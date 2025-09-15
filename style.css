@@ -35,3 +35,34 @@ body {
     display: none;
 }
 
+#searchInput {
+    padding: 5px;
+    width: 50vh;
+    margin: 20px;
+}
+
+.project-thumb {
+    width: 30vh;
+}
+
+.project-thumb img {
+    width: -webkit-fill-available;
+}
+
+.project-main-img {
+    height: 50vh;
+}
+
+.project-tags .tag{
+    background-color: lightblue;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.project-gallery {
+    width: 20vh;
+}
+
+.project-gallery img {
+    width: -webkit-fill-available;
+}

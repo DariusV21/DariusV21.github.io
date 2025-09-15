@@ -1,0 +1,15 @@
+[
+  {
+    "title": "MINI SUMO main PCB",
+    "tags": ["PCB", "Electronics", "Mini-Sumo"],
+    "thumbnail": "projects/project_1/tn_proj1.png",
+    "link": "projects/project1/project_index.html"
+  },
+  {
+    "title": "Project 2",
+    "tags": ["3D Printing", "DIY"],
+    "thumbnail": "images/project2.jpg",
+    "link": "project2.html"
+  }
+  // Add more projects...
+]
