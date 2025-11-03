@@ -343,6 +343,126 @@ footer {
     padding: 2rem;
 }
 
+/* Gallery modal styles */
+#galleryModal {
+    position: fixed; /* Ensure it overlays the body */
+    inset: 0; /* Cover the entire viewport */
+    display: none; /* Hidden by default */
+    align-items: center; /* Center content vertically */
+    justify-content: center; /* Center content horizontally */
+    z-index: 2000; /* High z-index to appear above other content */
+}
+
+#galleryOverlay {
+    position: fixed; /* Cover the entire viewport */
+    inset: 0; /* Cover the entire viewport */
+    background: rgba(0, 0, 0, 0.65); /* Dark overlay */
+    backdrop-filter: blur(4px); /* Optional blur effect */
+    z-index: 2010; /* Slightly lower than modal */
+}
+
+.gallery-content {
+    position: relative; /* Position relative to the modal */
+    z-index: 2020; /* Ensure content is above overlay */
+    max-width: 1100px; /* Max width for the gallery content */
+    width: calc(100% - 4rem); /* Responsive width */
+    background: rgba(255, 255, 255, 0.03); /* Background for content */
+    padding: 1rem; /* Padding around content */
+    display: flex; /* Flexbox for layout */
+    flex-direction: column; /* Column layout */
+    align-items: center; /* Center items */
+}
+
+/* Ensure buttons are also positioned correctly */
+.gallery-controls {
+    position: absolute; /* Position controls absolutely */
+    bottom: 1rem; /* Position at the bottom */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust for centering */
+    z-index: 2030; /* Above other content */
+}
+
+/* Ensure each slide centers content and fills slider area */
+.gallery-slide {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Image sizing: limit height so caption / controls keep consistent place */
+.gallery-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+/* Controls fixed at bottom center of modal */
+.gallery-controls {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 1.5rem;
+    z-index: 2030;
+    display: flex;
+    gap: 1rem;
+    pointer-events: auto;
+}
+
+/* Keep close button at top-right inside modal */
+.gallery-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 2035;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.45rem 0.65rem;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.gallery-nav {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.gallery-caption {
+    color: white;
+    font-weight: 600;
+    background: rgba(0,0,0,0.35);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+}
+
+/* When modal is open - blur and disable interaction with page content */
+body.modal-open > :not(#galleryModal) {
+    filter: blur(6px) brightness(0.6);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ensure modal content remains interactive */
+#galleryModal * {
+    pointer-events: auto;
+}
+
+/* small screen tweaks */
+@media (max-width: 600px) {
+    .gallery-content { width: calc(100% - 2rem); }
+    .gallery-close { top: -36px; right: 0; }
+}
+
 @keyframes fadeInUp {
     from {
         opacity: 0;

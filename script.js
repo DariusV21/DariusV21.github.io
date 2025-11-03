@@ -1,114 +1,3 @@
-const projects = [
-    {
-        id: 1,
-        folder: "prj_001",
-        title: "Router Cabinet",
-        shortDesc: "Custom wooden cabinet designed to elegantly hide networking equipment.",
-        icon: "📦",
-        categories: ["woodworking", "home-improvement"],
-        tags: ["cabinet", "router", "storage", "organization"]
-    },
-    {
-        id: 2,
-        folder: "prj_002",
-        title: "Key Hanger",
-        shortDesc: "Wall-mounted wooden key organizer with modern design.",
-        icon: "🔑",
-        categories: ["woodworking", "home-improvement"],
-        tags: ["organizer", "keys", "wall mount", "entryway"]
-    },
-    {
-        id: 3,
-        folder: "prj_003",
-        title: "TV Table Shelf",
-        shortDesc: "Complementary shelf unit for additional storage next to TV.",
-        icon: "📺",
-        categories: ["woodworking", "home-improvement"],
-        tags: ["shelf", "TV", "storage", "living room"]
-    },
-    {
-        id: 4,
-        folder: "prj_004",
-        title: "Decorative Lamp",
-        shortDesc: "Handcrafted wooden lamp with unique design elements.",
-        icon: "💡",
-        categories: ["woodworking", "laser-cutting"],
-        tags: ["lamp", "lighting", "decoration", "handcrafted"]
-    },
-    {
-        id: 5,
-        folder: "prj_005",
-        title: "Wooden Toy Collection",
-        shortDesc: "Safe, eco-friendly wooden toys for children.",
-        icon: "🧸",
-        categories: ["woodworking", "toys"],
-        tags: ["toys", "children", "safe", "handmade", "eco-friendly"]
-    },
-    {
-        id: 6,
-        folder: "prj_006",
-        title: "Electronic Modules Kit",
-        shortDesc: "Curated electronic modules and DIY kits for makers.",
-        icon: "⚡",
-        categories: ["electronics"],
-        tags: ["electronics", "DIY", "Arduino", "modules", "sensors"]
-    },
-    {
-        id: 7,
-        folder: "prj_007",
-        title: "Wooden Storage Boxes",
-        shortDesc: "Various wooden boxes for storage and organization.",
-        icon: "📦",
-        categories: ["woodworking"],
-        tags: ["storage", "boxes", "organization", "custom"]
-    },
-    {
-        id: 8,
-        folder: "prj_008",
-        title: "Laser Cut Art",
-        shortDesc: "Precision laser-cut designs for decoration and function.",
-        icon: "✂️",
-        categories: ["laser-cutting"],
-        tags: ["laser", "art", "decoration", "custom design"]
-    },
-    {
-        id: 9,
-        folder: "prj_009",
-        title: "3D Printed Components",
-        shortDesc: "Custom 3D printed parts and prototypes.",
-        icon: "🖨️",
-        categories: ["3d-printing"],
-        tags: ["3D printing", "prototypes", "custom parts"]
-    },
-    {
-        id: 10,
-        folder: "prj_010",
-        title: "Smart Home Integration",
-        shortDesc: "Electronic modules for home automation projects.",
-        icon: "🏠",
-        categories: ["electronics", "home-improvement"],
-        tags: ["smart home", "automation", "IoT", "electronics"]
-    },
-    {
-        id: 11,
-        folder: "prj_011",
-        title: "Educational Toy Kits",
-        shortDesc: "STEM-focused toys combining wood and electronics.",
-        icon: "🎓",
-        categories: ["toys", "electronics", "woodworking"],
-        tags: ["educational", "STEM", "toys", "learning", "kids"]
-    },
-    {
-        id: 12,
-        folder: "prj_012",
-        title: "Laser Engraved Gifts",
-        shortDesc: "Personalized wooden items with laser engraving.",
-        icon: "🎁",
-        categories: ["laser-cutting", "woodworking"],
-        tags: ["gifts", "personalized", "engraving", "custom"]
-    }
-];
-
 let currentFilter = 'all';
 let searchTerm = '';
 
@@ -133,18 +22,50 @@ function renderProjects() {
         filtered = filtered.sort(() => 0.5 - Math.random()).slice(0, 6);
     }
 
-    grid.innerHTML = filtered.map(project => `
-        <a href="projects/${project.folder}/index.html" class="portfolio-item">
-            <div class="portfolio-image">${project.icon}</div>
-            <div class="portfolio-info">
-                <h3>${project.title}</h3>
-                <p>${project.shortDesc}</p>
-                <div class="portfolio-tags">
-                    ${project.tags.map(tag => `<span class="portfolio-tag">${tag}</span>`).join('')}
-                </div>
-            </div>
-        </a>
-    `).join('');
+    grid.innerHTML = filtered.map(project => {
+        // build image src from filename (projects/{folder}/files/{filename})
+        const imageSrc = project.image
+            ? (String(project.image).includes('/') ? project.image : `projects/${project.folder}/files/${project.image}`)
+            : null;
+
+        const imageContent = imageSrc
+            ? `<img src="${imageSrc}" alt="${project.title}" style="width: 100%; height: 250px; object-fit: cover; display: block;">`
+            : `<span style="font-size: 48px; display:flex; align-items:center; justify-content:center; height:250px;">${project.icon}</span>`;
+
+        // if project.gallery exists and has items -> open gallery modal
+        if (Array.isArray(project.gallery) && project.gallery.length) {
+            return `
+                <a href="#" class="portfolio-item gallery-trigger" data-id="${project.id}">
+                    <div class="portfolio-image">
+                        ${imageContent}
+                    </div>
+                    <div class="portfolio-info">
+                        <h3>${project.title}</h3>
+                        <p>${project.shortDesc}</p>
+                        <div class="portfolio-tags">
+                            ${(project.tags || []).map(tag => `<span class="portfolio-tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                </a>
+            `;
+        } else {
+            // otherwise link to project's page
+            return `
+                <a href="projects/${project.folder}/index.html" class="portfolio-item">
+                    <div class="portfolio-image">
+                        ${imageContent}
+                    </div>
+                    <div class="portfolio-info">
+                        <h3>${project.title}</h3>
+                        <p>${project.shortDesc}</p>
+                        <div class="portfolio-tags">
+                            ${(project.tags || []).map(tag => `<span class="portfolio-tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
+    }).join('');
 }
 
 document.querySelectorAll('.category-tag').forEach(tag => {
@@ -161,6 +82,92 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
     renderProjects();
 });
 
+// Delegated click handler for gallery-trigger items
+document.getElementById('portfolioGrid').addEventListener('click', function(e) {
+    const item = e.target.closest('.portfolio-item');
+    if (!item) return;
+
+    if (item.classList.contains('gallery-trigger')) {
+        e.preventDefault();
+        const id = item.dataset.id;
+        const project = projects.find(p => String(p.id) === String(id));
+        if (project) openGallery(project);
+    }
+});
+
+// Gallery modal logic
+function openGallery(project) {
+    const modal = document.getElementById('galleryModal');
+    const overlay = document.getElementById('galleryOverlay');
+    const slider = document.getElementById('gallerySlider');
+    const caption = document.getElementById('galleryCaption');
+    const prevBtn = document.getElementById('galleryPrev');
+    const nextBtn = document.getElementById('galleryNext');
+    const closeBtn = document.getElementById('galleryClose');
+
+    const filenames = Array.isArray(project.gallery) ? project.gallery.map(fn => String(fn).split('/').pop()) : [];
+    if (!filenames.length) return;
+
+    // build slides (simple slideshow style)
+    slider.innerHTML = filenames.map((fn, i) => `
+        <div class="mySlide" style="display:${i === 0 ? 'block' : 'none'};">
+            <img src="projects/${project.folder}/files/${fn}" alt="${project.title} - ${i+1}" style="width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">
+        </div>
+    `).join('');
+
+    let slideIndex = 0;
+    const lastActive = document.activeElement;
+
+    function showSlide(n) {
+        const slides = slider.querySelectorAll('.mySlide');
+        if (!slides.length) return;
+        if (n < 0) n = slides.length - 1;
+        if (n >= slides.length) n = 0;
+        slides.forEach((s, i) => s.style.display = i === n ? 'block' : 'none');
+        slideIndex = n;
+        caption.textContent = `${project.title} — ${slideIndex + 1} / ${slides.length}`;
+    }
+
+    function onNext() { showSlide(slideIndex + 1); }
+    function onPrev() { showSlide(slideIndex - 1); }
+    function onKey(e) {
+        if (e.key === 'Escape') close();
+        if (e.key === 'ArrowRight') onNext();
+        if (e.key === 'ArrowLeft') onPrev();
+    }
+
+    function close() {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        // cleanup
+        nextBtn.removeEventListener('click', onNext);
+        prevBtn.removeEventListener('click', onPrev);
+        closeBtn.removeEventListener('click', close);
+        overlay.removeEventListener('click', close);
+        document.removeEventListener('keydown', onKey);
+        slider.innerHTML = '';
+        caption.textContent = '';
+        if (lastActive && typeof lastActive.focus === 'function') lastActive.focus();
+    }
+
+    // open modal
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    // focus management
+    setTimeout(() => closeBtn.focus(), 50);
+
+    // attach handlers
+    nextBtn.addEventListener('click', onNext);
+    prevBtn.addEventListener('click', onPrev);
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+
+    // initial render
+    showSlide(0);
+}
+
+// Smooth anchor scrolling (kept)
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         e.preventDefault();
@@ -171,12 +178,14 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
+// Contact form (kept)
 document.getElementById('contactForm').addEventListener('submit', function(e) {
     e.preventDefault();
     alert('Thank you for your message! I will get back to you soon.');
     this.reset();
 });
 
+// Header scroll effect (kept)
 window.addEventListener('scroll', function() {
     const header = document.querySelector('header');
     if (window.scrollY > 100) {

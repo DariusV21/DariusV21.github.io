@@ -33,21 +33,24 @@
                 <p>Hello! I'm Darius, a passionate craftsman specializing in custom woodworking and electronics projects. I create functional and beautiful pieces that blend traditional woodworking with modern design.</p>
                 <p style="margin-top: 1rem;">From handcrafted wooden toys to practical home solutions and electronic kits, each project is made with attention to detail and quality craftsmanship.</p>
                 <div class="skills">
-                    <span class="skill-tag">Woodworking</span>
-                    <span class="skill-tag">Laser Cutting</span>
                     <span class="skill-tag">Electronics</span>
                     <span class="skill-tag">Custom Design</span>
+                    <span class="skill-tag">3D Printing</span>
+                    <span class="skill-tag">Woodworking</span>
+                    <span class="skill-tag">Laser Cutting</span>
+
+                    
                 </div>
             </div>
             <div class="about-text">
                 <h3 style="margin-bottom: 1rem; color: var(--accent);">What I Offer</h3>
                 <ul style="list-style: none; line-height: 2;">
+                    <li>🤖 Electronic Kits & Modules</li>
+                    <li>⚡ Custom PCB Designs</li>
+                    <li>🖨️ 3D Printing and parametric model Designs</li>
+                    <li>✂️ Laser Cut Designs</li>
                     <li>🪵 Custom Wooden Furniture</li>
                     <li>🧸 Handcrafted Wooden Toys</li>
-                    <li>⚡ Electronic Kits & Modules</li>
-                    <li>✂️ Laser Cut Designs</li>
-                    <li>🎨 Decorative Pieces</li>
-                    <li>📦 Custom Storage Solutions</li>
                 </ul>
             </div>
         </div>
@@ -59,11 +62,12 @@
         <div class="portfolio-controls">
             <div class="category-filters">
                 <div class="category-tag active" data-category="all">All</div>
-                <div class="category-tag" data-category="woodworking">Woodworking</div>
-                <div class="category-tag" data-category="home-improvement">Home Improvement</div>
                 <div class="category-tag" data-category="electronics">Electronics</div>
                 <div class="category-tag" data-category="3d-printing">3D Printing</div>
+                <div class="category-tag" data-category="automotive">Automotive</div>
+                <div class="category-tag" data-category="woodworking">Woodworking</div>
                 <div class="category-tag" data-category="laser-cutting">Laser Cutting</div>
+                <div class="category-tag" data-category="home-improvement">Home Improvement</div>
                 <div class="category-tag" data-category="toys">Toys</div>
             </div>
             <div class="search-container">
@@ -100,6 +104,22 @@
         <p>&copy; 2025 Darius Vaitiekus. All rights reserved.</p>
     </footer>
 
-    <script src="script.js"></script>
+    <!-- Gallery modal (hidden by default) -->
+    <div id="galleryModal" class="gallery-modal" aria-hidden="true" style="display:none;">
+        <div class="gallery-overlay" id="galleryOverlay"></div>
+        <div class="gallery-content" role="dialog" aria-modal="true" aria-labelledby="galleryTitle">
+            <button class="gallery-close" id="galleryClose" aria-label="Close gallery">✕</button>
+            <div class="gallery-slider" id="gallerySlider"></div>
+            <div class="gallery-controls">
+                <button id="galleryPrev" class="gallery-nav" aria-label="Previous">◀</button>
+                <div id="galleryCaption" class="gallery-caption"></div>
+                <button id="galleryNext" class="gallery-nav" aria-label="Next">▶</button>
+            </div>
+        </div>
+    </div>
+    <!-- load project list first (declares global `projects`) -->
+    <script src="project-list.js" defer></script>
+    <!-- then your main script that uses `projects` -->
+    <script src="script.js" defer></script>
 </body>
 </html>
