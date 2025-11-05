@@ -6,7 +6,7 @@ function renderProjects() {
     let filtered = projects;
 
     if (currentFilter !== 'all') {
-        filtered = projects.filter(p => p.categories.includes(currentFilter));
+        filtered = projects.filter(p => p.tags.includes(currentFilter));
     }
 
     if (searchTerm) {
