@@ -275,9 +275,10 @@ section {
 }
 
 .contact-content {
-    max-width: 600px;
+    max-width: 760px;
     margin: 0 auto;
-    text-align: center;
+    text-align: left;
+    padding: 0 1rem;
 }
 
 .contact-form {
@@ -340,7 +341,99 @@ footer {
     background: var(--primary);
     color: white;
     text-align: center;
-    padding: 2rem;
+    padding: 1.5rem 1rem;
+}
+
+/* Professional contact block (invisible table) */
+.footer-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.contact-block {
+    margin-top: 0.5rem;
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 0.6rem 1.25rem;
+    align-items: center;
+    justify-items: start;
+    color: var(--light);
+    margin: 0.5rem auto 0;
+    max-width: 720px;
+    background: linear-gradient(180deg, rgba(18,40,55,0.98), rgba(18,28,34,0.98));
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 8px 30px rgba(4,8,12,0.5);
+    border: 1px solid rgba(255,255,255,0.04);
+}
+
+.contact-grid dt {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    color: var(--light);
+    font-size: 0.98rem;
+    letter-spacing: 0.2px;
+}
+
+.contact-grid dd {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.5;
+    color: var(--light);
+    padding-bottom: 0.6rem;
+}
+
+
+.contact-grid a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.12s ease, transform 0.12s ease;
+    font-weight: 600;
+}
+
+.contact-grid a:hover {
+    color: #d46b15; /* slightly darker accent */
+    text-decoration: underline;
+    transform: translateY(-1px);
+}
+
+/* separators between rows */
+.contact-grid dd:not(:last-of-type) {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+/* icon styling */
+.contact-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.contact-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+@media (max-width: 640px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 0.25rem 0.5rem;
+    }
+    .contact-grid dt {
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
 }
 
 /* Gallery modal styles */
