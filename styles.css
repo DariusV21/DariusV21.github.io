@@ -78,6 +78,13 @@ nav {
     animation: fadeInUp 1s ease;
 }
 
+.hero-logo {
+    width: 200px;
+    height: auto;
+    /* margin-bottom: 2rem; */
+    animation: fadeInUp 1s ease;
+}
+
 .hero-content p {
     font-size: 1.5rem;
     margin-bottom: 2rem;
@@ -574,6 +581,10 @@ body.modal-open > :not(#galleryModal) {
 
     .hero-content p {
         font-size: 1.2rem;
+    }
+
+    .hero-logo {
+        width: 150px;
     }
 
     .about-content {
