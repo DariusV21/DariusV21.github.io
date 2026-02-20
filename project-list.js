@@ -6,7 +6,7 @@ const projects = [
         shortDesc: "Custom wooden cabinet designed to elegantly hide networking equipment.",
         icon: "📦",
         image: "1.jpg", // optional: main image for the project
-        tags: ["Woodworking", "Home-Improvement"],
+        tags: ["Woodworking", "Home-Improvement", "CAD"],
         // optional: add images array when you want gallery slides
         // filenames only -> files are located at projects/prj_001/files/{filename}
         gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg"]
@@ -17,7 +17,7 @@ const projects = [
         title: "Q-tip and Cotton Pad Holders",
         shortDesc: "Custom laser cut storage solutions for bathroom organization.",
         image: "1.jpg", // optional: main image for the project
-        tags: ["Woodworking", "Laser-CNC", "Home-Improvement"],
+        tags: ["Woodworking", "Laser-CNC", "Home-Improvement", "CAD"],
         gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"]
     },
     {
@@ -54,7 +54,7 @@ const projects = [
         title: "Portable variable power supply",
         shortDesc: "Custom made portable power supply for electronics projects and testing.",
         image: "1.jpg",
-        tags: ["Electronics", "3D-Printing"],
+        tags: ["Electronics", "3D-Printing", "CAD"],
         gallery: ["1.jpg", "2.jpg", "3.jpg"]
     },
     {
@@ -63,8 +63,14 @@ const projects = [
         title: "Custom PCB projects",
         shortDesc: "Various custom-built pcb solutions.",
         image: "1.jpg",
-        tags: ["Electronics", "PCB-Design", "Automotive", "Toys"],
-        gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpeg", "10.jpg"]
+        tags: ["Electronics", "PCB-Design", "Automotive", "Toys", "Software", "CAD"],
+        gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpeg", "10.jpg"],
+        imageText: [
+            [1, "Various custom-built PCB solutions for Electrical Hybrid Agriculture tractor project."],
+            [2, "Raspberry Pi CM4 based infotainment system module for a fully Electric City Bus."],
+            [3, "CAN over WiFi transmitter module, based on ESP32."],
+            [8, "Partially populated board of an infotainment system module for a fully Electric City Bus."]
+        ]
     },
     {
         id: 8,
@@ -73,7 +79,12 @@ const projects = [
         shortDesc: "Miniature models created using SLA 3D printing for tabletop gaming",
         image: "1.jpg",
         tags: ["3D-Printing", "Toys"],
-        gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg"]
+        gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg"],
+        imageText: [
+            [1, "A collection of custom-designed miniatures for tabletop gaming."],
+            [2, "Models can be printed with very high detail and smooth surfaces, ready for painting."],
+            [3, "Printer used: SLA Photon Mono, with buildplate dimensions of 130x78x160mm."]
+        ]
     },
     {
         id: 9,
@@ -82,7 +93,11 @@ const projects = [
         shortDesc: "Bluetooth mono speaker enclosure, made from reclaimed materials",
         image: "1.jpg",
         tags: ["Woodworking", "Electronics"],
-        gallery: ["1.jpg", "2.jpg", "3.jpg"]
+        gallery: ["1.jpg", "2.jpg", "3.jpg"],
+        imageText: [
+            [1, "A simple single speaker box, made from scraps of 6mm plywood."],
+            [6, "Speaker is connected to a generic AliExpress bluetooth compatible audio receiver and amplifier modules"]
+        ]
     },
     {
         id: 10,
@@ -90,7 +105,7 @@ const projects = [
         title: "Dice Tower",
         shortDesc: "Custom made folding dice tower from plywood for tabletop gaming",
         image: "1.jpg",
-        tags: ["Woodworking", "Toys"],
+        tags: ["Woodworking", "Toys", "CAD"],
         gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"]
     },
     {
@@ -99,7 +114,7 @@ const projects = [
         title: "Temperature and Voltage Monitoring System",
         shortDesc: "System to track battery voltage level of a nearby parked car.",
         image: "1.jpg",
-        tags: ["Electronics", "Automotive", "3D-Printing"],
+        tags: ["Electronics", "Automotive", "3D-Printing", "Software", "CAD"],
         gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"],
         // imageText can be provided as an array of [index, text] pairs (1-based image index)
         imageText: [
@@ -114,7 +129,7 @@ const projects = [
         title: "Tea and Coffee Condiments holder tray",
         shortDesc: "A simple yet very useful tray for sorting random tea / coffee condiments.",
         image: "1.png",
-        tags: ["3D-Printing", "Home-Improvement"],
+        tags: ["3D-Printing", "Home-Improvement", "CAD"],
         gallery: ["1.png", "2.png", "3.png"]
     },
     {
@@ -132,7 +147,7 @@ const projects = [
         title: "Trash bag holder",
         shortDesc: "Trash bag holder that fits over standard kitchen cabinet doors.",
         image: "1.png",
-        tags: ["3D-Printing", "Home-Improvement"],
+        tags: ["3D-Printing", "Home-Improvement", "CAD"],
         gallery: ["1.png", "2.png", "3.png"]
     },
     {
