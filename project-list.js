@@ -81,7 +81,7 @@ const projects = [
         shortDesc: "Bluetooth mono speaker enclosure, made from reclaimed materials",
         image: "1.jpg",
         tags: ["Woodworking", "Electronics"],
-        gallery: ["1.jpg", "2.jpg", "3.mp4"]
+        gallery: ["1.jpg", "2.jpg", "3.jpg"]
     },
     {
         id: 10,

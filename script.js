@@ -108,14 +108,16 @@ function openGallery(project) {
     const filenames = Array.isArray(project.gallery) ? project.gallery.map(fn => String(fn).split('/').pop()) : [];
     if (!filenames.length) return;
 
-    // build slides (simple slideshow style)
+    // build slides
     slider.innerHTML = filenames.map((fn, i) => `
-        <div class="mySlide" style="display:${i === 0 ? 'block' : 'none'};">
-            <img src="projects/${project.folder}/files/${fn}" alt="${project.title} - ${i+1}" style="width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">
+        <div class="mySlide" style="display:${i === 0 ? 'flex' : 'none'};">
+            <img src="projects/${project.folder}/files/${fn}" alt="${project.title} - ${i+1}">
         </div>
     `).join('');
 
     let slideIndex = 0;
+    let touchStartX = 0;
+    let touchEndX = 0;
     const lastActive = document.activeElement;
 
     function showSlide(n) {
@@ -123,13 +125,36 @@ function openGallery(project) {
         if (!slides.length) return;
         if (n < 0) n = slides.length - 1;
         if (n >= slides.length) n = 0;
-        slides.forEach((s, i) => s.style.display = i === n ? 'block' : 'none');
+        slides.forEach((s, i) => s.style.display = i === n ? 'flex' : 'none');
         slideIndex = n;
-        caption.textContent = `${project.title} — ${slideIndex + 1} / ${slides.length}`;
+        caption.textContent = `${slideIndex + 1} / ${slides.length}`;
     }
 
     function onNext() { showSlide(slideIndex + 1); }
     function onPrev() { showSlide(slideIndex - 1); }
+    
+    function onTouchStart(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }
+    
+    function onTouchEnd(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }
+    
+    function handleSwipe() {
+        const swipeThreshold = 50;
+        const diff = touchStartX - touchEndX;
+        
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                onNext(); // swiped left, go next
+            } else {
+                onPrev(); // swiped right, go prev
+            }
+        }
+    }
+    
     function onKey(e) {
         if (e.key === 'Escape') close();
         if (e.key === 'ArrowRight') onNext();
@@ -144,6 +169,8 @@ function openGallery(project) {
         prevBtn.removeEventListener('click', onPrev);
         closeBtn.removeEventListener('click', close);
         overlay.removeEventListener('click', close);
+        slider.removeEventListener('touchstart', onTouchStart);
+        slider.removeEventListener('touchend', onTouchEnd);
         document.removeEventListener('keydown', onKey);
         slider.innerHTML = '';
         caption.textContent = '';
@@ -161,6 +188,8 @@ function openGallery(project) {
     prevBtn.addEventListener('click', onPrev);
     closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', close);
+    slider.addEventListener('touchstart', onTouchStart);
+    slider.addEventListener('touchend', onTouchEnd);
     document.addEventListener('keydown', onKey);
 
     // initial render
