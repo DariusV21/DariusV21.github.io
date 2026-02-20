@@ -145,11 +145,13 @@
         <div class="gallery-overlay" id="galleryOverlay"></div>
         <div class="gallery-content" role="dialog" aria-modal="true" aria-labelledby="galleryTitle">
             <button class="gallery-close" id="galleryClose" aria-label="Close gallery">✕</button>
-            <div class="gallery-slider" id="gallerySlider"></div>
+            <div class="gallery-slider" id="gallerySlider">
+                <button id="galleryPrev" class="gallery-nav gallery-nav-left" aria-label="Previous">◀</button>
+                <div id="gallerySlides" class="gallery-slides"><!-- slides injected here --></div>
+                <button id="galleryNext" class="gallery-nav gallery-nav-right" aria-label="Next">▶</button>
+            </div>
             <div class="gallery-controls">
-                <button id="galleryPrev" class="gallery-nav" aria-label="Previous">◀</button>
                 <div id="galleryCaption" class="gallery-caption"></div>
-                <button id="galleryNext" class="gallery-nav" aria-label="Next">▶</button>
             </div>
         </div>
     </div>

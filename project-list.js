@@ -36,7 +36,8 @@ const projects = [
         shortDesc: "Custom designed PCB for controlling mini sumo robots.",
         image: "3.png", // optional: main image for the project
         tags: ["Electronics", "Toys", "PCB-Design"],
-        gallery: ["1.jpg", "2.jpg", "3.png", "4.png", "5.jpg"]
+        gallery: ["1.jpg", "2.jpg", "3.png", "4.png", "5.jpg"],
+        imageText: [1, "PCB design for mini sumo robot competition."] // optional: text to show with each gallery image
     },
     {
         id: 5,
@@ -99,7 +100,13 @@ const projects = [
         shortDesc: "System to track battery voltage level of a nearby parked car.",
         image: "1.jpg",
         tags: ["Electronics", "Automotive", "3D-Printing"],
-        gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"]
+        gallery: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"],
+        // imageText can be provided as an array of [index, text] pairs (1-based image index)
+        imageText: [
+            [1, "Receiver monitor and a webserver. Uses ESP32 with a custom PCB and a 3D printed enclosure."],
+            [2, "WEB interface."],
+            [6, "Module is powered via micro USB connector."]
+        ]
     },
     {
         id: 12,

@@ -486,6 +486,12 @@ footer {
     background: rgba(0, 0, 0, 0.8);
 }
 
+#gallerySlides {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
 .mySlide {
     position: absolute;
     width: 100%;
@@ -496,6 +502,12 @@ footer {
     animation: fadeIn 0.3s ease-in-out;
 }
 
+.mySlide {
+    left: 0;
+    top: 0;
+    z-index: 2025;
+}
+
 .mySlide img {
     max-width: 100%;
     max-height: 100%;
@@ -503,9 +515,44 @@ footer {
     padding: 1rem;
 }
 
+.mySlide img {
+    display: block;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.slide-text-bubble {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(44, 62, 80, 0.9);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 20px;
+    max-width: 80%;
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    backdrop-filter: blur(5px);
+    animation: slideUp 0.3s ease-in-out;
+    z-index: 2034;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 
@@ -535,7 +582,7 @@ footer {
 
 .gallery-controls {
     position: absolute;
-    bottom: 1rem;
+    /* bottom: 1rem; */
     left: 50%;
     transform: translateX(-50%);
     z-index: 2030;
@@ -550,28 +597,46 @@ footer {
 }
 
 .gallery-nav {
-    background: var(--accent);
+    background: rgba(26, 26, 26, 0.2);
     color: white;
     border: none;
-    padding: 0.8rem 1.2rem;
-    border-radius: 6px;
     cursor: pointer;
-    font-size: 1.1rem;
-    transition: background 0.2s, transform 0.2s;
-    min-width: 44px;
-    min-height: 44px;
+    font-size: 1.5rem;
+    transition: background 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
+    z-index: 2032;
 }
 
 .gallery-nav:hover {
-    background: #d35a0f;
-    transform: scale(1.05);
+    /* background: rgba(230, 126, 34, 0.9); */
 }
 
 .gallery-nav:active {
     transform: scale(0.95);
+}
+
+.gallery-nav-left {
+    position: absolute;
+    left: 0;
+    /* top: 0; */
+    height: 100%;
+    width: 60px;
+    border-radius: 0;
+    padding: 0;
+}
+
+.gallery-nav-right {
+    position: absolute;
+    right: 0;
+    /* top: 0; */
+    height: 100%;
+    width: 60px;
+    border-radius: 0;
+    padding: 0;
 }
 
 .gallery-caption {

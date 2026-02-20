@@ -104,16 +104,42 @@ function openGallery(project) {
     const prevBtn = document.getElementById('galleryPrev');
     const nextBtn = document.getElementById('galleryNext');
     const closeBtn = document.getElementById('galleryClose');
+    const content = modal.querySelector('.gallery-content');
 
     const filenames = Array.isArray(project.gallery) ? project.gallery.map(fn => String(fn).split('/').pop()) : [];
     if (!filenames.length) return;
 
-    // build slides
-    slider.innerHTML = filenames.map((fn, i) => `
+    // build slides inside dedicated container so buttons are not removed
+    const slidesContainer = document.getElementById('gallerySlides');
+    // clear any existing slides
+    slidesContainer.innerHTML = '';
+    slidesContainer.innerHTML = filenames.map((fn, i) => {
+        // Support several ways to declare imageText in project data:
+        // - object map: { "1": "text", "2": "text" }
+        // - array of pairs: [[1, "text"], [2, "text"]]
+        // - single pair: [1, "text"]
+        let imageTextEntry = null;
+        if (project.imageText) {
+            if (!Array.isArray(project.imageText) && typeof project.imageText === 'object') {
+                imageTextEntry = project.imageText[String(i + 1)] || project.imageText[i + 1] || null;
+            } else if (Array.isArray(project.imageText)) {
+                // array-of-pairs e.g. [[1, 'a'], [2, 'b']]
+                if (project.imageText.length && Array.isArray(project.imageText[0])) {
+                    const found = project.imageText.find(pair => pair && Number(pair[0]) === i + 1);
+                    imageTextEntry = found ? String(found[1]) : null;
+                } else if (project.imageText.length >= 2 && typeof project.imageText[0] === 'number') {
+                    // single pair [index, text]
+                    imageTextEntry = Number(project.imageText[0]) === i + 1 ? project.imageText[1] : null;
+                }
+            }
+        }
+
+        return `
         <div class="mySlide" style="display:${i === 0 ? 'flex' : 'none'};">
             <img src="projects/${project.folder}/files/${fn}" alt="${project.title} - ${i+1}">
+            ${imageTextEntry ? `<div class="slide-text-bubble">${imageTextEntry}</div>` : ''}
         </div>
-    `).join('');
+    `}).join('');
 
     let slideIndex = 0;
     let touchStartX = 0;
@@ -121,13 +147,24 @@ function openGallery(project) {
     const lastActive = document.activeElement;
 
     function showSlide(n) {
-        const slides = slider.querySelectorAll('.mySlide');
+        const slides = slidesContainer.querySelectorAll('.mySlide');
         if (!slides.length) return;
         if (n < 0) n = slides.length - 1;
         if (n >= slides.length) n = 0;
         slides.forEach((s, i) => s.style.display = i === n ? 'flex' : 'none');
         slideIndex = n;
         caption.textContent = `${slideIndex + 1} / ${slides.length}`;
+        
+        // Update button heights to match the displayed image
+        setTimeout(() => {
+            const currentSlide = slides[n];
+            const img = currentSlide.querySelector('img');
+            if (img && img.offsetHeight) {
+                const height = img.offsetHeight;
+                prevBtn.style.height = height + 'px';
+                nextBtn.style.height = height + 'px';
+            }
+        }, 0);
     }
 
     function onNext() { showSlide(slideIndex + 1); }
@@ -169,10 +206,10 @@ function openGallery(project) {
         prevBtn.removeEventListener('click', onPrev);
         closeBtn.removeEventListener('click', close);
         overlay.removeEventListener('click', close);
-        slider.removeEventListener('touchstart', onTouchStart);
-        slider.removeEventListener('touchend', onTouchEnd);
+        content.removeEventListener('touchstart', onTouchStart);
+        content.removeEventListener('touchend', onTouchEnd);
         document.removeEventListener('keydown', onKey);
-        slider.innerHTML = '';
+        slidesContainer.innerHTML = '';
         caption.textContent = '';
         if (lastActive && typeof lastActive.focus === 'function') lastActive.focus();
     }
@@ -188,8 +225,8 @@ function openGallery(project) {
     prevBtn.addEventListener('click', onPrev);
     closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', close);
-    slider.addEventListener('touchstart', onTouchStart);
-    slider.addEventListener('touchend', onTouchEnd);
+    content.addEventListener('touchstart', onTouchStart);
+    content.addEventListener('touchend', onTouchEnd);
     document.addEventListener('keydown', onKey);
 
     // initial render
