@@ -161,8 +161,9 @@ function openGallery(project) {
             const img = currentSlide.querySelector('img');
             if (img && img.offsetHeight) {
                 const height = img.offsetHeight;
-                prevBtn.style.height = height + 'px';
-                nextBtn.style.height = height + 'px';
+                const btnH = Math.max(40, Math.round(height / 4)); // keep a minimum touch size
+                prevBtn.style.height = btnH + 'px';
+                nextBtn.style.height = btnH + 'px';
             }
         }, 0);
     }
