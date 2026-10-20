@@ -1,0 +1,546 @@
+<title>2GT Belt &amp; Pulley Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench split — parameter panel left, preview right; one tab per part; stacks on phones */
+:root{
+  --bg:#eef1f4; --panel:#f8fafb; --line:#d3d9e0; --fg:#1b232c; --muted:#5d6975;
+  --accent:#2c5f8f; --accent-fg:#fff; --rubber:#262b30; --rubber-edge:#11151a; --pitch:#d2691e;
+  --part:#4d6378; --part-2:#9fb0c0; --warn:#b4531a;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13181d; --panel:#1a2027; --line:#2c353f; --fg:#e3e8ed; --muted:#93a0ad;
+  --accent:#6fa4d6; --accent-fg:#0d141b; --rubber:#3a424b; --rubber-edge:#5b6672; --pitch:#f0954a;
+  --part:#7f98b0; --part-2:#3d4c5b; --warn:#f0954a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13181d; --panel:#1a2027; --line:#2c353f; --fg:#e3e8ed; --muted:#93a0ad;
+  --accent:#6fa4d6; --accent-fg:#0d141b; --rubber:#3a424b; --rubber-edge:#5b6672; --pitch:#f0954a;
+  --part:#7f98b0; --part-2:#3d4c5b; --warn:#f0954a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:24px 40px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:18px}
+header h1{font:700 1.9rem/1.1 var(--f-display);margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:.35rem 0 0;color:var(--muted);max-width:62ch}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{font:600 1rem var(--f-display);letter-spacing:.03em;background:transparent;color:var(--muted);border:0;border-bottom:2px solid transparent;padding:8px 14px;margin-bottom:-1px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--fg)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.main{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.main{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;display:grid;gap:16px;min-width:0}
+.group{display:grid;gap:10px}
+.ghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.group h2{font:600 .78rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0}
+.linkbtn{font:500 .8rem var(--f-body);color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.field{display:grid;grid-template-columns:minmax(0,1fr) 108px 28px;align-items:center;gap:8px}
+.field label{font-size:.93rem}
+.field small{display:block;color:var(--muted);font-size:.78rem;line-height:1.3}
+.inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:4px;background:var(--bg);min-width:0}
+.inp:focus-within{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.inp input,.inp select{width:100%;min-width:0;border:0;background:transparent;color:var(--fg);font:500 .95rem var(--f-mono);padding:7px 4px 7px 9px;outline:none;font-variant-numeric:tabular-nums}
+.inp select{font:500 .85rem var(--f-body);padding-right:6px;cursor:pointer}
+.inp span{font:.78rem var(--f-mono);color:var(--muted);padding-right:8px}
+.reset{width:28px;height:28px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--accent);font:600 15px/1 var(--f-body);cursor:pointer;display:grid;place-items:center;padding:0}
+.reset:hover:not(:disabled){border-color:var(--accent)}
+.reset:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.reset:disabled{color:var(--line);cursor:default;border-color:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .8rem var(--f-mono);border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:3px;padding:4px 8px;cursor:pointer}
+.chip:hover,.chip:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn{font:600 1rem var(--f-display);letter-spacing:.03em;background:var(--accent);color:var(--accent-fg);border:0;border-radius:4px;padding:12px 16px;cursor:pointer;width:100%}
+.btn:hover{filter:brightness(1.08)}
+.btn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.status{font-size:.82rem;color:var(--muted);min-height:1.2em;margin:-6px 0 0}
+.view{display:grid;gap:14px;min-width:0}
+.name{font:700 1.5rem/1 var(--f-mono);letter-spacing:-.01em;overflow-wrap:anywhere}
+.name small{font:500 .8rem var(--f-body);color:var(--muted);display:block;margin-top:6px;letter-spacing:0}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--panel);padding:10px 12px}
+.stat dt{font:600 .7rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.stat dd{margin:6px 0 0;font:500 1.05rem var(--f-mono);font-variant-numeric:tabular-nums}
+.canvases{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:560px){.canvases{grid-template-columns:minmax(0,1fr)}}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;min-width:0}
+figure canvas{width:100%;aspect-ratio:1/1;display:block;max-width:100%}
+figcaption{font-size:.8rem;color:var(--muted);padding:6px 2px 0;display:flex;gap:14px;flex-wrap:wrap}
+.key{display:inline-flex;align-items:center;gap:6px}
+.key i{display:inline-block;width:16px;height:0;border-top:2px dashed var(--pitch)}
+.key b{display:inline-block;width:12px;height:12px;border-radius:2px}
+.notes{font-size:.88rem;color:var(--muted);max-width:70ch}
+.notes p{margin:.3rem 0}
+.warn{color:var(--warn);font-weight:500}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>2GT Belt &amp; Pulley Generator</h1>
+    <p>GT2 parts with 2&nbsp;mm pitch. Set the parameters, check the preview, and export an STL for printing.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Part type">
+    <button class="tab" role="tab" id="tab-belt" aria-controls="pane-belt" aria-selected="true" type="button">Closed belt</button>
+    <button class="tab" role="tab" id="tab-pulley" aria-controls="pane-pulley" aria-selected="false" type="button">Pulley</button>
+  </div>
+
+  <section id="pane-belt" role="tabpanel" aria-labelledby="tab-belt">
+    <div class="main">
+      <form class="panel" id="f-belt" autocomplete="off">
+        <div id="fields-belt" class="group"></div>
+        <button class="btn" type="submit" data-dl>Download STL</button>
+        <p class="status" id="st-belt" role="status"></p>
+      </form>
+      <div class="view">
+        <div class="name" id="b-name">2GT-200-6<small id="b-sub"></small></div>
+        <dl class="stats">
+          <div class="stat"><dt>Pitch Ø</dt><dd id="b-pd">–</dd></div>
+          <div class="stat"><dt>Outer Ø</dt><dd id="b-od">–</dd></div>
+          <div class="stat"><dt>Tooth tip Ø</dt><dd id="b-id">–</dd></div>
+          <div class="stat"><dt>Triangles</dt><dd id="b-tri">–</dd></div>
+        </dl>
+        <div class="canvases">
+          <figure><canvas id="b-c1" aria-label="Top view of the whole belt loop"></canvas>
+            <figcaption><span class="key"><b style="background:var(--rubber)"></b>belt</span><span class="key"><i></i>pitch line</span></figcaption></figure>
+          <figure><canvas id="b-c2" aria-label="Magnified cross-section of a few teeth"></canvas>
+            <figcaption><span>Detail at the top of the loop, 1&nbsp;mm grid</span></figcaption></figure>
+        </div>
+        <div class="notes">
+          <p>The tooth shape follows the common GT2 2&nbsp;mm profile: 1.38&nbsp;mm total height, 0.75&nbsp;mm teeth, 0.254&nbsp;mm pitch line offset. The loop is modelled flat with the teeth facing inward, so it prints lying on the bed.</p>
+          <p>Print in TPU (95A or softer) with 0.1–0.15&nbsp;mm layers and 100% infill. A printed belt has no glass or steel cords, so expect it to stretch under load.</p>
+          <p class="warn" id="b-warn" hidden></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pane-pulley" role="tabpanel" aria-labelledby="tab-pulley" hidden>
+    <div class="main">
+      <form class="panel" id="f-pulley" autocomplete="off">
+        <div id="fields-pulley" class="group"></div>
+        <button class="btn" type="submit" data-dl>Download STL</button>
+        <p class="status" id="st-pulley" role="status"></p>
+      </form>
+      <div class="view">
+        <div class="name" id="p-name">GT2-20T<small id="p-sub"></small></div>
+        <dl class="stats">
+          <div class="stat"><dt>Pitch Ø</dt><dd id="p-pd">–</dd></div>
+          <div class="stat"><dt>Outer Ø</dt><dd id="p-od">–</dd></div>
+          <div class="stat"><dt>Side wall Ø</dt><dd id="p-fd">–</dd></div>
+          <div class="stat"><dt>Total height</dt><dd id="p-h">–</dd></div>
+        </dl>
+        <div class="canvases">
+          <figure><canvas id="p-c1" aria-label="Top view of the pulley"></canvas>
+            <figcaption><span class="key"><b style="background:var(--part)"></b>teeth</span><span class="key"><b style="background:var(--part-2)"></b>side wall / hub</span><span class="key"><i></i>pitch line</span></figcaption></figure>
+          <figure><canvas id="p-c2" aria-label="Side cross-section of the pulley"></canvas>
+            <figcaption><span>Side section through the axis, bottom side wall on the bed</span></figcaption></figure>
+        </div>
+        <div class="notes">
+          <p>Groove shape matches the belt profile, widened by the groove width extra so the belt seats without binding. Outer diameter is set by the tooth count: pitch Ø = teeth × 2&nbsp;mm ÷ π, outer Ø = pitch Ø − 0.508&nbsp;mm.</p>
+          <p>The N20 option cuts a 3&nbsp;mm D-shaft hole with a 2.5&nbsp;mm flat. For a press fit on PLA or PETG start with 0.05–0.1&nbsp;mm clearance; print one and adjust. Add a hub for more grip on the shaft.</p>
+          <p class="warn" id="p-warn" hidden></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const PITCH=2;
+// GT2 2 mm tooth profile (x along belt, y = height above land), from the widely used parametric pulley profile. Ascending x.
+const PROFILE=[[0.747183,0],[0.647876,0.037218],[0.598311,0.130528],[0.578556,0.238423],[0.547158,0.343077],[0.504649,0.443762],[0.451556,0.53975],[0.358229,0.636924],[0.2484,0.707276],[0.127259,0.750044],[0,0.76447],[-0.127259,0.750044],[-0.2484,0.707276],[-0.358229,0.636924],[-0.451556,0.53975],[-0.504649,0.443762],[-0.547158,0.343077],[-0.578556,0.238423],[-0.598311,0.130528],[-0.647876,0.037218],[-0.747183,0]].reverse();
+const PROF_H=0.76447, PROF_HALF=0.747183;
+
+// ---------- field definitions ----------
+const BELT_FIELDS=[
+  {g:"Size",chips:"b_presets"},
+  {id:"b_teeth",label:"Tooth count",hint:"Pitch length = teeth × 2 mm",unit:"T",min:10,max:2000,step:1,def:100,int:true},
+  {id:"b_length",label:"Pitch length",hint:"Rounded to the nearest tooth",unit:"mm",min:20,max:4000,step:2,def:200,evt:"change"},
+  {id:"b_width",label:"Belt width",unit:"mm",min:1,max:50,step:0.5,def:6},
+  {g:"Profile"},
+  {id:"b_toothH",label:"Tooth height",unit:"mm",min:0.3,max:1.2,step:0.01,def:0.75},
+  {id:"b_backT",label:"Back thickness",hint:"Land to outer surface",unit:"mm",min:0.3,max:3,step:0.01,def:0.63},
+  {id:"b_pld",label:"Pitch line offset",hint:"Land to pitch line (PLD)",unit:"mm",min:0,max:1,step:0.001,def:0.254},
+  {id:"b_toothW",label:"Tooth width",hint:"Shrink for a looser fit",unit:"%",min:70,max:125,step:1,def:100},
+  {id:"b_seg",label:"Land segments",hint:"Mesh points between teeth",unit:"seg",min:1,max:12,step:1,def:3,int:true}
+];
+const P_OD_DEF=+(20*PITCH/Math.PI-2*0.254).toFixed(2);
+const PULLEY_FIELDS=[
+  {g:"Size",chips:"p_presets"},
+  {id:"p_teeth",label:"Tooth count",hint:"Sets the diameter",unit:"T",min:12,max:300,step:1,def:20,int:true},
+  {id:"p_od",label:"Pulley diameter",hint:"Outer Ø at the teeth; rounded to the nearest tooth",unit:"mm",min:6,max:200,step:0.01,def:P_OD_DEF,evt:"change"},
+  {id:"p_width",label:"Pulley width",hint:"Toothed section; belt width + about 1 mm",unit:"mm",min:1,max:60,step:0.5,def:7},
+  {g:"Side walls"},
+  {id:"p_fh",label:"Side wall height",hint:"Above the teeth; 0 for none",unit:"mm",min:0,max:20,step:0.1,def:1.5},
+  {id:"p_ft",label:"Side wall thickness",unit:"mm",min:0.4,max:10,step:0.1,def:1},
+  {g:"Shaft"},
+  {id:"p_bore",label:"Hole type",type:"select",options:[["round","Round hole"],["n20","N20 shaft"]],def:"round"},
+  {id:"p_bd",label:"Hole diameter",unit:"mm",min:0.5,max:100,step:0.1,def:5,show:v=>v.p_bore==="round"},
+  {id:"p_sd",label:"Shaft diameter",hint:"N20 output shaft",unit:"mm",min:1,max:10,step:0.05,def:3,show:v=>v.p_bore==="n20"},
+  {id:"p_sf",label:"Across the flat",hint:"Flat to opposite side",unit:"mm",min:0.5,max:10,step:0.05,def:2.5,show:v=>v.p_bore==="n20"},
+  {id:"p_clr",label:"Fit clearance",hint:"Added to the hole size",unit:"mm",min:-0.3,max:1,step:0.01,def:0.1},
+  {id:"p_hh",label:"Hub height",hint:"Collar on top for shaft grip; 0 for none",unit:"mm",min:0,max:30,step:0.5,def:0},
+  {id:"p_hd",label:"Hub diameter",unit:"mm",min:2,max:200,step:0.5,def:8,show:v=>+v.p_hh>0},
+  {g:"Tooth profile"},
+  {id:"p_gw",label:"Groove width extra",hint:"Clearance for the belt tooth",unit:"mm",min:-0.3,max:0.6,step:0.01,def:0.2},
+  {id:"p_gd",label:"Groove depth",unit:"%",min:60,max:130,step:1,def:100},
+  {id:"p_pld",label:"Pitch line offset",hint:"Tooth tips to pitch line",unit:"mm",min:0,max:1,step:0.001,def:0.254},
+  {id:"p_seg",label:"Land segments",hint:"Mesh points between grooves",unit:"seg",min:1,max:12,step:1,def:3,int:true}
+];
+
+function buildFields(container,fields,form){
+  let grp=null;
+  const resetAll=()=>{fields.forEach(f=>{if(f.id)$(f.id).value=f.def;});form.dispatchEvent(new Event("input",{bubbles:true}));};
+  fields.forEach((f,i)=>{
+    if(f.g){
+      grp=document.createElement("div");grp.className="group";
+      const h=document.createElement("div");h.className="ghead";
+      h.innerHTML="<h2>"+f.g+"</h2>";
+      if(i===0){const b=document.createElement("button");b.type="button";b.className="linkbtn";b.textContent="Reset all";b.addEventListener("click",resetAll);h.appendChild(b);}
+      grp.appendChild(h);
+      if(f.chips){const c=document.createElement("div");c.className="chips";c.id=f.chips;grp.appendChild(c);}
+      container.appendChild(grp);return;
+    }
+    const row=document.createElement("div");row.className="field";row.id="row_"+f.id;
+    const lab=document.createElement("label");lab.htmlFor=f.id;lab.textContent=f.label;
+    if(f.hint){const s=document.createElement("small");s.textContent=f.hint;lab.appendChild(s);}
+    const box=document.createElement("div");box.className="inp";
+    let el;
+    if(f.type==="select"){el=document.createElement("select");f.options.forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;el.appendChild(o);});}
+    else{el=document.createElement("input");el.type="number";el.min=f.min;el.max=f.max;el.step=f.step;el.inputMode="decimal";}
+    el.id=f.id;el.value=f.def;box.appendChild(el);
+    if(f.unit){const u=document.createElement("span");u.textContent=f.unit;box.appendChild(u);}
+    const rb=document.createElement("button");rb.type="button";rb.className="reset";rb.textContent="↺";
+    rb.title="Reset to "+(f.options?f.options.find(o=>o[0]===f.def)[1]:f.def+(f.unit?" "+f.unit:""));
+    rb.setAttribute("aria-label","Reset "+f.label+" to default");
+    rb.addEventListener("click",()=>{el.value=f.def;el.dispatchEvent(new Event(f.evt||"input",{bubbles:true}));el.focus();});
+    row.append(lab,box,rb);grp.appendChild(row);
+    f.el=el;f.rb=rb;f.row=row;
+  });
+}
+function readVals(fields){
+  const v={};
+  fields.forEach(f=>{
+    if(!f.id)return;
+    if(f.type==="select"){v[f.id]=f.el.value;return;}
+    let x=parseFloat(f.el.value);
+    if(!isFinite(x))x=f.def;
+    x=Math.min(f.max,Math.max(f.min,x));
+    if(f.int)x=Math.round(x);
+    v[f.id]=x;
+  });
+  return v;
+}
+function syncUI(fields,raw){
+  const rv={};fields.forEach(f=>{if(f.id)rv[f.id]=f.el.value;});
+  fields.forEach(f=>{
+    if(!f.id)return;
+    const same=f.type==="select"?f.el.value===f.def:Math.abs(parseFloat(f.el.value)-f.def)<1e-9;
+    f.rb.disabled=same;
+    if(f.show)f.row.hidden=!f.show(rv);
+  });
+}
+function store(key,fields){try{localStorage.setItem(key,JSON.stringify(Object.fromEntries(fields.filter(f=>f.id).map(f=>[f.id,f.el.value]))));}catch(e){}}
+function restore(key,fields){try{const s=JSON.parse(localStorage.getItem(key)||"null");if(s)fields.forEach(f=>{if(f.id&&s[f.id]!=null)f.el.value=s[f.id];});}catch(e){}}
+
+// ---------- geometry ----------
+// Toothed contour around a circle of radius R. Shape points inward (toward centre) by y.
+// Returns points in ascending angle, plus a flag if the contour folds back (too few teeth).
+function toothedRing(N,R,sx,sy,landSeg){
+  const pts=[], half=PROF_HALF*sx, halfAng=Math.atan2(half,R), step=2*Math.PI/N;
+  for(let k=0;k<N;k++){
+    const th=k*step,c=Math.cos(th),s=Math.sin(th);
+    for(const [x0,y0] of PROFILE){
+      const x=x0*sx,y=y0*sy;
+      if(y===0){const a=th+(x>0?halfAng:-halfAng);pts.push([R*Math.cos(a),R*Math.sin(a)]);continue;}
+      const r=R-y;pts.push([c*r-s*x,s*r+c*x]);
+    }
+    const a0=th+halfAng,a1=th+step-halfAng;
+    for(let j=1;j<landSeg;j++){const a=a0+(a1-a0)*j/landSeg;pts.push([R*Math.cos(a),R*Math.sin(a)]);}
+  }
+  // monotonic angle check
+  let ok=true,prev=null,total=0;
+  for(const p of pts){const a=Math.atan2(p[1],p[0]);if(prev!==null){let d=a-prev;if(d<-Math.PI)d+=2*Math.PI;if(d>Math.PI)d-=2*Math.PI;if(d<=0)ok=false;total+=d;}prev=a;}
+  return {pts,ok,overlap:2*half>=2*R*Math.sin(step/2)-0.05};
+}
+const ang=p=>Math.atan2(p[1],p[0]);
+const circleAt=(angles,r)=>angles.map(a=>[r*Math.cos(a),r*Math.sin(a)]);
+
+// Stacked prism mesher. All rings share the same angle sampling.
+// sections: [{z0,z1,ring}], bore: ring (inner wall through the full height).
+function stackMesh(sections,bore){
+  const n=bore.length, cnt=sections.length*2*n+2*n+4*n+(sections.length-1)*2*n;
+  const t=new Float32Array(cnt*9);let o=0;
+  const tri=(a,b,c)=>{t[o++]=a[0];t[o++]=a[1];t[o++]=a[2];t[o++]=b[0];t[o++]=b[1];t[o++]=b[2];t[o++]=c[0];t[o++]=c[1];t[o++]=c[2];};
+  const P=(q,z)=>[q[0],q[1],z];
+  const r2=q=>q[0]*q[0]+q[1]*q[1];
+  // +z facing annulus from ring a (inside) to ring b (outside)
+  const capUp=(a,b,z,i,j)=>{tri(P(a[i],z),P(b[i],z),P(b[j],z));tri(P(a[i],z),P(b[j],z),P(a[j],z));};
+  const capDown=(a,b,z,i,j)=>{tri(P(a[i],z),P(b[j],z),P(b[i],z));tri(P(a[i],z),P(a[j],z),P(b[j],z));};
+  const zmin=sections[0].z0, zmax=sections[sections.length-1].z1;
+  for(let i=0;i<n;i++){
+    const j=(i+1)%n;
+    for(const s of sections){const R=s.ring;
+      tri(P(R[i],s.z0),P(R[j],s.z0),P(R[j],s.z1));tri(P(R[i],s.z0),P(R[j],s.z1),P(R[i],s.z1));}
+    tri(P(bore[i],zmin),P(bore[i],zmax),P(bore[j],zmax));tri(P(bore[i],zmin),P(bore[j],zmax),P(bore[j],zmin));
+    capDown(bore,sections[0].ring,zmin,i,j);
+    capUp(bore,sections[sections.length-1].ring,zmax,i,j);
+    for(let k=0;k<sections.length-1;k++){
+      const lo=sections[k].ring,up=sections[k+1].ring,z=sections[k].z1;
+      if(r2(lo[i])+r2(lo[j])>=r2(up[i])+r2(up[j])) capUp(up,lo,z,i,j); else capDown(lo,up,z,i,j);
+    }
+  }
+  let v=0;
+  for(let k=0;k<t.length;k+=9){const ax=t[k],ay=t[k+1],az=t[k+2],bx=t[k+3],by=t[k+4],bz=t[k+5],cx=t[k+6],cy=t[k+7],cz=t[k+8];
+    v+=ax*(by*cz-bz*cy)-ay*(bx*cz-bz*cx)+az*(bx*cy-by*cx);}
+  if(v<0)for(let k=0;k<t.length;k+=9)for(let m=0;m<3;m++){const a=t[k+3+m];t[k+3+m]=t[k+6+m];t[k+6+m]=a;}
+  return {tris:t,volume:Math.abs(v)/6};
+}
+
+// ---------- belt ----------
+function beltModel(v){
+  const N=v.b_teeth, Rp=N*PITCH/(2*Math.PI), Rl=Rp-v.b_pld, Rb=Rl+v.b_backT, Rt=Rl-v.b_toothH;
+  const tr=toothedRing(N,Rl,v.b_toothW/100,v.b_toothH/PROF_H,v.b_seg);
+  const angles=tr.pts.map(ang), outer=circleAt(angles,Rb);
+  // The belt is a single section: outer wall = back, "bore" = toothed inner surface.
+  const m=stackMesh([{z0:0,z1:v.b_width,ring:outer}],tr.pts);
+  return {N,Rp,Rl,Rb,Rt,inner:tr.pts,outer,mesh:m,ok:tr.ok,overlap:tr.overlap,
+    name:"2GT-"+(N*PITCH)+"-"+(+v.b_width.toFixed(2))};
+}
+
+// ---------- pulley ----------
+function boreRadiusFn(v){
+  const c=v.p_clr;
+  if(v.p_bore==="n20"){
+    const R=(v.p_sd+c)/2, d=Math.min(R,(v.p_sf+c)-R), a0=Math.PI/2;
+    return {R,fn:a=>{const k=Math.cos(a-a0);return k>1e-6?Math.min(R,d/k):R;},label:"N20",desc:"N20 D-shaft "+v.p_sd+" mm, flat "+v.p_sf+" mm"};
+  }
+  const R=(v.p_bd+c)/2;
+  return {R,fn:()=>R,label:(+v.p_bd.toFixed(2))+"mm",desc:(+v.p_bd.toFixed(2))+" mm round hole"};
+}
+function pulleyModel(v){
+  const N=v.p_teeth, Rp=N*PITCH/(2*Math.PI), Rod=Rp-v.p_pld;
+  const sx=(2*PROF_HALF+v.p_gw)/(2*PROF_HALF), depth=PROF_H*v.p_gd/100;
+  const tr=toothedRing(N,Rod,sx,v.p_gd/100,v.p_seg);
+  const angles=tr.pts.map(ang);
+  const bore=boreRadiusFn(v);
+  const boreRing=angles.map(a=>{const r=bore.fn(a);return [r*Math.cos(a),r*Math.sin(a)];});
+  const hasF=v.p_fh>0, Rf=Rod+v.p_fh, ft=hasF?v.p_ft:0;
+  const hasHub=v.p_hh>0&&v.p_hd/2>bore.R+0.2, Rh=v.p_hd/2;
+  const flange=circleAt(angles,Rf), hub=circleAt(angles,Rh);
+  const secs=[];let z=0;
+  if(hasF){secs.push({z0:z,z1:z+ft,ring:flange,kind:"wall"});z+=ft;}
+  secs.push({z0:z,z1:z+v.p_width,ring:tr.pts,kind:"teeth"});z+=v.p_width;
+  if(hasF){secs.push({z0:z,z1:z+ft,ring:flange,kind:"wall"});z+=ft;}
+  if(hasHub){secs.push({z0:z,z1:z+v.p_hh,ring:hub,kind:"hub"});z+=v.p_hh;}
+  const m=stackMesh(secs,boreRing);
+  const Rroot=Rod-depth;
+  const warns=[];
+  if(!tr.ok||tr.overlap)warns.push("Grooves are too wide for this few teeth. Add teeth or reduce groove width extra.");
+  if(bore.R>Rroot-0.6)warns.push("Wall between the hole and the groove bottoms is under 0.6 mm. Use a smaller hole or more teeth.");
+  if(v.p_hh>0&&!hasHub)warns.push("Hub diameter must be larger than the hole. Hub left out.");
+  return {N,Rp,Rod,Rroot,Rf,Rh,ft,hasF,hasHub,height:z,teeth:tr.pts,boreRing,bore,secs,mesh:m,warns,
+    name:"GT2-pulley-"+N+"T-"+bore.label};
+}
+
+// ---------- files ----------
+function stl(tris,name){
+  const n=tris.length/9,buf=new ArrayBuffer(84+n*50),dv=new DataView(buf);
+  const hdr=("GT2 "+name).slice(0,79);for(let i=0;i<hdr.length;i++)dv.setUint8(i,hdr.charCodeAt(i));
+  dv.setUint32(80,n,true);let off=84;
+  for(let k=0;k<tris.length;k+=9){
+    const ux=tris[k+3]-tris[k],uy=tris[k+4]-tris[k+1],uz=tris[k+5]-tris[k+2];
+    const vx=tris[k+6]-tris[k],vy=tris[k+7]-tris[k+1],vz=tris[k+8]-tris[k+2];
+    let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;const l=Math.hypot(nx,ny,nz)||1;
+    dv.setFloat32(off,nx/l,true);dv.setFloat32(off+4,ny/l,true);dv.setFloat32(off+8,nz/l,true);off+=12;
+    for(let m=0;m<9;m++){dv.setFloat32(off,tris[k+m],true);off+=4;}
+    dv.setUint16(off,0,true);off+=2;
+  }
+  return new Uint8Array(buf);
+}
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(d){let c=0xFFFFFFFF;for(let i=0;i<d.length;i++)c=CRC[(c^d[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zip(name,data){
+  const nm=new TextEncoder().encode(name),crc=crc32(data),sz=data.length;
+  const lh=new DataView(new ArrayBuffer(30));
+  lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint32(14,crc,true);lh.setUint32(18,sz,true);lh.setUint32(22,sz,true);lh.setUint16(26,nm.length,true);
+  const ch=new DataView(new ArrayBuffer(46));
+  ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint32(16,crc,true);ch.setUint32(20,sz,true);ch.setUint32(24,sz,true);ch.setUint16(28,nm.length,true);
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true);end.setUint16(8,1,true);end.setUint16(10,1,true);end.setUint32(12,46+nm.length,true);end.setUint32(16,30+nm.length+sz,true);
+  return new Blob([lh.buffer,nm,data,ch.buffer,nm,end.buffer],{type:"application/zip"});
+}
+let dlCap=null;
+const hasClaude=!!(window.claude&&window.claude.use);
+const capReady=hasClaude?window.claude.use("downloads").then(d=>{dlCap=d;if(d)document.querySelectorAll("[data-dl]").forEach(b=>b.textContent="Download STL (.zip)");return d;}).catch(()=>null):Promise.resolve(null);
+async function download(name,tris,st){
+  const data=stl(tris,name);
+  if(hasClaude){
+    st.textContent="Preparing…";
+    const d=dlCap||await capReady;
+    if(d){
+      try{await d.save({filename:name+".zip",data:zip(name+".stl",data)});st.textContent="Saved "+name+".zip. Unzip it to get "+name+".stl.";}
+      catch(err){st.textContent=err&&err.code==="declined"?"Download cancelled.":"This view can't save files. Open the page in a browser to download.";}
+      return;
+    }
+  }
+  const url=URL.createObjectURL(new Blob([data],{type:"model/stl"}));
+  const a=document.createElement("a");a.href=url;a.download=name+".stl";document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  st.textContent="Saved "+name+".stl";
+}
+
+// ---------- drawing ----------
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function prep(cv){
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth||300;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(w*dpr);
+  const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,w);return [g,w];
+}
+function ringPath(g,rings,tf){
+  g.beginPath();
+  for(const r of rings){r.forEach((q,i)=>{const [x,y]=tf(q);i?g.lineTo(x,y):g.moveTo(x,y);});g.closePath();}
+}
+function dashedCircle(g,cx,cy,r,col){g.setLineDash([5,4]);g.strokeStyle=col;g.lineWidth=1.2;g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.stroke();g.setLineDash([]);}
+
+function drawBelt(v,b){
+  const rub=css("--rubber"),edge=css("--rubber-edge"),pitch=css("--pitch"),muted=css("--muted"),line=css("--line"),mono=css("--f-mono");
+  let [g,w]=prep($("b-c1"));
+  const sc=(w/2-10)/b.Rb,c=w/2,tf=q=>[c+q[0]*sc,c-q[1]*sc];
+  ringPath(g,[b.outer,b.inner],tf);g.fillStyle=rub;g.fill("evenodd");
+  dashedCircle(g,c,c,b.Rp*sc,pitch);
+  g.fillStyle=muted;g.font="12px "+mono;g.textAlign="center";g.fillText("Ø"+(2*b.Rp).toFixed(2)+" pitch",c,c+4);
+
+  [g,w]=prep($("b-c2"));
+  const span=9,s2=w/span,top=b.Rl+span/2,tf2=q=>[w/2+q[0]*s2,(top-q[1])*s2];
+  g.strokeStyle=line;g.lineWidth=1;
+  for(let x=-4;x<=4;x+=1){const X=w/2+x*s2;g.beginPath();g.moveTo(X,0);g.lineTo(X,w);g.stroke();}
+  const rot=q=>[-q[1],q[0]];
+  ringPath(g,[b.outer.map(rot),b.inner.map(rot)],tf2);g.fillStyle=rub;g.fill("evenodd");g.strokeStyle=edge;g.stroke();
+  g.setLineDash([6,4]);g.strokeStyle=pitch;g.lineWidth=1.5;g.beginPath();g.arc(w/2,top*s2,b.Rp*s2,Math.PI*1.25,Math.PI*1.75);g.stroke();g.setLineDash([]);
+  g.font="11px "+mono;g.textAlign="left";g.fillStyle=muted;
+  g.fillText("back "+v.b_backT.toFixed(2)+" mm",8,(top-b.Rb)*s2-8);
+  g.fillText("total "+(v.b_backT+v.b_toothH).toFixed(2)+" mm, PLD "+v.b_pld.toFixed(3),8,Math.min(w-8,(top-b.Rt)*s2+18));
+  g.textAlign="right";g.fillText("2.00 pitch",w-8,w-10);
+}
+
+function drawPulley(v,p){
+  const part=css("--part"),part2=css("--part-2"),pitch=css("--pitch"),muted=css("--muted"),fg=css("--fg"),bg=css("--panel"),mono=css("--f-mono");
+  // top view
+  let [g,w]=prep($("p-c1"));
+  const Rmax=Math.max(p.hasF?p.Rf:0,p.Rod,p.hasHub?p.Rh:0);
+  const sc=(w/2-12)/Rmax,c=w/2,tf=q=>[c+q[0]*sc,c-q[1]*sc];
+  if(p.hasF){ringPath(g,[circleAt([...Array(180).keys()].map(i=>i*Math.PI/90),p.Rf),p.boreRing],tf);g.fillStyle=part2;g.fill("evenodd");}
+  ringPath(g,[p.teeth,p.boreRing],tf);g.fillStyle=part;g.fill("evenodd");
+  if(p.hasHub){g.strokeStyle=part2;g.lineWidth=1.5;g.beginPath();g.arc(c,c,p.Rh*sc,0,Math.PI*2);g.stroke();}
+  dashedCircle(g,c,c,p.Rp*sc,pitch);
+  // side section
+  [g,w]=prep($("p-c2"));
+  const padX=14,padTop=26,padBot=30;
+  const s=Math.min((w-2*padX-70)/(2*Rmax),(w-padTop-padBot)/p.height);
+  const cx=padX+Rmax*s, base=w-padBot;
+  const X=x=>cx+x*s, Y=z=>base-z*s;
+  for(const sec of p.secs){
+    const R=sec.kind==="teeth"?p.Rod:sec.kind==="hub"?p.Rh:p.Rf;
+    g.fillStyle=sec.kind==="teeth"?part:part2;
+    g.fillRect(X(-R),Y(sec.z1),2*R*s,(sec.z1-sec.z0)*s);
+    if(sec.kind==="teeth"){g.strokeStyle=bg;g.lineWidth=1;g.setLineDash([3,3]);
+      for(const xr of [-p.Rroot,p.Rroot]){g.beginPath();g.moveTo(X(xr),Y(sec.z0));g.lineTo(X(xr),Y(sec.z1));g.stroke();}g.setLineDash([]);}
+  }
+  g.fillStyle=bg;g.fillRect(X(-p.bore.R),Y(p.height),2*p.bore.R*s,p.height*s);
+  g.strokeStyle=muted;g.lineWidth=1;g.setLineDash([6,3,1,3]);g.beginPath();g.moveTo(cx,Y(p.height)-8);g.lineTo(cx,base+8);g.stroke();g.setLineDash([]);
+  // dimensions on the right
+  const dx=X(Rmax)+14;
+  g.strokeStyle=muted;g.fillStyle=muted;g.font="11px "+mono;g.textAlign="left";
+  const dim=(z0,z1,label,off)=>{const x=dx+off;g.beginPath();g.moveTo(x,Y(z0));g.lineTo(x,Y(z1));g.moveTo(x-3,Y(z0));g.lineTo(x+3,Y(z0));g.moveTo(x-3,Y(z1));g.lineTo(x+3,Y(z1));g.stroke();
+    g.save();g.translate(x+12,(Y(z0)+Y(z1))/2);g.fillText(label,0,4);g.restore();};
+  const tsec=p.secs.find(q=>q.kind==="teeth");
+  dim(tsec.z0,tsec.z1,v.p_width+" mm",0);
+  g.textAlign="center";g.fillStyle=fg;
+  g.fillText("total "+p.height.toFixed(2)+" mm",cx,Y(p.height)-12);
+  g.fillStyle=muted;
+  g.fillText("Ø"+(2*p.Rod).toFixed(2)+(p.hasF?"  ·  wall Ø"+(2*p.Rf).toFixed(2):""),cx,base+20);
+}
+
+// ---------- tabs ----------
+const tabs=[["belt",$("tab-belt"),$("pane-belt")],["pulley",$("tab-pulley"),$("pane-pulley")]];
+function selectTab(name,focus){
+  tabs.forEach(([n,t,p])=>{const on=n===name;t.setAttribute("aria-selected",String(on));t.tabIndex=on?0:-1;p.hidden=!on;if(on&&focus)t.focus();});
+  try{localStorage.setItem("gt2tab",name);}catch(e){}
+  redraw();
+}
+tabs.forEach(([n,t],i)=>{t.addEventListener("click",()=>selectTab(n));
+  t.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();selectTab(tabs[(i+(e.key==="ArrowRight"?1:tabs.length-1))%tabs.length][0],true);}});});
+
+// ---------- belt wiring ----------
+const fb=$("f-belt");
+buildFields($("fields-belt"),BELT_FIELDS,fb);
+restore("gt2belt2",BELT_FIELDS);
+[110,158,200,280,400,610,852].forEach(l=>{const b=document.createElement("button");b.type="button";b.className="chip";b.dataset.l=l;b.textContent=l;
+  b.addEventListener("click",()=>{$("b_length").value=l;$("b_teeth").value=l/2;updateBelt();});$("b_presets").appendChild(b);});
+$("b_teeth").addEventListener("input",()=>{const n=Math.round(parseFloat($("b_teeth").value));if(n>=10)$("b_length").value=n*PITCH;});
+$("b_length").addEventListener("change",()=>{const n=Math.max(10,Math.round(parseFloat($("b_length").value)/PITCH))||100;$("b_teeth").value=n;$("b_length").value=n*PITCH;});
+let belt=null;
+function updateBelt(){
+  syncUI(BELT_FIELDS);
+  const v=readVals(BELT_FIELDS),b=beltModel(v);belt={v,b};
+  $("b-name").firstChild.nodeValue=b.name;
+  $("b-sub").textContent=b.N+" teeth · "+(b.N*PITCH)+" mm pitch length · "+v.b_width+" mm wide · ≈"+(b.mesh.volume/1000).toFixed(2)+" cm³";
+  $("b-pd").textContent=(2*b.Rp).toFixed(2)+" mm";$("b-od").textContent=(2*b.Rb).toFixed(2)+" mm";
+  $("b-id").textContent=(2*b.Rt).toFixed(2)+" mm";$("b-tri").textContent=(b.mesh.tris.length/9).toLocaleString();
+  const bad=!b.ok||b.overlap;$("b-warn").hidden=!bad;$("b-warn").textContent=bad?"Teeth are so wide that neighbouring teeth touch. Reduce tooth width.":"";
+  document.querySelectorAll("#b_presets .chip").forEach(c=>c.setAttribute("aria-pressed",String(+c.dataset.l===b.N*PITCH)));
+  if(!$("pane-belt").hidden)drawBelt(v,b);
+  store("gt2belt2",BELT_FIELDS);
+}
+fb.addEventListener("input",updateBelt);fb.addEventListener("change",updateBelt);
+fb.addEventListener("submit",e=>{e.preventDefault();updateBelt();download(belt.b.name,belt.b.mesh.tris,$("st-belt"));});
+
+// ---------- pulley wiring ----------
+const fp=$("f-pulley");
+buildFields($("fields-pulley"),PULLEY_FIELDS,fp);
+restore("gt2pulley",PULLEY_FIELDS);
+const odOf=n=>+(n*PITCH/Math.PI-2*(parseFloat($("p_pld").value)||0.254)).toFixed(2);
+[16,20,24,30,36,40,60].forEach(n=>{const b=document.createElement("button");b.type="button";b.className="chip";b.dataset.n=n;b.textContent=n+"T";
+  b.addEventListener("click",()=>{$("p_teeth").value=n;$("p_od").value=odOf(n);updatePulley();});$("p_presets").appendChild(b);});
+$("p_teeth").addEventListener("input",()=>{const n=Math.round(parseFloat($("p_teeth").value));if(n>=12)$("p_od").value=odOf(n);});
+$("p_pld").addEventListener("input",()=>{const n=Math.round(parseFloat($("p_teeth").value));if(n>=12)$("p_od").value=odOf(n);});
+$("p_od").addEventListener("change",()=>{
+  const pld=parseFloat($("p_pld").value)||0.254,d=parseFloat($("p_od").value);
+  const n=Math.min(300,Math.max(12,Math.round(Math.PI*(d+2*pld)/PITCH)))||20;
+  $("p_teeth").value=n;$("p_od").value=odOf(n);
+});
+let pul=null;
+function updatePulley(){
+  syncUI(PULLEY_FIELDS);
+  const v=readVals(PULLEY_FIELDS),p=pulleyModel(v);pul={v,p};
+  $("p-name").firstChild.nodeValue=p.name;
+  $("p-sub").textContent=p.N+" teeth · "+p.bore.desc+" · "+(p.mesh.tris.length/9).toLocaleString()+" triangles";
+  $("p-pd").textContent=(2*p.Rp).toFixed(2)+" mm";$("p-od").textContent=(2*p.Rod).toFixed(2)+" mm";
+  $("p-fd").textContent=p.hasF?(2*p.Rf).toFixed(2)+" mm":"none";$("p-h").textContent=p.height.toFixed(2)+" mm";
+  $("p-warn").hidden=!p.warns.length;$("p-warn").textContent=p.warns.join(" ");
+  document.querySelectorAll("#p_presets .chip").forEach(c=>c.setAttribute("aria-pressed",String(+c.dataset.n===p.N)));
+  if(!$("pane-pulley").hidden)drawPulley(v,p);
+  store("gt2pulley",PULLEY_FIELDS);
+}
+fp.addEventListener("input",updatePulley);fp.addEventListener("change",updatePulley);
+fp.addEventListener("submit",e=>{e.preventDefault();updatePulley();download(pul.p.name,pul.p.mesh.tris,$("st-pulley"));});
+
+function redraw(){updateBelt();updatePulley();}
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(redraw,80);});
+const mq=window.matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",redraw);
+new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(redraw);
+let start="belt";try{start=localStorage.getItem("gt2tab")||"belt";}catch(e){}
+selectTab(start==="pulley"?"pulley":"belt");
+})();
+</script>

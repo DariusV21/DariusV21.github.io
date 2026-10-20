@@ -1,7 +1,7 @@
 // Public tools shown in the "Tools" section.
-// Hosted by the Inventory_Tracker repo on GitHub Pages (login-system/public).
-// To add a tool: drop the .html into login-system/public, push, and add an entry here.
-const TOOLS_BASE = "https://dariusv21.github.io/Inventory_Tracker/";
+// The tools live in the /tools folder of this repo.
+// To add a tool: drop the .html into /tools and add an entry here.
+const TOOLS_BASE = "tools/";
 
 const tools = [
     {

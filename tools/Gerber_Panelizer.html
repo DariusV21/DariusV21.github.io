@@ -1,0 +1,3199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerber Panelizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench — settings column on the left, live 3D/2D panel preview on the right; stacks on narrow screens */
+:root{
+  --bg:#eef1f4; --panel:#f8fafb; --line:#d3d9e0; --fg:#1b232c; --muted:#5d6975;
+  --accent:#2c5f8f; --accent-fg:#fff; --warn:#b4531a; --ok:#2f7d4a; --view:#dfe4ea;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13181d; --panel:#1a2027; --line:#2c353f; --fg:#e3e8ed; --muted:#93a0ad;
+  --accent:#6fa4d6; --accent-fg:#0d141b; --warn:#f0954a; --ok:#6cc58a; --view:#0e1216; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13181d; --panel:#1a2027; --line:#2c353f; --fg:#e3e8ed; --muted:#93a0ad;
+  --accent:#6fa4d6; --accent-fg:#0d141b; --warn:#f0954a; --ok:#6cc58a; --view:#0e1216; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
+.app{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);height:100vh}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr);height:auto}}
+.side{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:16px 16px 28px;display:grid;gap:14px;align-content:start}
+@media (max-width:900px){.side{border-right:0;border-bottom:1px solid var(--line);order:2}}
+.side header h1{font:700 1.6rem/1.1 var(--f-display);margin:0;letter-spacing:.01em}
+.side header p{margin:.3rem 0 0;color:var(--muted);font-size:.88rem}
+.sec{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px}
+.sec h2{font:600 .78rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 2px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 128px 26px;align-items:center;gap:8px}
+.row label{font-size:.9rem}
+.row.chk{grid-template-columns:auto minmax(0,1fr) 26px}
+.reset{width:26px;height:26px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--accent);cursor:pointer;display:grid;place-items:center;padding:0}
+.reset[hidden]{display:grid!important;visibility:hidden}
+.reset:hover{border-color:var(--accent)}
+.reset:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row.chk input{width:18px;height:18px;margin:0;accent-color:var(--accent)}
+.inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:4px;background:var(--bg);min-width:0}
+.inp:focus-within{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.inp input,.inp select{width:100%;min-width:0;border:0;background:transparent;color:var(--fg);font:500 .92rem var(--f-mono);padding:6px 4px 6px 8px;outline:none;font-variant-numeric:tabular-nums}
+.inp select{font:500 .84rem var(--f-body);cursor:pointer}
+.inp span{font:.76rem var(--f-mono);color:var(--muted);padding-right:8px}
+.row.wide{grid-template-columns:minmax(0,1fr)}
+.btn{font:600 1rem var(--f-display);letter-spacing:.03em;background:var(--accent);color:var(--accent-fg);border:0;border-radius:4px;padding:10px 14px;cursor:pointer;width:100%}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+.btn.sec2{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.files{display:grid;gap:6px;max-height:260px;overflow:auto}
+.file{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:6px;align-items:center;font-size:.8rem}
+.file code{font:.76rem var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file select{width:100%;font:.78rem var(--f-body);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:3px;padding:3px}
+.designs{display:grid;gap:6px}
+.design{border:1px solid var(--line);border-radius:4px;background:var(--bg);min-width:0}
+.dhead{display:grid;grid-template-columns:12px auto minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;background:transparent;border:0;color:var(--fg);padding:7px 8px;cursor:pointer;text-align:left;font:inherit}
+.dhead:hover .dname{color:var(--accent)}
+.dhead:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px}
+.dhead svg{transition:transform .15s;color:var(--muted)}
+.dhead[aria-expanded="true"] svg{transform:rotate(90deg)}
+.dtag{font:600 .72rem/1.3 var(--f-mono);color:var(--accent-fg);background:var(--accent);border-radius:3px;padding:1px 5px}
+.dname{font:.8rem var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dmeta{font:.72rem var(--f-mono);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dmeta.err{color:var(--warn)}
+.dbody{border-top:1px solid var(--line);padding:8px;display:grid;gap:8px}
+.dbody .file select{background:var(--panel)}
+.dcount{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dcount label{display:grid;gap:3px;font-size:.78rem;color:var(--muted)}
+.dcount .inp{background:var(--panel)}
+.dcount .inp select{font:500 .84rem var(--f-body);padding:5px 4px 5px 8px}
+.dcount .dchk{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:var(--fg);font-size:.84rem}
+.dcount .dchk input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
+.dacts{display:flex;flex-wrap:wrap;gap:6px}
+.btn.sm{font-size:.84rem;padding:5px 10px;width:auto}
+.btn.sm.danger{color:var(--warn)}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+.status{font-size:.82rem;color:var(--muted);min-height:1.2em;margin:0}
+.stage{display:grid;grid-template-rows:auto auto minmax(0,1fr);min-width:0;min-height:0}
+@media (max-width:900px){.stage{order:1;grid-template-rows:auto auto 62vh}}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{font:600 .86rem var(--f-display);letter-spacing:.03em;background:transparent;color:var(--muted);border:0;padding:6px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.toolbar .sp{flex:1}
+.stats{display:flex;flex-wrap:wrap;gap:4px 18px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+.stats b{font:500 .86rem var(--f-mono);color:var(--fg);font-variant-numeric:tabular-nums}
+.stats .warn{color:var(--warn);flex-basis:100%}
+.viewport{position:relative;background:var(--view);min-height:0;overflow:hidden}
+#v3d,#v2d{position:absolute;inset:0;width:100%;height:100%}
+#v2d{cursor:grab;touch-action:none}
+#v2d.drag{cursor:grabbing}
+.drop{position:absolute;inset:16px;border:2px dashed var(--line);border-radius:10px;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.drop h2{font:700 1.4rem var(--f-display);color:var(--fg);margin:0 0 6px}
+.drop .btns{max-width:420px;margin:14px auto 0}
+.coord{position:absolute;right:10px;bottom:8px;font:.75rem var(--f-mono);color:var(--muted);background:color-mix(in srgb,var(--panel) 80%,transparent);padding:2px 6px;border-radius:3px;pointer-events:none}
+.busy{position:absolute;left:10px;bottom:8px;font:.78rem var(--f-body);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <header>
+      <h1>Gerber Panelizer</h1>
+      <p>Load a Gerber ZIP, tweak the settings and see the panel update instantly. Fabrication files use JLCPCB, PCBWay or KiCad naming.</p>
+    </header>
+    <section class="sec" id="sec-files">
+      <h2>Files</h2>
+      <div class="btns">
+        <button class="btn" type="button" id="btn-open">Load ZIP / files</button>
+        <button class="btn sec2" type="button" id="btn-demo">Demo board</button>
+      </div>
+      <input type="file" id="file-in" multiple accept=".zip,.gbr,.ger,.gtl,.gbl,.gts,.gbs,.gto,.gbo,.gtp,.gbp,.gko,.gm1,.gml,.drl,.xln,.txt,.g1,.g2,.g3,.g4,.exc,.csv,.pos" hidden>
+      <input type="file" id="file-add" multiple accept=".zip,.gbr,.ger,.gtl,.gbl,.gts,.gbs,.gto,.gbo,.gtp,.gbp,.gko,.gm1,.gml,.drl,.xln,.txt,.g1,.g2,.g3,.g4,.exc,.csv,.pos" hidden>
+      <p class="hint" id="board-info">No board loaded.</p>
+      <div class="designs" id="files"></div>
+      <button class="btn sec2" type="button" id="btn-add-design" hidden>+ Add another design</button>
+      <p class="hint">Add a CPL (KiCad .pos / .csv, JLC CSV) and a BOM (CSV) in the same ZIP, or with a design’s own “Load files” button, to get panelized pick-and-place files.</p>
+    </section>
+    <div id="settings"></div>
+    <section class="sec">
+      <h2>Fabrication output</h2>
+      <button class="btn" type="button" id="btn-export" disabled>Download Gerber ZIP</button>
+      <div class="btns">
+        <button class="btn sec2" type="button" id="btn-cpl" disabled>Download CPL</button>
+        <button class="btn sec2" type="button" id="btn-bom" disabled>Download BOM</button>
+      </div>
+      <p class="status" id="export-status" role="status"></p>
+    </section>
+    <section class="sec">
+      <h2>Settings</h2>
+      <div class="btns">
+        <button class="btn sec2" type="button" id="btn-save-set">Export settings</button>
+        <button class="btn sec2" type="button" id="btn-load-set">Import settings</button>
+      </div>
+      <input type="file" id="set-in" accept=".json,application/json" hidden>
+      <button class="btn sec2" type="button" id="btn-reset">Reset all to defaults</button>
+      <p class="status" id="set-status" role="status"></p>
+    </section>
+  </aside>
+
+  <main class="stage">
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="What to show">
+        <button type="button" data-what="panel" aria-pressed="true">Panel</button>
+        <button type="button" data-what="single" aria-pressed="false">Single board</button>
+      </div>
+      <div class="inp" id="design-pick" hidden style="width:auto"><select id="design-sel" aria-label="Design to show"></select></div>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-mode="3d" aria-pressed="true">3D</button>
+        <button type="button" data-mode="top" aria-pressed="false">Top</button>
+        <button type="button" data-mode="bottom" aria-pressed="false">Bottom</button>
+      </div>
+      <span class="sp"></span>
+      <button class="btn sec2" type="button" id="btn-fit" style="width:auto;padding:6px 12px;font-size:.86rem">Fit view</button>
+    </div>
+    <div class="stats" id="stats"><span>Load a board to see the panel dimensions.</span></div>
+    <div class="viewport" id="viewport">
+      <div id="v3d"></div>
+      <canvas id="v2d" hidden></canvas>
+      <div class="drop" id="drop">
+        <div>
+          <h2>Drop Gerber files here</h2>
+          <p>A ZIP archive or loose .gbr / .gtl / .drl files (KiCad, Altium, EasyEDA…), plus optional CPL and BOM.</p>
+          <div class="btns">
+            <button class="btn" type="button" id="btn-open2">Choose files</button>
+            <button class="btn sec2" type="button" id="btn-demo2">Try the demo</button>
+          </div>
+        </div>
+      </div>
+      <span class="coord" id="coord" hidden></span>
+      <span class="busy" id="busy"></span>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+/* ======================================================================
+   Gerber Panelizer — single-file tool, everything runs in the browser.
+   Flow: Gerber/Excellon parsers → board model → panel geometry →
+   raster composition (2D/3D) → export.
+   Vidiniai matmenys – mm, Gerber operacijos saugomos failo vienetais.
+   ====================================================================== */
+
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fmt = (v, d = 2) => (+v).toFixed(d).replace(/\.?0+$/, '') || '0';
+
+/* ---------------------------------------------------------------- Gerber */
+
+function evalExpr(src, vars) {
+  const s = src.replace(/\s+/g, '');
+  let p = 0;
+  const expr = () => {
+    let v = term();
+    while (s[p] === '+' || s[p] === '-') { const o = s[p++]; const t = term(); v = o === '+' ? v + t : v - t; }
+    return v;
+  };
+  const term = () => {
+    let v = factor();
+    while (s[p] === 'x' || s[p] === 'X' || s[p] === '/') { const o = s[p++]; const f = factor(); v = o === '/' ? v / f : v * f; }
+    return v;
+  };
+  const factor = () => {
+    const c = s[p];
+    if (c === '+') { p++; return factor(); }
+    if (c === '-') { p++; return -factor(); }
+    if (c === '(') { p++; const v = expr(); p++; return v; }
+    if (c === '$') { p++; const st = p; while (p < s.length && s[p] >= '0' && s[p] <= '9') p++; return vars[+s.slice(st, p)] || 0; }
+    const st = p; while (p < s.length && /[0-9.]/.test(s[p])) p++;
+    return parseFloat(s.slice(st, p)) || 0;
+  };
+  return expr();
+}
+
+function parseGerber(text) {
+  const G = { units: 'mm', ops: [], aps: {}, apText: {}, macros: {}, macroText: [], fileFunction: null, warn: [], maxAp: 10 };
+  const fs = { lz: true, inc: false, xi: 4, xd: 6, yi: 4, yd: 6 };
+  let x = 0, y = 0, interp = 'L', single = false, ap = null, pol = 'D', lastD = null;
+  let region = null, contour = null, sr = null;
+
+  const coord = (v, axis) => {
+    if (v.indexOf('.') >= 0) return parseFloat(v);
+    let neg = false;
+    if (v[0] === '+' || v[0] === '-') { neg = v[0] === '-'; v = v.slice(1); }
+    const di = axis === 'x' ? fs.xi : fs.yi, dd = axis === 'x' ? fs.xd : fs.yd;
+    if (!fs.lz) while (v.length < di + dd) v += '0';
+    const n = parseInt(v, 10) / Math.pow(10, dd);
+    return neg ? -n : n;
+  };
+  const endSR = () => {
+    if (!sr) return;
+    const block = G.ops.slice(sr.start);
+    for (let ix = 0; ix < sr.nx; ix++) for (let iy = 0; iy < sr.ny; iy++) {
+      if (!ix && !iy) continue;
+      const dx = ix * sr.dx, dy = iy * sr.dy;
+      for (const op of block) G.ops.push(moveOp(op, dx, dy));
+    }
+    sr = null;
+  };
+  const ext = raw => {
+    const c = raw.replace(/[\r\n]/g, '');
+    const cmd = c.slice(0, 2);
+    if (cmd === 'FS') {
+      const m = /FS([LTD]?)([AI]?)X(\d)(\d)Y(\d)(\d)/.exec(c);
+      if (m) { fs.lz = m[1] !== 'T'; fs.inc = m[2] === 'I'; fs.xi = +m[3]; fs.xd = +m[4]; fs.yi = +m[5]; fs.yd = +m[6]; }
+    } else if (cmd === 'MO') {
+      G.units = c.startsWith('MOIN') ? 'in' : 'mm';
+    } else if (cmd === 'AD') {
+      const m = /^ADD(\d+)([^,*]+)(?:,([^*]*))?/.exec(c);
+      if (m) {
+        const code = +m[1];
+        G.aps[code] = { name: m[2], params: m[3] ? m[3].split(/X/).map(Number) : [] };
+        G.apText[code] = '%' + c.trim().replace(/\*?$/, '*') + '%';
+        G.maxAp = Math.max(G.maxAp, code);
+      }
+    } else if (cmd === 'AM') {
+      const k = c.indexOf('*');
+      const name = c.slice(2, k);
+      G.macros[name] = c.slice(k + 1).split('*').map(t => t.trim()).filter(Boolean);
+      G.macroText.push('%' + raw.trim().replace(/\*?$/, '*') + '%');
+    } else if (cmd === 'LP') {
+      pol = c[2] === 'C' ? 'C' : 'D';
+    } else if (cmd === 'SR') {
+      endSR();
+      const g = l => { const m = new RegExp(l + '([\\d.+-]+)').exec(c); return m ? +m[1] : null; };
+      const nx = g('X') || 1, ny = g('Y') || 1;
+      if (nx > 1 || ny > 1) sr = { nx, ny, dx: g('I') || 0, dy: g('J') || 0, start: G.ops.length };
+    } else if (c.startsWith('TF.FileFunction')) {
+      G.fileFunction = c.slice(16).replace(/\*$/, '');
+    } else if (/^(LR|LM|LS)/.test(c) && !/^(LR0|LMN|LS1)\b/.test(c)) {
+      G.warn.push('Unsupported command ' + c.slice(0, 4) + ' – the preview may be inaccurate');
+    } else if (c.startsWith('IPNEG')) {
+      G.warn.push('Negative image layers (IPNEG) are not supported');
+    }
+  };
+  const arcCenter = (x1, y1, x2, y2, i, j, cw) => {
+    if (!single) return [x1 + i, y1 + j];
+    let best = null, bestErr = Infinity;
+    for (const si of [1, -1]) for (const sj of [1, -1]) {
+      const cx = x1 + si * Math.abs(i), cy = y1 + sj * Math.abs(j);
+      const r1 = Math.hypot(x1 - cx, y1 - cy), r2 = Math.hypot(x2 - cx, y2 - cy);
+      let sw = Math.atan2(y2 - cy, x2 - cx) - Math.atan2(y1 - cy, x1 - cx);
+      if (cw) sw = -sw;
+      sw = ((sw % TAU) + TAU) % TAU;
+      if (sw > Math.PI / 2 + 1e-3) continue;
+      const e = Math.abs(r1 - r2);
+      if (e < bestErr) { bestErr = e; best = [cx, cy]; }
+    }
+    return best || [x1 + i, y1 + j];
+  };
+  const word = w => {
+    if (!w || w.startsWith('G04') || w.startsWith('G4 ')) return;
+    if (w === 'M02' || w === 'M00' || w === 'M30') return;
+    const re = /([A-Z])([+-]?[0-9.]+)/g;
+    let m, nx = null, ny = null, ni = 0, nj = 0, d = null, hasCoord = false;
+    while ((m = re.exec(w))) {
+      const v = m[2];
+      switch (m[1]) {
+        case 'G': {
+          const g = +v;
+          if (g === 1) interp = 'L'; else if (g === 2) interp = 'CW'; else if (g === 3) interp = 'CCW';
+          else if (g === 36) { region = { t: 'R', pol, contours: [] }; contour = null; }
+          else if (g === 37) {
+            if (region) {
+              if (contour && contour.segs.length) region.contours.push(contour);
+              if (region.contours.length) G.ops.push(region);
+            }
+            region = null; contour = null;
+          }
+          else if (g === 74) single = true; else if (g === 75) single = false;
+          else if (g === 70) G.units = 'in'; else if (g === 71) G.units = 'mm';
+          else if (g === 91) fs.inc = true; else if (g === 90) fs.inc = false;
+          break;
+        }
+        case 'D': d = +v; break;
+        case 'X': nx = coord(v, 'x'); hasCoord = true; break;
+        case 'Y': ny = coord(v, 'y'); hasCoord = true; break;
+        case 'I': ni = coord(v, 'x'); hasCoord = true; break;
+        case 'J': nj = coord(v, 'y'); hasCoord = true; break;
+      }
+    }
+    if (d !== null && d >= 10) { ap = d; return; }
+    let op = d;
+    if (op === null) { if (!hasCoord) return; op = lastD || 2; }
+    if (op < 1 || op > 3) return;
+    lastD = op;
+    const tx = nx === null ? x : (fs.inc ? x + nx : nx);
+    const ty = ny === null ? y : (fs.inc ? y + ny : ny);
+    if (op === 1) {
+      let seg;
+      if (interp === 'L') seg = { t: 'L', x1: x, y1: y, x2: tx, y2: ty };
+      else {
+        const cw = interp === 'CW';
+        const [cx, cy] = arcCenter(x, y, tx, ty, ni, nj, cw);
+        seg = { t: 'A', x1: x, y1: y, x2: tx, y2: ty, cx, cy, cw };
+      }
+      if (region) {
+        if (!contour) contour = { x0: x, y0: y, segs: [] };
+        contour.segs.push(seg);
+      } else {
+        seg.ap = ap; seg.pol = pol;
+        G.ops.push(seg);
+      }
+    } else if (op === 2) {
+      if (region) {
+        if (contour && contour.segs.length) region.contours.push(contour);
+        contour = { x0: tx, y0: ty, segs: [] };
+      }
+    } else if (op === 3) {
+      G.ops.push({ t: 'F', ap, x: tx, y: ty, pol });
+    }
+    x = tx; y = ty;
+  };
+
+  const N = text.length;
+  let i = 0;
+  while (i < N) {
+    const c = text[i];
+    if (c === '%') {
+      const j = text.indexOf('%', i + 1);
+      if (j < 0) break;
+      ext(text.slice(i + 1, j));
+      i = j + 1;
+    } else if (c <= ' ') i++;
+    else {
+      let j = text.indexOf('*', i);
+      if (j < 0) j = N;
+      const w = text.slice(i, j);
+      word(w.startsWith('G04') ? w : w.replace(/\s+/g, ''));
+      i = j + 1;
+    }
+  }
+  endSR();
+  return G;
+}
+
+function moveOp(op, dx, dy) {
+  const o = Object.assign({}, op);
+  if (o.t === 'F') { o.x += dx; o.y += dy; }
+  else if (o.t === 'R') o.contours = o.contours.map(c => ({ x0: c.x0 + dx, y0: c.y0 + dy, segs: c.segs.map(s => moveSeg(s, dx, dy)) }));
+  else return Object.assign(moveSeg(o, dx, dy), { ap: o.ap, pol: o.pol });
+  return o;
+}
+function moveSeg(s, dx, dy) {
+  const o = Object.assign({}, s);
+  o.x1 += dx; o.y1 += dy; o.x2 += dx; o.y2 += dy;
+  if (o.t === 'A') { o.cx += dx; o.cy += dy; }
+  return o;
+}
+
+/* Aperture → list of primitive shapes (file units), exposure on/off */
+function rot(x, y, deg) {
+  if (!deg) return [x, y];
+  const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  return [x * c - y * s, x * s + y * c];
+}
+function circlePts(cx, cy, r, n = 48) {
+  const pts = [];
+  for (let k = 0; k < n; k++) pts.push([cx + r * Math.cos(k / n * TAU), cy + r * Math.sin(k / n * TAU)]);
+  return pts;
+}
+function obroundPts(w, h) {
+  const pts = [], r = Math.min(w, h) / 2, n = 16;
+  if (w >= h) {
+    const d = w / 2 - r;
+    for (let k = 0; k <= n; k++) { const a = -Math.PI / 2 + k / n * Math.PI; pts.push([d + r * Math.cos(a), r * Math.sin(a)]); }
+    for (let k = 0; k <= n; k++) { const a = Math.PI / 2 + k / n * Math.PI; pts.push([-d + r * Math.cos(a), r * Math.sin(a)]); }
+  } else {
+    const d = h / 2 - r;
+    for (let k = 0; k <= n; k++) { const a = k / n * Math.PI; pts.push([r * Math.cos(a), d + r * Math.sin(a)]); }
+    for (let k = 0; k <= n; k++) { const a = Math.PI + k / n * Math.PI; pts.push([r * Math.cos(a), -d + r * Math.sin(a)]); }
+  }
+  return pts;
+}
+function holeShape(d) { return d > 0 ? [{ on: false, pts: circlePts(0, 0, d / 2) }] : []; }
+
+function apShapes(G, code) {
+  const a = G.aps[code];
+  if (!a) return [];
+  const p = a.params;
+  switch (a.name) {
+    case 'C': return [{ on: true, circle: [0, 0, (p[0] || 0) / 2] }, ...holeShape(p[1])];
+    case 'R': { const w = p[0] / 2, h = (p[1] || p[0]) / 2; return [{ on: true, pts: [[-w, -h], [w, -h], [w, h], [-w, h]] }, ...holeShape(p[2])]; }
+    case 'O': return [{ on: true, pts: obroundPts(p[0], p[1] || p[0]) }, ...holeShape(p[2])];
+    case 'P': {
+      const n = Math.max(3, Math.round(p[1] || 3)), r = p[0] / 2, ro = p[2] || 0, pts = [];
+      for (let k = 0; k < n; k++) pts.push(rot(r * Math.cos(k / n * TAU), r * Math.sin(k / n * TAU), ro));
+      return [{ on: true, pts }, ...holeShape(p[3])];
+    }
+  }
+  const body = G.macros[a.name];
+  if (!body) return [{ on: true, circle: [0, 0, (p[0] || 0.1) / 2] }];
+  const vars = {}; p.forEach((v, k) => vars[k + 1] = v);
+  const out = [];
+  for (const st of body) {
+    if (/^0(\s|$)/.test(st)) continue;
+    const asg = /^\$(\d+)=(.+)$/.exec(st);
+    if (asg) { vars[+asg[1]] = evalExpr(asg[2], vars); continue; }
+    const parts = st.split(',');
+    const code2 = parseInt(parts[0], 10);
+    const v = parts.slice(1).map(e => evalExpr(e, vars));
+    const on = code2 === 6 ? true : v[0] !== 0;
+    const R = (pts, deg) => pts.map(q => rot(q[0], q[1], deg));
+    if (code2 === 1) {
+      const [cx, cy] = rot(v[2], v[3], v[4] || 0);
+      out.push({ on, circle: [cx, cy, v[1] / 2] });
+    } else if (code2 === 20 || code2 === 2) {
+      const [, w, x1, y1, x2, y2, rr] = v;
+      const len = Math.hypot(x2 - x1, y2 - y1) || 1e-9, nx = -(y2 - y1) / len * w / 2, ny = (x2 - x1) / len * w / 2;
+      out.push({ on, pts: R([[x1 + nx, y1 + ny], [x2 + nx, y2 + ny], [x2 - nx, y2 - ny], [x1 - nx, y1 - ny]], rr || 0) });
+    } else if (code2 === 21) {
+      const [, w, h, cx, cy, rr] = v;
+      out.push({ on, pts: R([[cx - w / 2, cy - h / 2], [cx + w / 2, cy - h / 2], [cx + w / 2, cy + h / 2], [cx - w / 2, cy + h / 2]], rr || 0) });
+    } else if (code2 === 22) {
+      const [, w, h, lx, ly, rr] = v;
+      out.push({ on, pts: R([[lx, ly], [lx + w, ly], [lx + w, ly + h], [lx, ly + h]], rr || 0) });
+    } else if (code2 === 4) {
+      const n = Math.round(v[1]), pts = [];
+      for (let k = 0; k <= n; k++) pts.push([v[2 + k * 2], v[3 + k * 2]]);
+      out.push({ on, pts: R(pts, v[4 + n * 2] || 0) });
+    } else if (code2 === 5) {
+      const n = Math.round(v[1]), pts = [];
+      for (let k = 0; k < n; k++) pts.push([v[2] + v[4] / 2 * Math.cos(k / n * TAU), v[3] + v[4] / 2 * Math.sin(k / n * TAU)]);
+      out.push({ on, pts: R(pts, v[5] || 0) });
+    } else if (code2 === 7) {
+      const [cx, cy, od, id, gap, rr] = v;
+      out.push({ on: true, circle: [...rot(cx, cy, rr || 0), od / 2] });
+      out.push({ on: false, circle: [...rot(cx, cy, rr || 0), id / 2] });
+      out.push({ on: false, pts: R([[cx - od, cy - gap / 2], [cx + od, cy - gap / 2], [cx + od, cy + gap / 2], [cx - od, cy + gap / 2]], rr || 0) });
+      out.push({ on: false, pts: R([[cx - gap / 2, cy - od], [cx + gap / 2, cy - od], [cx + gap / 2, cy + od], [cx - gap / 2, cy + od]], rr || 0) });
+    } else if (code2 === 6) {
+      const [cx, cy, od, th, gap, n, cth, clen, rr] = v;
+      let d = od;
+      for (let k = 0; k < n && d > 0; k++) {
+        out.push({ on: true, circle: [...rot(cx, cy, rr || 0), d / 2] });
+        out.push({ on: false, circle: [...rot(cx, cy, rr || 0), Math.max(0, d / 2 - th)] });
+        d -= 2 * (th + gap);
+      }
+      out.push({ on: true, pts: R([[cx - clen / 2, cy - cth / 2], [cx + clen / 2, cy - cth / 2], [cx + clen / 2, cy + cth / 2], [cx - clen / 2, cy + cth / 2]], rr || 0) });
+      out.push({ on: true, pts: R([[cx - cth / 2, cy - clen / 2], [cx + cth / 2, cy - clen / 2], [cx + cth / 2, cy + clen / 2], [cx - cth / 2, cy + clen / 2]], rr || 0) });
+    }
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------- Excellon */
+
+function parseExcellon(text, name) {
+  const D = { tools: {}, holes: [], slots: [], plated: null };
+  let units = 'in', unitsSet = false, lz = null, fi = 2, fd = 4, fmtSet = false;
+  let tool = null, x = 0, y = 0, inc = false, mode = 'drill', down = false;
+  const f = () => units === 'mm' ? 1 : 25.4;
+  const num = v => {
+    if (v.indexOf('.') >= 0) return parseFloat(v) * f();
+    let neg = false;
+    if (v[0] === '+' || v[0] === '-') { neg = v[0] === '-'; v = v.slice(1); }
+    if (lz === true) while (v.length < fi + fd) v += '0';
+    const n = parseInt(v, 10) / Math.pow(10, fd) * f();
+    return neg ? -n : n;
+  };
+  const setUnits = u => { units = u; unitsSet = true; if (!fmtSet) { if (u === 'mm') { fi = 3; fd = 3; } else { fi = 2; fd = 4; } } };
+  if (/npth|non[-_ ]?plated/i.test(name)) D.plated = false;
+  else if (/(^|[^n])pth|plated/i.test(name)) D.plated = true;
+  const xy = line => {
+    const mx = /X([+-]?[\d.]+)/.exec(line), my = /Y([+-]?[\d.]+)/.exec(line);
+    let nx = mx ? num(mx[1]) : null, ny = my ? num(my[1]) : null;
+    if (inc) { nx = x + (nx || 0); ny = y + (ny || 0); }
+    return [nx === null ? x : nx, ny === null ? y : ny];
+  };
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line[0] === ';') {
+      let m;
+      if ((m = /FORMAT=\{(\d):(\d)/.exec(line)) || (m = /FILE_FORMAT=(\d):(\d)/.exec(line))) { fi = +m[1]; fd = +m[2]; fmtSet = true; }
+      if (/NON_PLATED|NonPlated/i.test(line)) D.plated = false;
+      else if (/TYPE=PLATED|FileFunction,Plated/i.test(line)) D.plated = true;
+      continue;
+    }
+    let m;
+    if (/^(METRIC|INCH)/.test(line)) {
+      setUnits(line.startsWith('METRIC') ? 'mm' : 'in');
+      if (/,LZ/.test(line)) lz = true; else if (/,TZ/.test(line)) lz = false;
+      if ((m = /,(0+)\.(0+)/.exec(line))) { fi = m[1].length; fd = m[2].length; fmtSet = true; }
+      continue;
+    }
+    if (line === 'M71') { setUnits('mm'); continue; }
+    if (line === 'M72') { setUnits('in'); continue; }
+    if ((m = /^T(\d+)(?:[^C]*)C([\d.]+)/.exec(line))) { D.tools[+m[1]] = parseFloat(m[2]) * f(); if (!/[XY]/.test(line)) continue; }
+    if ((m = /^T(\d+)$/.exec(line)) || (m = /^T(\d+)[^C\d]/.exec(line))) { tool = +m[1] || null; if (!/X|Y/.test(line)) continue; }
+    if (line === 'G90') { inc = false; continue; }
+    if (line === 'G91') { inc = true; continue; }
+    if (line === 'G05' || line === 'G81') { mode = 'drill'; down = false; continue; }
+    if (line === 'M15') { down = true; continue; }
+    if (line === 'M16' || line === 'M17') { down = false; continue; }
+    if (line === 'M30' || line === 'M00') continue;
+    if (/G85/.test(line)) {
+      const [a, b] = line.split('G85');
+      const p1 = xy(a); x = p1[0]; y = p1[1];
+      const p2 = xy(b);
+      if (tool) D.slots.push({ t: tool, x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1] });
+      x = p2[0]; y = p2[1];
+      continue;
+    }
+    if (/^G00/.test(line)) { mode = 'route'; down = false; [x, y] = xy(line); continue; }
+    if (/^G0?1/.test(line) && /[XY]/.test(line)) {
+      const [nx, ny] = xy(line);
+      if (tool && mode === 'route' && down) D.slots.push({ t: tool, x1: x, y1: y, x2: nx, y2: ny });
+      x = nx; y = ny; continue;
+    }
+    if (/^[XY]/.test(line)) {
+      const [nx, ny] = xy(line);
+      x = nx; y = ny;
+      if (tool) D.holes.push({ t: tool, x, y });
+    }
+  }
+  if (!unitsSet && Object.values(D.tools).some(d => d > 10)) D.warn = 'Drill file units are unknown';
+  return D;
+}
+
+/* ---------------------------------------------------------------- CPL / BOM tables */
+
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  // pick the delimiter from the busiest of the first lines (Altium files start with a few preamble lines)
+  const top = text.split(/\r?\n/).slice(0, 30);
+  const delim = [',', ';', '\t'].map(d => [d, Math.max(0, ...top.map(l => l.split(d).length))]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = [];
+  let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== '')).map(r => r.map(c => c.trim()));
+}
+function toCSV(rows) {
+  return rows.map(r => r.map(c => { c = String(c); return /[",\r\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',')).join('\r\n') + '\r\n';
+}
+const COLS = {
+  ref: ['designator', 'designators', 'ref', 'refs', 'reference', 'references', 'refdes'],
+  x: ['midx', 'posx', 'centerx', 'centerxmm', 'centerxmil', 'x', 'refx', 'locationx'],
+  y: ['midy', 'posy', 'centery', 'centerymm', 'centerymil', 'y', 'refy', 'locationy'],
+  rot: ['rotation', 'rot', 'angle', 'rotate'],
+  side: ['layer', 'side', 'tb'],
+  val: ['val', 'value', 'comment'],
+  pkg: ['package', 'footprint'],
+  qty: ['qty', 'quantity', 'count']
+};
+const normHead = h => String(h).toLowerCase().replace(/[\s_"'().#-]/g, '');
+function findCol(head, key) { const n = head.map(normHead); for (const c of COLS[key]) { const i = n.indexOf(c); if (i >= 0) return i; } return -1; }
+/* Returns {head, rows, type:'cpl'|'bom'} or null */
+function parseTable(text, name) {
+  const lines = text.replace(/^﻿/, '').split(/\r?\n/);
+  const kh = lines.find(l => /^#\s*Ref\s+Val\s+Package\s+PosX/i.test(l));
+  if (kh) { // KiCad ASCII .pos
+    const head = ['Ref', 'Val', 'Package', 'PosX', 'PosY', 'Rot', 'Side'], rows = [];
+    for (const l of lines) {
+      if (!l.trim() || l.trim()[0] === '#') continue;
+      const t = l.trim().split(/\s+/);
+      if (t.length < 7) continue;
+      rows.push([t[0], t[1], t.slice(2, t.length - 4).join(' '), ...t.slice(-4)]);
+    }
+    return { head, rows, type: 'cpl' };
+  }
+  if (!/\.(csv|txt|pos|tsv)$/i.test(name)) return null;
+  const all = parseCSV(text);
+  for (let i = 0; i < Math.min(all.length, 30); i++) {
+    const h = all[i];
+    if (findCol(h, 'ref') < 0) continue;
+    const type = findCol(h, 'x') >= 0 && findCol(h, 'y') >= 0 ? 'cpl' : 'bom';
+    return { head: h, rows: all.slice(i + 1), type };
+  }
+  return null;
+}
+function sniffTable(name, text) { try { const t = parseTable(text, name); return t ? t.type : null; } catch (e) { return null; } }
+const parseLen = v => {
+  const m = /([+-]?\d*\.?\d+(?:e[+-]?\d+)?)\s*(mm|mil|in)?/i.exec(String(v));
+  if (!m) return NaN;
+  const n = parseFloat(m[1]), u = (m[2] || 'mm').toLowerCase();
+  return u === 'mil' ? n * 0.0254 : u === 'in' ? n * 25.4 : n;
+};
+/* Works out where the CPL coordinates are measured from, by checking which origin puts the parts on the board */
+function cplOrigin(T, B, mode) {
+  const xi = findCol(T.head, 'x'), yi = findCol(T.head, 'y');
+  const pts = T.rows.map(r => [parseLen(r[xi]), parseLen(r[yi])]).filter(p => isFinite(p[0]) && isFinite(p[1]));
+  const cands = { abs: [0, 0, 'same origin as the Gerbers'], bl: [B.minX, B.minY, 'board bottom-left corner'], tl: [B.minX, B.maxY, 'board top-left corner'] };
+  const score = o => pts.filter(([x, y]) => x + o[0] >= B.minX - 1 && x + o[0] <= B.maxX + 1 && y + o[1] >= B.minY - 1 && y + o[1] <= B.maxY + 1).length;
+  let key = mode;
+  if (!cands[key]) key = Object.keys(cands).reduce((a, b) => score(cands[b]) > score(cands[a]) ? b : a, 'abs');
+  const o = cands[key];
+  return { dx: o[0], dy: o[1], label: o[2], inside: score(o), total: pts.length };
+}
+/* Designator for copy i (0-based, counted within its design) of design dn (1-based).
+   One design: PN1_R1. Several designs merged into one panel: D1PN1_R1, D2PN1_R1 … */
+const refName = (i, ref, dn) => (DESIGNS.length > 1 ? 'D' + (dn || 1) : '') + (S.refPrefix || 'PN') + (i + 1) + '_' + ref;
+const copiesOf = (P, D) => P.copies.filter(cp => cp.D === D);
+function panelCPL(P) {
+  const out = [['Designator', 'Val', 'Package', 'Mid X', 'Mid Y', 'Rotation', 'Layer']], origins = [];
+  for (const D of loadedDesigns()) {
+    const T = mergedTable(D, 'cpl');
+    if (!T) continue;
+    const ci = { ref: findCol(T.head, 'ref'), x: findCol(T.head, 'x'), y: findCol(T.head, 'y'), rot: findCol(T.head, 'rot'), side: findCol(T.head, 'side'), val: findCol(T.head, 'val'), pkg: findCol(T.head, 'pkg') };
+    const o = cplOrigin(T, D.board, S.cplOrigin);
+    origins.push(Object.assign({ D }, o));
+    const get = (r, k) => ci[k] >= 0 ? (r[ci[k]] || '') : '';
+    copiesOf(P, D).forEach(cp => {
+      for (const r of T.rows) {
+        const ref = get(r, 'ref'), x = parseLen(get(r, 'x')), y = parseLen(get(r, 'y'));
+        if (!ref || !isFinite(x) || !isFinite(y)) continue;
+        const bottom = /^(b|bot|bottom|b\.cu|bottomlayer)$/i.test(get(r, 'side').replace(/\s+/g, ''));
+        const [px, py] = cpXY(cp, x + o.dx, y + o.dy);
+        // a rotated copy turns every part with it (angles as seen from the top, like KiCad / JLC)
+        const rt = cp.rot ? String(+((((parseFloat(get(r, 'rot')) || 0) + cp.rot) % 360 + 360) % 360).toFixed(4)) : (get(r, 'rot') || '0');
+        out.push([refName(cp.i, ref, cp.dn), get(r, 'val'), get(r, 'pkg'), px.toFixed(4) + 'mm', py.toFixed(4) + 'mm', rt, bottom ? 'Bottom' : 'Top']);
+      }
+    });
+  }
+  const outside = origins.reduce((a, o) => a + o.total - o.inside, 0);
+  return { csv: toCSV(out), parts: out.length - 1, origins, outside, first: out[1] && out[1][0], last: out.length > 1 ? out[out.length - 1][0] : '' };
+}
+/* BOM for the panel. With several designs the columns are united (matched by name) and lines that describe
+   the same part (every column except designator and quantity equal) are merged into one line. */
+function panelBOM(P) {
+  const tabs = loadedDesigns().map(D => ({ D, T: mergedTable(D, 'bom') })).filter(x => x.T);
+  if (!tabs.length) return null;
+  const head = tabs[0].T.head.slice();
+  for (const { T } of tabs.slice(1)) for (const h of T.head) if (!head.some(x => normHead(x) === normHead(h))) head.push(h);
+  const ri = findCol(head, 'ref'), qi = findCol(head, 'qty');
+  const out = [head], byKey = new Map();
+  let parts = 0;
+  for (const { D, T } of tabs) {
+    const map = head.map((h, i) => T === tabs[0].T ? (i < T.head.length ? i : -1) : T.head.findIndex(x => normHead(x) === normHead(h)));
+    const cps = copiesOf(P, D), tri = findCol(T.head, 'ref'), tqi = findCol(T.head, 'qty');
+    for (const r of T.rows) {
+      const row = map.map(i => i >= 0 ? (r[i] || '') : '');
+      const refs = (r[tri] || '').split(/[,;\s]+/).filter(Boolean);
+      const nr = [];
+      for (const ref of refs) for (const cp of cps) nr.push(refName(cp.i, ref, cp.dn));
+      row[ri] = nr.join(',');
+      parts += nr.length;
+      if (qi >= 0 && tqi >= 0 && /^\d+$/.test(r[tqi] || '')) row[qi] = String(+r[tqi] * cps.length);
+      if (tabs.length > 1) {
+        const key = row.map((c, i) => i === ri || i === qi ? '' : c.trim().toLowerCase()).join('\u0001');
+        const prev = byKey.get(key);
+        if (prev) {
+          prev[ri] = [prev[ri], row[ri]].filter(Boolean).join(',');
+          if (qi >= 0 && /^\d+$/.test(prev[qi]) && /^\d+$/.test(row[qi])) prev[qi] = String(+prev[qi] + +row[qi]);
+          continue;
+        }
+        byKey.set(key, row);
+      }
+      out.push(row);
+    }
+  }
+  return { csv: toCSV(out), parts };
+}
+
+/* ---------------------------------------------------------------- Layer detection */
+
+const KINDS = [
+  ['cuTop', 'Top copper'], ['cuBot', 'Bottom copper'], ['cuIn', 'Inner copper'],
+  ['maskTop', 'Top solder mask'], ['maskBot', 'Bottom solder mask'],
+  ['silkTop', 'Top silkscreen'], ['silkBot', 'Bottom silkscreen'],
+  ['pasteTop', 'Top paste'], ['pasteBot', 'Bottom paste'],
+  ['outline', 'Outline (Edge Cuts)'], ['pth', 'Drill PTH'], ['npth', 'Drill NPTH'],
+  ['cpl', 'CPL / pick and place'], ['bom', 'BOM'],
+  ['other', 'Other Gerber'], ['ignore', 'Ignore']
+];
+const KIND_NAME = Object.fromEntries(KINDS);
+
+function detectKind(name, text) {
+  const n = name.toLowerCase().split('/').pop();
+  const head = text.slice(0, 4000);
+  const isGerber = /%FS[LTD]?[AI]?X\d\d/.test(head) || /%MO(MM|IN)/.test(head);
+  const isDrill = !isGerber && (/^\s*M48/m.test(head) || /^(;.*\n|\s)*M48/.test(head) || (/^T\d+C[\d.]+/m.test(head) && /^X[+-]?[\d.]+Y/m.test(text)));
+  if (isDrill) return { kind: /npth|non[-_ ]?plated/i.test(n) || /NON_PLATED|NonPlated/.test(head) ? 'npth' : 'pth' };
+  if (!isGerber) { const t = sniffTable(name, text); return { kind: t || 'ignore' }; }
+  const ff = /%TF\.FileFunction,([^*]*)\*/.exec(head);
+  if (ff) {
+    const p = ff[1].split(',');
+    if (p[0] === 'Copper') {
+      if (p[2] === 'Top') return { kind: 'cuTop' };
+      if (p[2] === 'Bot') return { kind: 'cuBot' };
+      return { kind: 'cuIn', idx: Math.max(1, (parseInt((p[1] || 'L2').slice(1), 10) || 2) - 1) };
+    }
+    const side = p[1] === 'Bot' ? 'Bot' : 'Top';
+    if (p[0] === 'Soldermask') return { kind: 'mask' + side };
+    if (p[0] === 'Legend') return { kind: 'silk' + side };
+    if (p[0] === 'Paste') return { kind: 'paste' + side };
+    if (p[0] === 'Profile') return { kind: 'outline' };
+  }
+  const ext = (/\.([a-z0-9]+)$/.exec(n) || [, ''])[1];
+  const EXT = { gtl: 'cuTop', gbl: 'cuBot', gts: 'maskTop', gbs: 'maskBot', gto: 'silkTop', gbo: 'silkBot', gtp: 'pasteTop', gbp: 'pasteBot', gko: 'outline', gm1: 'outline', gml: 'outline', gm: 'outline', oln: 'outline', cmp: 'cuTop', sol: 'cuBot', stc: 'maskTop', sts: 'maskBot', plc: 'silkTop', pls: 'silkBot', crc: 'pasteTop', crs: 'pasteBot' };
+  if (EXT[ext]) return { kind: EXT[ext] };
+  let m;
+  if ((m = /^g(\d+)$/.exec(ext)) || (m = /^gl(\d+)$/.exec(ext))) return { kind: 'cuIn', idx: +m[1] };
+  const pats = [
+    [/edge[_.]?cuts|outline|profile|keep.?out/, 'outline'],
+    [/in(\d+)[_.]cu|inner.?layer.?(\d+)/, 'cuIn'],
+    [/f[_.]cu|top.?(layer|copper)|copper.?top/, 'cuTop'],
+    [/b[_.]cu|bottom.?(layer|copper)|copper.?bot/, 'cuBot'],
+    [/f[_.]mask|top.?(solder)?.?mask|mask.?top/, 'maskTop'],
+    [/b[_.]mask|bottom.?(solder)?.?mask|mask.?bot/, 'maskBot'],
+    [/f[_.]silk|top.?silk|silk.?top|f[_.]legend/, 'silkTop'],
+    [/b[_.]silk|bottom.?silk|silk.?bot|b[_.]legend/, 'silkBot'],
+    [/f[_.]paste|top.?paste|paste.?top/, 'pasteTop'],
+    [/b[_.]paste|bottom.?paste|paste.?bot/, 'pasteBot']
+  ];
+  for (const [re, k] of pats) {
+    const mm = re.exec(n);
+    if (mm) return k === 'cuIn' ? { kind: k, idx: +(mm[1] || mm[2]) || 1 } : { kind: k };
+  }
+  return { kind: 'other' };
+}
+
+/* ---------------------------------------------------------------- Geometry */
+
+function arcSweep(s) {
+  const a1 = Math.atan2(s.y1 - s.cy, s.x1 - s.cx), a2 = Math.atan2(s.y2 - s.cy, s.x2 - s.cx);
+  if (Math.hypot(s.x2 - s.x1, s.y2 - s.y1) < 1e-9) return [a1, s.cw ? -TAU : TAU];
+  let sw = a2 - a1;
+  if (s.cw) { sw = -(((-sw) % TAU + TAU) % TAU); if (sw === 0) sw = -TAU; }
+  else { sw = ((sw % TAU) + TAU) % TAU; if (sw === 0) sw = TAU; }
+  return [a1, sw];
+}
+function tessSeg(s, tol = 0.01) {
+  if (s.t === 'L') return [[s.x1, s.y1], [s.x2, s.y2]];
+  const r = Math.hypot(s.x1 - s.cx, s.y1 - s.cy);
+  const [a1, sw] = arcSweep(s);
+  const step = r > tol ? 2 * Math.acos(1 - tol / r) : Math.PI / 4;
+  const n = clamp(Math.ceil(Math.abs(sw) / step), 2, 720);
+  const pts = [];
+  for (let k = 0; k <= n; k++) { const a = a1 + sw * k / n; pts.push([s.cx + r * Math.cos(a), s.cy + r * Math.sin(a)]); }
+  pts[0] = [s.x1, s.y1]; pts[n] = [s.x2, s.y2];
+  return pts;
+}
+function segsBBox(segs) {
+  const b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const s of segs) for (const [x, y] of tessSeg(s, 0.05)) {
+    if (x < b.minX) b.minX = x; if (x > b.maxX) b.maxX = x;
+    if (y < b.minY) b.minY = y; if (y > b.maxY) b.maxY = y;
+  }
+  return b;
+}
+function scaleSeg(s, u) {
+  const o = { t: s.t, x1: s.x1 * u, y1: s.y1 * u, x2: s.x2 * u, y2: s.y2 * u };
+  if (s.t === 'A') { o.cx = s.cx * u; o.cy = s.cy * u; o.cw = s.cw; }
+  return o;
+}
+function roundRectSegs(x0, y0, x1, y1, r) {
+  r = Math.min(r, (x1 - x0) / 2, (y1 - y0) / 2);
+  return [
+    { t: 'L', x1: x0 + r, y1: y0, x2: x1 - r, y2: y0 }, { t: 'A', x1: x1 - r, y1: y0, x2: x1, y2: y0 + r, cx: x1 - r, cy: y0 + r, cw: false },
+    { t: 'L', x1: x1, y1: y0 + r, x2: x1, y2: y1 - r }, { t: 'A', x1: x1, y1: y1 - r, x2: x1 - r, y2: y1, cx: x1 - r, cy: y1 - r, cw: false },
+    { t: 'L', x1: x1 - r, y1: y1, x2: x0 + r, y2: y1 }, { t: 'A', x1: x0 + r, y1: y1, x2: x0, y2: y1 - r, cx: x0 + r, cy: y1 - r, cw: false },
+    { t: 'L', x1: x0, y1: y1 - r, x2: x0, y2: y0 + r }, { t: 'A', x1: x0, y1: y0 + r, x2: x0 + r, y2: y0, cx: x0 + r, cy: y0 + r, cw: false }
+  ];
+}
+function rectSegs(x0, y0, x1, y1) {
+  return [
+    { t: 'L', x1: x0, y1: y0, x2: x1, y2: y0 }, { t: 'L', x1: x1, y1: y0, x2: x1, y2: y1 },
+    { t: 'L', x1: x1, y1: y1, x2: x0, y2: y1 }, { t: 'L', x1: x0, y1: y1, x2: x0, y2: y0 }
+  ];
+}
+
+/* Joins polylines into closed loops */
+function chainLoops(polys, tol = 0.02) {
+  const items = polys.filter(p => p.length >= 2).map(p => ({ pts: p, used: false }));
+  const grid = new Map(), key = (x, y) => Math.round(x / tol) + ',' + Math.round(y / tol);
+  const add = (pt, it, end) => { const k = key(pt[0], pt[1]); if (!grid.has(k)) grid.set(k, []); grid.get(k).push({ it, end }); };
+  for (const it of items) { add(it.pts[0], it, 0); add(it.pts[it.pts.length - 1], it, 1); }
+  const find = pt => {
+    const gx = Math.round(pt[0] / tol), gy = Math.round(pt[1] / tol);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      const lst = grid.get((gx + dx) + ',' + (gy + dy));
+      if (!lst) continue;
+      for (const e of lst) {
+        if (e.it.used) continue;
+        const q = e.end ? e.it.pts[e.it.pts.length - 1] : e.it.pts[0];
+        if (Math.abs(q[0] - pt[0]) <= tol && Math.abs(q[1] - pt[1]) <= tol) return e;
+      }
+    }
+    return null;
+  };
+  const close = (a, b) => Math.abs(a[0] - b[0]) <= tol && Math.abs(a[1] - b[1]) <= tol;
+  const loops = [], open = [];
+  for (const it of items) {
+    if (it.used) continue;
+    it.used = true;
+    let chain = it.pts.slice(), flipped = false;
+    for (;;) {
+      if (chain.length > 2 && close(chain[0], chain[chain.length - 1])) { loops.push(chain); chain = null; break; }
+      const e = find(chain[chain.length - 1]);
+      if (!e) {
+        if (flipped) break;
+        chain.reverse(); flipped = true; continue;
+      }
+      e.it.used = true;
+      const pts = e.end ? e.it.pts.slice().reverse() : e.it.pts;
+      for (let k = 1; k < pts.length; k++) chain.push(pts[k]);
+    }
+    if (chain) open.push(chain);
+  }
+  return { loops, open };
+}
+function polyArea(p) { let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] + p[i][0]) * (p[j][1] - p[i][1]); return a / 2; }
+function pointInPoly(pt, p) {
+  let c = false;
+  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+    if ((p[i][1] > pt[1]) !== (p[j][1] > pt[1]) && pt[0] < (p[j][0] - p[i][0]) * (pt[1] - p[i][1]) / (p[j][1] - p[i][1]) + p[i][0]) c = !c;
+  }
+  return c;
+}
+/* Loops → outer shapes with holes (for the 3D shape) */
+function nestLoops(loops) {
+  const L = loops.map(p => ({ p, area: Math.abs(polyArea(p)), depth: 0, parent: null, holes: [] }));
+  L.sort((a, b) => b.area - a.area);
+  for (let i = 0; i < L.length; i++) {
+    for (let j = i - 1; j >= 0; j--) {
+      if (L[j].area > L[i].area && pointInPoly(L[i].p[0], L[j].p)) { L[i].parent = L[j]; L[i].depth = L[j].depth + 1; break; }
+    }
+  }
+  const outers = L.filter(l => l.depth % 2 === 0);
+  for (const l of L) if (l.depth % 2 === 1 && l.parent) l.parent.holes.push(l.p);
+  return outers.map(o => ({ outer: o.p, holes: o.holes }));
+}
+
+/* Parts of a segment outside a rectangle (Liang–Barsky) */
+function clipOutside(p1, p2, R) {
+  const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+  let t0 = 0, t1 = 1;
+  const P = [-dx, dx, -dy, dy], Q = [p1[0] - R[0], R[2] - p1[0], p1[1] - R[1], R[3] - p1[1]];
+  for (let k = 0; k < 4; k++) {
+    if (P[k] === 0) { if (Q[k] < 0) return [[p1, p2]]; }
+    else {
+      const t = Q[k] / P[k];
+      if (P[k] < 0) { if (t > t1) return [[p1, p2]]; if (t > t0) t0 = t; }
+      else { if (t < t0) return [[p1, p2]]; if (t < t1) t1 = t; }
+    }
+  }
+  const lerp = t => [p1[0] + dx * t, p1[1] + dy * t], out = [];
+  if (t0 > 1e-9) out.push([p1, lerp(t0)]);
+  if (t1 < 1 - 1e-9) out.push([lerp(t1), p2]);
+  return out;
+}
+function bboxHit(pts, R) {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const [x, y] of pts) { if (x < a) a = x; if (y < b) b = y; if (x > c) c = x; if (y > d) d = y; }
+  return !(c < R[0] || a > R[2] || d < R[1] || b > R[3]);
+}
+function clipSegs(segs, rects) {
+  let cur = segs;
+  for (const R of rects) {
+    const next = [];
+    for (const s of cur) {
+      const pts = tessSeg(s, 0.01);
+      if (!bboxHit(pts, R)) { next.push(s); continue; }
+      for (let k = 0; k + 1 < pts.length; k++)
+        for (const [a, b] of clipOutside(pts[k], pts[k + 1], R)) {
+          // drop slivers left where a tessellated curve just grazes the clip boundary
+          if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.02) next.push({ t: 'L', x1: a[0], y1: a[1], x2: b[0], y2: b[1] });
+        }
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+/* ---------------------------------------------------------------- Stroke font (silkscreen) */
+
+const FONT_SRC = {
+  A: '0,0 0,4 2,6 4,4 4,0|0,3 4,3', B: '0,0 0,6 3,6 4,5 4,4 3,3 0,3|3,3 4,2 4,1 3,0 0,0', C: '4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1',
+  D: '0,0 0,6 3,6 4,5 4,1 3,0 0,0', E: '4,6 0,6 0,0 4,0|0,3 3,3', F: '4,6 0,6 0,0|0,3 3,3', G: '4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,3 2,3',
+  H: '0,0 0,6|4,0 4,6|0,3 4,3', I: '1,6 3,6|2,6 2,0|1,0 3,0', J: '4,6 4,1 3,0 1,0 0,1', K: '0,0 0,6|4,6 0,2|1,3 4,0', L: '0,6 0,0 4,0',
+  M: '0,0 0,6 2,3 4,6 4,0', N: '0,0 0,6 4,0 4,6', O: '1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0', P: '0,0 0,6 3,6 4,5 4,4 3,3 0,3',
+  Q: '1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0|2,2 4,0', R: '0,0 0,6 3,6 4,5 4,4 3,3 0,3|2,3 4,0',
+  S: '4,5 3,6 1,6 0,5 0,4 1,3 3,3 4,2 4,1 3,0 1,0 0,1', T: '0,6 4,6|2,6 2,0', U: '0,6 0,1 1,0 3,0 4,1 4,6', V: '0,6 2,0 4,6',
+  W: '0,6 1,0 2,3 3,0 4,6', X: '0,0 4,6|0,6 4,0', Y: '0,6 2,3 4,6|2,3 2,0', Z: '0,6 4,6 0,0 4,0',
+  0: '1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0|0,1 4,5', 1: '1,5 2,6 2,0|1,0 3,0', 2: '0,5 1,6 3,6 4,5 4,4 0,0 4,0',
+  3: '0,5 1,6 3,6 4,5 4,4 3,3 4,2 4,1 3,0 1,0 0,1|1,3 3,3', 4: '3,0 3,6 0,2 4,2', 5: '4,6 0,6 0,3 3,3 4,2 4,1 3,0 0,0',
+  6: '4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,2 3,3 0,3', 7: '0,6 4,6 1,0', 8: '1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3 1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3',
+  9: '0,1 1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,4 1,3 4,3', '-': '1,3 3,3', '.': '2,0 2,0.4', '_': '0,0 4,0', ':': '2,1 2,1.4|2,4 2,4.4',
+  '/': '0,0 4,6', '+': '0,3 4,3|2,1 2,5', '(': '3,6 2,5 2,1 3,0', ')': '1,6 2,5 2,1 1,0', '#': '1,0 1,6|3,0 3,6|0,2 4,2|0,4 4,4', '=': '0,2 4,2|0,4 4,4'
+};
+const FONT = {};
+for (const [ch, src] of Object.entries(FONT_SRC)) FONT[ch] = src.split('|').map(st => st.split(' ').map(p => p.split(',').map(Number)));
+const LT_MAP = { 'Ą': 'A', 'Č': 'C', 'Ę': 'E', 'Ė': 'E', 'Į': 'I', 'Š': 'S', 'Ų': 'U', 'Ū': 'U', 'Ž': 'Z' };
+
+function textWidth(str, h) { return str.length ? (str.length * 6 - 2) * h / 6 : 0; }
+/* Returns lines [x1,y1,x2,y2] in mm. (cx,cy) is the text centre, deg the rotation */
+function textLines(str, cx, cy, h, deg = 0) {
+  const k = h / 6, w = textWidth(str, h), out = [];
+  [...str.toUpperCase()].forEach((ch, i) => {
+    const g = FONT[LT_MAP[ch] || ch];
+    if (!g) return;
+    const ox = i * 6 * k - w / 2, oy = -h / 2;
+    for (const st of g) for (let j = 0; j + 1 < st.length; j++) {
+      const [ax, ay] = rot(ox + st[j][0] * k, oy + st[j][1] * k, deg);
+      const [bx, by] = rot(ox + st[j + 1][0] * k, oy + st[j + 1][1] * k, deg);
+      out.push([cx + ax, cy + ay, cx + bx, cy + by]);
+    }
+  });
+  return out;
+}
+
+/* ---------------------------------------------------------------- Board model */
+
+/* Every loaded design (Gerber set) is one entry. Design 1 uses the Layout settings (columns, rows, rotation,
+   nesting), the others keep their own copies of those.
+   {name, entries, board: {layers, segs, polySegs, minX.., w, h, loops}, raster, img, open, cols, rows, rotPat, rotAngle, nest} */
+let DESIGNS = [];
+let PANEL = null;
+let BOARD_UID = 0;
+const loadedDesigns = () => DESIGNS.filter(D => D.board);
+const hasBoard = () => DESIGNS.some(D => D.board);
+const multiDesign = () => DESIGNS.length > 1;
+const dNum = D => DESIGNS.indexOf(D) + 1;
+const D_KEYS = ['cols', 'rows', 'rotPat', 'rotAngle', 'nest', 'qty', 'autoRot', 'fill'];
+const dGet = (D, k) => D === DESIGNS[0] ? S[k] : D[k];
+const dCols = D => dGet(D, 'cols');
+const dRows = D => dGet(D, 'rows');
+/* Rotation (degrees CCW, 0/90/180/270) of the copy in column c, row r of a design block */
+function rotFor(D, c, r, inv) {
+  const p = dGet(D, 'rotPat'), a = (+dGet(D, 'rotAngle') || 0) % 360;
+  let on = p === 'all' || (p === 'row' && r % 2 === 1) || (p === 'col' && c % 2 === 1) || (p === 'check' && (c + r) % 2 === 1);
+  if (inv && (p === 'row' || p === 'col' || p === 'check')) on = !on; // the other copies of each pair turned instead
+  return on ? a : 0;
+}
+/* Board coordinates → panel coordinates for one copy (rotation about the board centre) */
+function cpXY(cp, x, y) {
+  if (!cp.rot) return [x + cp.dx, y + cp.dy];
+  const [a, b] = rotPt(x - cp.bcx, y - cp.bcy, cp.rot);
+  return [a + cp.cx, b + cp.cy];
+}
+function cpSeg(cp, s) {
+  if (!cp.rot) return moveSeg(s, cp.dx, cp.dy);
+  const o = Object.assign({}, s);
+  [o.x1, o.y1] = cpXY(cp, s.x1, s.y1); [o.x2, o.y2] = cpXY(cp, s.x2, s.y2);
+  if (s.t === 'A') [o.cx, o.cy] = cpXY(cp, s.cx, s.cy);
+  return o;
+}
+
+function buildBoard(entries) {
+  const layers = entries.filter(e => e.kind !== 'ignore');
+  const warn = [];
+  let segs = [];
+  for (const L of layers.filter(l => l.kind === 'outline' && l.g)) {
+    const u = L.g.units === 'in' ? 25.4 : 1;
+    for (const op of L.g.ops) {
+      if (op.t === 'L' || op.t === 'A') segs.push(scaleSeg(op, u));
+      else if (op.t === 'R') for (const c of op.contours) for (const s of c.segs) segs.push(scaleSeg(s, u));
+    }
+  }
+  segs = segs.filter(s => s.t === 'A' || Math.hypot(s.x2 - s.x1, s.y2 - s.y1) > 1e-6);
+  let bb;
+  if (segs.length) bb = segsBBox(segs);
+  if (!segs.length || !isFinite(bb.minX)) {
+    bb = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    for (const L of layers) {
+      if (L.g) {
+        const u = L.g.units === 'in' ? 25.4 : 1;
+        for (const op of L.g.ops) {
+          const pts = op.t === 'F' ? [[op.x, op.y]] : op.t === 'R' ? op.contours.map(c => [c.x0, c.y0]) : [[op.x1, op.y1], [op.x2, op.y2]];
+          for (const [x, y] of pts) { bb.minX = Math.min(bb.minX, x * u); bb.maxX = Math.max(bb.maxX, x * u); bb.minY = Math.min(bb.minY, y * u); bb.maxY = Math.max(bb.maxY, y * u); }
+        }
+      }
+    }
+    if (!isFinite(bb.minX)) return null;
+    bb.minX -= 1; bb.minY -= 1; bb.maxX += 1; bb.maxY += 1;
+    segs = rectSegs(bb.minX, bb.minY, bb.maxX, bb.maxY);
+    warn.push('No outline (Edge Cuts) layer found – using a rectangle around the content.');
+  }
+  const polys = segs.map(s => tessSeg(s));
+  let { loops, open } = chainLoops(polys);
+  if (!loops.length) {
+    warn.push('The outline is not closed – using its bounding rectangle.');
+    segs = rectSegs(bb.minX, bb.minY, bb.maxX, bb.maxY);
+    loops = chainLoops(segs.map(s => tessSeg(s))).loops;
+  } else if (open.length) warn.push('The outline has ' + open.length + ' unclosed line(s).');
+  const polySegs = [];
+  for (const p of polys) for (let k = 0; k + 1 < p.length; k++) polySegs.push([p[k][0], p[k][1], p[k + 1][0], p[k + 1][1]]);
+  const outerLoop = loops.reduce((a, b) => Math.abs(polyArea(b)) > Math.abs(polyArea(a)) ? b : a);
+  const w = bb.maxX - bb.minX, h = bb.maxY - bb.minY;
+  const rectangular = Math.abs(polyArea(outerLoop)) > 0.97 * w * h;
+  for (const L of layers) if (L.g && L.g.warn.length) warn.push(L.name + ': ' + [...new Set(L.g.warn)].join('; '));
+  for (const L of layers) if (L.d && L.d.warn) warn.push(L.name + ': ' + L.d.warn);
+  return { uid: ++BOARD_UID, layers, segs, polySegs, loops, outerLoop, rectangular, ...bb, w, h, warn };
+}
+
+/* ---------------------------------------------------------------- Settings */
+
+const DEF = {
+  cols: 2, rows: 2, sep: 'tabs', hspace: 2, vspace: 2,
+  frame: 'rails_tb', frameWidth: 5, frameWidthLR: 5, frameGap: 2,
+  tabWidth: 3, tabsH: 2, tabsV: 1, fillet: true, filletAuto: true, filletR: 1,
+  mousebites: true, mbDia: 0.5, mbSpacing: 0.8, mbOffset: 0.25,
+  vcutLayer: 'outline',
+  fiducials: '3', fidCopper: 1, fidMask: 2, fidOffset: 10, fidBottom: false,
+  tooling: '4', toolDia: 1.152, toolOffset: 4,
+  textOn: true, text: 'JLCJLCJLCJLC', textSize: 1.2, textRail: 'top',
+  maskColor: 'green', finish: 'hasl', thickness: '1.6',
+  fab: 'jlc', project: 'board', mergeDrill: false,
+  refPrefix: 'PN', cplOrigin: 'auto',
+  designArr: 'h', designAlign: 'start', designGap: 3, maxTab: 20,
+  rotPat: 'none', rotAngle: '90', nest: false,
+  layoutMode: 'grid', fabRules: 'jlc_std', qty: 4, autoRot: 'free', fill: false
+};
+const S = Object.assign({}, DEF);
+try { applySettings(JSON.parse(localStorage.getItem('gerberPanelizer.v1') || '{}')); } catch (e) { /* storage unavailable */ }
+const saveSettings = () => { try { localStorage.setItem('gerberPanelizer.v1', JSON.stringify(S)); } catch (e) { /* ignore */ } };
+/* Copies only known keys, coercing each value to the type of its default */
+function applySettings(obj) {
+  let n = 0;
+  if (!obj || typeof obj !== 'object') return n;
+  for (const k of Object.keys(DEF)) {
+    if (!(k in obj)) continue;
+    const d = DEF[k], v = obj[k];
+    if (typeof d === 'number') { const x = parseFloat(v); if (isFinite(x)) { S[k] = x; n++; } }
+    else if (typeof d === 'boolean') { S[k] = !!v; n++; }
+    else if (v != null) { S[k] = String(v); n++; }
+  }
+  return n;
+}
+
+const tabs = s => s.sep === 'tabs';
+const ROT_PAT = [['none', 'No rotation'], ['all', 'All copies'], ['row', 'Every second row'], ['col', 'Every second column'], ['check', 'Checkerboard']];
+const ROT_ANG = [['90', '90° CCW'], ['180', '180°'], ['270', '90° CW']];
+const AUTO_ROT = [['free', 'Any (90° steps)'], ['flip', '0° / 180° only'], ['none', 'No rotation']];
+const FAB_RULES = [['jlc_std', 'JLCPCB standard assembly'], ['jlc_eco', 'JLCPCB economic assembly'], ['none', 'None']];
+const isAuto = s => s.layoutMode === 'auto' && s.sep === 'tabs';
+const SCHEMA = [
+  { sec: 'Layout', fields: [
+    { k: 'fabRules', l: 'Fab rules', t: 'sel', o: FAB_RULES },
+    { k: 'layoutMode', l: 'Placement', t: 'sel', o: [['grid', 'Grid (set by hand)'], ['auto', 'Auto – smallest panel']], if: tabs },
+    { k: 'qty', l: 'Copies', t: 'int', min: 1, max: 200, if: s => !multiDesign() && isAuto(s) },
+    { k: 'autoRot', l: 'Allowed rotations', t: 'sel', o: AUTO_ROT, if: s => !multiDesign() && isAuto(s) },
+    { k: 'cols', l: 'Columns (X)', t: 'int', min: 1, max: 40, if: s => !multiDesign() && !isAuto(s) },
+    { k: 'rows', l: 'Rows (Y)', t: 'int', min: 1, max: 40, if: s => !multiDesign() && !isAuto(s) },
+    { k: 'rotPat', l: 'Rotate copies', t: 'sel', o: ROT_PAT, if: s => !multiDesign() && !isAuto(s) },
+    { k: 'rotAngle', l: 'Rotation angle', t: 'sel', o: ROT_ANG, if: s => !multiDesign() && !isAuto(s) && s.rotPat !== 'none' },
+    { k: 'nest', l: 'Nest copies (interlock odd shapes)', t: 'chk', if: s => !multiDesign() && !isAuto(s) && tabs(s) },
+    { k: 'sep', l: 'Separation', t: 'sel', o: [['tabs', 'Tabs + mouse bites'], ['vcut', 'V-cut (V-score)']] },
+    { k: 'hspace', l: 'Board spacing X', t: 'num', u: 'mm', min: 0, max: 50, step: 0.1, if: tabs },
+    { k: 'vspace', l: 'Board spacing Y', t: 'num', u: 'mm', min: 0, max: 50, step: 0.1, if: tabs }
+  ]},
+  { sec: 'Multiple designs', if: () => multiDesign(), fields: [
+    { k: 'designArr', l: 'Arrangement', t: 'sel', o: [['h', 'Side by side'], ['v', 'Stacked']], if: s => !isAuto(s) },
+    { k: 'designAlign', l: 'Alignment', t: 'sel', o: [['start', 'Bottom / left'], ['center', 'Centred'], ['end', 'Top / right']], if: s => !isAuto(s) },
+    { k: 'designGap', l: 'Spacing between designs', t: 'num', u: 'mm', min: 0, max: 50, step: 0.1, if: s => tabs(s) && !isAuto(s) },
+    { k: 'maxTab', l: 'Longest tab over empty space', t: 'num', u: 'mm', min: 1, max: 100, step: 0.5, if: tabs }
+  ]},
+  { sec: 'Frame', fields: [
+    { k: 'frame', l: 'Frame type', t: 'sel', o: [['none', 'No frame'], ['rails_tb', 'Rails top/bottom'], ['rails_lr', 'Rails left/right'], ['frame', 'Full frame']] },
+    { k: 'frameWidth', l: 'Rail width top / bottom', t: 'num', u: 'mm', min: 1, max: 30, step: 0.5, if: s => s.frame === 'frame' || s.frame === 'rails_tb' },
+    { k: 'frameWidthLR', l: 'Rail width left / right', t: 'num', u: 'mm', min: 1, max: 30, step: 0.5, if: s => s.frame === 'frame' || s.frame === 'rails_lr' },
+    { k: 'frameGap', l: 'Gap to frame', t: 'num', u: 'mm', min: 0, max: 30, step: 0.1, if: s => s.frame !== 'none' && tabs(s) }
+  ]},
+  { sec: 'Tabs and mouse bites', if: tabs, fields: [
+    { k: 'tabWidth', l: 'Tab width', t: 'num', u: 'mm', min: 0.5, max: 30, step: 0.1 },
+    { k: 'tabsH', l: 'Tabs on top/bottom edges', t: 'int', min: 0, max: 10 },
+    { k: 'tabsV', l: 'Tabs on left/right edges', t: 'int', min: 0, max: 10 },
+    { k: 'fillet', l: 'Rounded tab corners (mill fillets)', t: 'chk' },
+    { k: 'filletAuto', l: 'Fillet = half the gap (cutter Ø = gap)', t: 'chk', if: s => s.fillet },
+    { k: 'filletR', l: 'Fillet radius', t: 'num', u: 'mm', min: 0.1, max: 5, step: 0.05, if: s => s.fillet && !s.filletAuto },
+    { k: 'mousebites', l: 'Mouse bite holes', t: 'chk' },
+    { k: 'mbDia', l: 'Hole diameter', t: 'num', u: 'mm', min: 0.2, max: 2, step: 0.05, if: s => s.mousebites },
+    { k: 'mbSpacing', l: 'Pitch (centre to centre)', t: 'num', u: 'mm', min: 0.3, max: 3, step: 0.05, if: s => s.mousebites },
+    { k: 'mbOffset', l: 'Offset into board', t: 'num', u: 'mm', min: -1, max: 1, step: 0.05, if: s => s.mousebites }
+  ]},
+  { sec: 'V-cut', if: s => s.sep === 'vcut', fields: [
+    { k: 'vcutLayer', l: 'V-cut lines', t: 'sel', o: [['outline', 'In the outline layer'], ['separate', 'In a separate layer']] }
+  ]},
+  { sec: 'Fiducials and tooling holes', if: s => s.frame !== 'none', fields: [
+    { k: 'fiducials', l: 'Fiducials', t: 'sel', o: [['0', 'None'], ['3', '3'], ['4', '4']] },
+    { k: 'fidCopper', l: 'Fiducial copper Ø', t: 'num', u: 'mm', min: 0.3, max: 3, step: 0.1, if: s => s.fiducials !== '0' },
+    { k: 'fidMask', l: 'Mask opening Ø', t: 'num', u: 'mm', min: 0.5, max: 5, step: 0.1, if: s => s.fiducials !== '0' },
+    { k: 'fidOffset', l: 'Fiducial distance from end', t: 'num', u: 'mm', min: 1, max: 100, step: 0.5, if: s => s.fiducials !== '0' },
+    { k: 'fidBottom', l: 'Fiducials on the bottom too', t: 'chk', if: s => s.fiducials !== '0' },
+    { k: 'tooling', l: 'Tooling holes', t: 'sel', o: [['0', 'None'], ['2', '2 (diagonal)'], ['4', '4 (corners)']] },
+    { k: 'toolDia', l: 'Hole Ø', t: 'num', u: 'mm', min: 0.5, max: 6, step: 0.001, if: s => s.tooling !== '0' },
+    { k: 'toolOffset', l: 'Hole distance from end', t: 'num', u: 'mm', min: 1, max: 100, step: 0.5, if: s => s.tooling !== '0' }
+  ]},
+  { sec: 'Frame text', if: s => s.frame !== 'none', fields: [
+    { k: 'textOn', l: 'Silkscreen text on frame', t: 'chk' },
+    { k: 'text', l: 'Text', t: 'txt', if: s => s.textOn },
+    { k: 'textSize', l: 'Text height', t: 'num', u: 'mm', min: 0.6, max: 5, step: 0.1, if: s => s.textOn },
+    { k: 'textRail', l: 'Position', t: 'sel', o: [['top', 'Top / left rail'], ['bottom', 'Bottom / right rail']], if: s => s.textOn }
+  ]},
+  { sec: 'Appearance', fields: [
+    { k: 'maskColor', l: 'Solder mask', t: 'sel', o: [['green', 'Green'], ['black', 'Black'], ['blue', 'Blue'], ['red', 'Red'], ['white', 'White'], ['purple', 'Purple'], ['yellow', 'Yellow']] },
+    { k: 'finish', l: 'Surface finish', t: 'sel', o: [['hasl', 'HASL (tin)'], ['enig', 'ENIG (gold)']] },
+    { k: 'thickness', l: 'Thickness', t: 'sel', o: [['0.8', '0.8 mm'], ['1.0', '1.0 mm'], ['1.2', '1.2 mm'], ['1.6', '1.6 mm'], ['2.0', '2.0 mm']] }
+  ]},
+  { sec: 'Export format', fields: [
+    { k: 'fab', l: 'Manufacturer / naming', t: 'sel', o: [['jlc', 'JLCPCB'], ['pcbway', 'PCBWay'], ['kicad', 'KiCad names']] },
+    { k: 'project', l: 'Project name', t: 'txt' },
+    { k: 'mergeDrill', l: 'PTH and NPTH in one drill file', t: 'chk' },
+    { k: 'refPrefix', l: 'Designator prefix (CPL/BOM)', t: 'txt' },
+    { k: 'cplOrigin', l: 'CPL coordinate origin', t: 'sel', o: [['auto', 'Auto-detect'], ['abs', 'Same as Gerber'], ['bl', 'Board bottom-left'], ['tl', 'Board top-left']] }
+  ]}
+];
+
+const RESET_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 6.5A5 5 0 1 1 3 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M1.8 3.2 3.4 6.9 7 5.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function buildSettingsUI() {
+  const host = $('settings');
+  host.innerHTML = '';
+  let uid = 0;
+  for (const sec of SCHEMA) {
+    const el = document.createElement('section');
+    el.className = 'sec';
+    el._if = sec.if;
+    el.innerHTML = '<h2>' + sec.sec + '</h2>';
+    for (const f of sec.fields) {
+      const row = document.createElement('div');
+      const id = 'f' + (uid++);
+      row._if = f.if;
+      const lab = '<label for="' + id + '">' + f.l + '</label>';
+      let ctl;
+      if (f.t === 'chk') {
+        row.className = 'row chk';
+        row.innerHTML = '<input type="checkbox" id="' + id + '">' + lab;
+      } else if (f.t === 'sel') {
+        row.className = 'row';
+        row.innerHTML = lab + '<div class="inp"><select id="' + id + '">' + f.o.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select></div>';
+      } else if (f.t === 'txt') {
+        row.className = 'row';
+        row.innerHTML = lab + '<div class="inp"><input type="text" id="' + id + '" maxlength="40" spellcheck="false"></div>';
+      } else {
+        const step = f.t === 'int' ? 1 : (f.step || 0.1);
+        row.className = 'row';
+        row.innerHTML = lab + '<div class="inp"><input type="number" inputmode="decimal" id="' + id + '" min="' + f.min + '" max="' + f.max + '" step="' + step + '">' + (f.u ? '<span>' + f.u + '</span>' : '') + '</div>';
+      }
+      ctl = row.querySelector('#' + id);
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'reset';
+      reset.innerHTML = RESET_ICON;
+      reset.title = 'Reset to default (' + (f.t === 'chk' ? (DEF[f.k] ? 'on' : 'off') : f.t === 'sel' ? f.o.find(o => o[0] === DEF[f.k])[1] : DEF[f.k] + (f.u ? ' ' + f.u : '')) + ')';
+      reset.setAttribute('aria-label', 'Reset ' + f.l + ' to default');
+      row.appendChild(reset);
+      const show = () => {
+        if (f.t === 'chk') ctl.checked = !!S[f.k]; else ctl.value = S[f.k];
+        reset.hidden = S[f.k] === DEF[f.k];
+      };
+      f._show = show;
+      ctl.addEventListener(f.t === 'chk' || f.t === 'sel' ? 'change' : 'input', () => {
+        if (f.t === 'chk') S[f.k] = ctl.checked;
+        else if (f.t === 'sel' || f.t === 'txt') S[f.k] = ctl.value;
+        else {
+          const v = parseFloat(ctl.value);
+          if (!isFinite(v)) return;
+          S[f.k] = clamp(f.t === 'int' ? Math.round(v) : v, f.min, f.max);
+        }
+        reset.hidden = S[f.k] === DEF[f.k];
+        changed();
+      });
+      reset.addEventListener('click', () => { S[f.k] = DEF[f.k]; show(); changed(); ctl.focus(); });
+      show();
+      el.appendChild(row);
+    }
+    host.appendChild(el);
+  }
+  refreshVisibility();
+}
+function refreshVisibility() {
+  for (const el of $('settings').querySelectorAll('.sec, .row')) if (el._if) el.hidden = !el._if(S);
+}
+function changed() { refreshVisibility(); saveSettings(); if (multiDesign()) renderFileList(); scheduleUpdate(); }
+
+/* ---------------------------------------------------------------- Panel geometry */
+
+/* Douglas–Peucker simplification of a polygon (keeps the shape within tol) */
+function simplify(pts, tol) {
+  if (pts.length < 4) return pts.slice();
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const st = [[0, pts.length - 1]];
+  while (st.length) {
+    const [a, b] = st.pop(), [ax, ay] = pts[a], [bx, by] = pts[b], L = Math.hypot(bx - ax, by - ay);
+    let best = -1, bd = tol;
+    for (let i = a + 1; i < b; i++) {
+      const [px, py] = pts[i];
+      const d = L < 1e-12 ? Math.hypot(px - ax, py - ay) : Math.abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / L;
+      if (d > bd) { bd = d; best = i; }
+    }
+    if (best > 0) { keep[best] = 1; st.push([a, best], [best, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+/* First t ≥ 0 at which point p, moving along unit vector e, comes within g of segment a–b (a ray against a
+   capsule: the segment widened by g). Infinity when it never does. */
+function rayCapsule(px, py, ex, ey, ax, ay, bx, by, g) {
+  let best = Infinity;
+  const circ = (cx, cy) => {
+    const qx = px - cx, qy = py - cy, B = qx * ex + qy * ey, C = qx * qx + qy * qy - g * g;
+    if (C <= 0) return 0;
+    const disc = B * B - C;
+    if (disc < 0 || B > 0) return Infinity;
+    return -B - Math.sqrt(disc);
+  };
+  best = Math.min(circ(ax, ay), circ(bx, by));
+  const L = Math.hypot(bx - ax, by - ay);
+  if (L > 1e-12) {
+    const ux = (bx - ax) / L, uy = (by - ay) / L, nx = -uy, ny = ux;
+    const s0 = (px - ax) * nx + (py - ay) * ny, sn = ex * nx + ey * ny;
+    const w0 = (px - ax) * ux + (py - ay) * uy, wu = ex * ux + ey * uy;
+    const iv = (v0, dv, lo, hi) => {
+      if (Math.abs(dv) < 1e-15) return v0 >= lo && v0 <= hi ? [-Infinity, Infinity] : null;
+      const t1 = (lo - v0) / dv, t2 = (hi - v0) / dv;
+      return [Math.min(t1, t2), Math.max(t1, t2)];
+    };
+    const A = iv(s0, sn, -g, g), Bv = iv(w0, wu, 0, L);
+    if (A && Bv) {
+      const lo = Math.max(A[0], Bv[0], 0), hi = Math.min(A[1], Bv[1]);
+      if (lo <= hi) best = Math.min(best, lo);
+    }
+  }
+  return best;
+}
+/* How far polygon P can move along e before it comes within g of polygon Q (both closed point lists) */
+function slideDist(P, Q, ex, ey, g, limit) {
+  let t = limit;
+  const edges = (poly, f) => { for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; f(a[0], a[1], b[0], b[1]); } };
+  for (const p of P) edges(Q, (ax, ay, bx, by) => { const v = rayCapsule(p[0], p[1], ex, ey, ax, ay, bx, by, g); if (v < t) t = v; });
+  for (const q of Q) edges(P, (ax, ay, bx, by) => { const v = rayCapsule(q[0], q[1], -ex, -ey, ax, ay, bx, by, g); if (v < t) t = v; });
+  return Math.max(0, t);
+}
+const polyBox = P => { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const [x, y] of P) { if (x < a) a = x; if (y < b) b = y; if (x > c) c = x; if (y > d) d = y; } return [a, b, c, d]; };
+/* Copies of one design in block-local coordinates: [{c, r, rot, x, y, w, h}] plus the block size.
+   Without nesting every column / row is as wide / tall as its largest (rotated) copy. With nesting each copy is
+   dropped in from above and slid down, then left, until its outline is one board spacing away from the others,
+   so odd shapes (L, T, …) interlock. */
+function blockLayout(D, sx, sy, nest, inv) {
+  const B = D.board, cols = dCols(D), rows = dRows(D), list = [];
+  const dims = rot => rot % 180 ? [B.h, B.w] : [B.w, B.h];
+  const cw = Array(cols).fill(0), rh = Array(rows).fill(0);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const [w, h] = dims(rotFor(D, c, r, inv));
+    cw[c] = Math.max(cw[c], w); rh[r] = Math.max(rh[r], h);
+  }
+  const uniC = cw.every(v => v === cw[0]), uniR = rh.every(v => v === rh[0]);
+  const colX = [], rowY = [];
+  for (let c = 0; c < cols; c++) colX.push(uniC ? c * (cw[0] + sx) : c ? colX[c - 1] + cw[c - 1] + sx : 0);
+  for (let r = 0; r < rows; r++) rowY.push(uniR ? r * (rh[0] + sy) : r ? rowY[r - 1] + rh[r - 1] + sy : 0);
+  if (!nest) {
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const rot = rotFor(D, c, r, inv), [w, h] = dims(rot);
+      list.push({ c, r, rot, x: colX[c], y: rowY[r], w, h });
+    }
+    const W = uniC ? cols * cw[0] + (cols - 1) * sx : colX[cols - 1] + cw[cols - 1];
+    const H = uniR ? rows * rh[0] + (rows - 1) * sy : rowY[rows - 1] + rh[rows - 1];
+    return { list, w: W, h: H };
+  }
+  // outline around the board centre, simplified; 0.02 mm extra clearance covers the simplification
+  const bcx = (B.minX + B.maxX) / 2, bcy = (B.minY + B.maxY) / 2;
+  if (!B.nestPoly) {
+    let p = B.outerLoop.slice();
+    if (p.length > 2 && Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1]) < 0.03) p.pop();
+    B.nestPoly = simplify(p.concat([p[0]]), 0.01).slice(0, -1).map(([x, y]) => [x - bcx, y - bcy]);
+  }
+  const g = Math.max(sx, sy) + 0.02;
+  const shape = (rot, cx, cy) => B.nestPoly.map(([x, y]) => { const [a, b] = rot ? rotPt(x, y, rot) : [x, y]; return [a + cx, b + cy]; });
+  // One greedy run: copies come in one by one (row by row from above, or column by column from the right) and
+  // slide along the given directions until they are one spacing away from the boards already placed.
+  const run = (byCol, moves) => {
+    const placed = [], order = [];
+    if (byCol) { for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) order.push([c, r]); }
+    else { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) order.push([c, r]); }
+    for (const [c, r] of order) {
+      const rot = rotFor(D, c, r, inv), [w, h] = dims(rot);
+      const top = placed.length ? Math.max(...placed.map(p => p.y + p.h)) + sy + 1 : 0;
+      const right = placed.length ? Math.max(...placed.map(p => p.x + p.w)) + sx + 1 : 0;
+      // start positions keep the grid spacing plus the nesting margin, so neighbours never start too close
+      let cx = (byCol ? right : colX[c] + c * 0.05) + w / 2, cy = (byCol ? rowY[r] + r * 0.05 : top) + h / 2;
+      for (let it = 0; it < 6; it++) {
+        let moved = false;
+        for (const [ex, ey] of moves) {
+          const lim = ey ? cy - h / 2 : cx - w / 2;
+          if (lim <= 1e-9) continue;
+          const P = shape(rot, cx, cy), pb = polyBox(P);
+          let t = lim;
+          for (const q of placed) {
+            // only boards that the swept box can reach
+            const qb = q.box;
+            if (ey ? (qb[2] < pb[0] - g || qb[0] > pb[2] + g || qb[3] < pb[1] - t - g || qb[1] > pb[3] + g)
+                   : (qb[3] < pb[1] - g || qb[1] > pb[3] + g || qb[2] < pb[0] - t - g || qb[0] > pb[2] + g)) continue;
+            t = Math.min(t, slideDist(P, q.P, ex, ey, g, t));
+          }
+          if (t > 1e-4) { cx += ex * t; cy += ey * t; moved = true; }
+        }
+        if (!moved) break;
+      }
+      const P = shape(rot, cx, cy);
+      placed.push({ c, r, rot, x: cx - w / 2, y: cy - h / 2, w, h, P, box: polyBox(P) });
+    }
+    placed.sort((p, q) => p.r - q.r || p.c - q.c);
+    const list = placed.map(p => ({ c: p.c, r: p.r, rot: p.rot, x: p.x, y: p.y, w: p.w, h: p.h }));
+    return { list, w: Math.max(...list.map(q => q.x + q.w)), h: Math.max(...list.map(q => q.y + q.h)) };
+  };
+  // try a few ways of packing and keep the smallest block (the plain grid wins when nothing interlocks)
+  const D_ = [0, -1], L_ = [-1, 0];
+  let best = blockLayout(D, sx, sy, false, inv);
+  for (const [byCol, moves] of [[false, [D_]], [true, [L_]], [false, [D_, L_]], [true, [L_, D_]]]) {
+    const t = run(byCol, moves);
+    if (t.w * t.h < best.w * best.h - 1e-6) best = t;
+  }
+  // alternating patterns: a shape often only slots in from one side, so also try turning the other copy of each pair
+  if (!inv && ['row', 'col', 'check'].includes(dGet(D, 'rotPat'))) {
+    const t = blockLayout(D, sx, sy, true, true);
+    if (t.w * t.h < best.w * best.h - 1e-6) best = t;
+  }
+  return best;
+}
+const rotPt = (x, y, deg) => {
+  const a = ((deg % 360) + 360) % 360;
+  if (a === 90) return [-y, x];
+  if (a === 180) return [-x, -y];
+  if (a === 270) return [y, -x];
+  return rot(x, y, deg);
+};
+
+/* ---------------------------------------------------------------- Auto placement */
+
+/* Panel size limits per fab rule set (mm per side) */
+const FAB_LIM = { jlc_std: { max: 250, min: 70 }, jlc_eco: { max: 250, min: 10 }, none: { max: 500, min: 0 } };
+const dQty = D => Math.max(1, Math.round(+dGet(D, 'qty') || 1));
+const AUTO_ROTS = { free: [0, 90, 180, 270], flip: [0, 180], none: [0] };
+let AUTO_CACHE = null;
+/* Coarse outline about the board centre for packing (0.08 mm simplification, covered by the clearance margin) */
+function autoPoly(B) {
+  if (!B.autoPoly) {
+    const bcx = (B.minX + B.maxX) / 2, bcy = (B.minY + B.maxY) / 2;
+    let p = B.outerLoop.slice();
+    if (p.length > 2 && Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1]) < 0.03) p.pop();
+    B.autoPoly = simplify(p.concat([p[0]]), 0.08).slice(0, -1).map(([x, y]) => [x - bcx, y - bcy]);
+  }
+  return B.autoPoly;
+}
+/* Polygon (bounding box [0,w]×[0,h]) → cell mask at r mm per cell, as runs per row; plus the same mask grown by k cells */
+function rasterMask(P, w, h, r, k) {
+  const wc = Math.ceil(w / r) + 1, hc = Math.ceil(h / r) + 1, g = new Uint8Array(wc * hc);
+  const mark = (i, j) => { if (i >= 0 && j >= 0 && i < wc && j < hc) g[j * wc + i] = 1; };
+  for (let j = 0; j < hc; j++) {
+    for (const yy of [j * r, (j + 0.5) * r, (j + 1) * r]) {
+      const y = clamp(yy, 1e-6, h - 1e-6), xs = [];
+      for (let a = 0; a < P.length; a++) {
+        const [x1, y1] = P[a], [x2, y2] = P[(a + 1) % P.length];
+        if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) xs.push(x1 + (y - y1) * (x2 - x1) / (y2 - y1));
+      }
+      xs.sort((a, b) => a - b);
+      for (let q = 0; q + 1 < xs.length; q += 2) for (let i = Math.floor(xs[q] / r); i <= Math.floor(xs[q + 1] / r); i++) mark(i, j);
+    }
+  }
+  for (const [x, y] of P) mark(Math.floor(x / r), Math.floor(y / r));
+  const runs = (grid, W, H) => {
+    const rows = [];
+    for (let j = 0; j < H; j++) {
+      const row = [];
+      let a = -1;
+      for (let i = 0; i <= W; i++) {
+        const on = i < W && grid[j * W + i];
+        if (on && a < 0) a = i; else if (!on && a >= 0) { row.push([a, i - 1]); a = -1; }
+      }
+      rows.push(row);
+    }
+    return rows;
+  };
+  // grown mask: every cell on the edge stamps a disc of radius k
+  const W2 = wc + 2 * k, H2 = hc + 2 * k, d = new Uint8Array(W2 * H2), disc = [];
+  for (let dj = -k; dj <= k; dj++) for (let di = -k; di <= k; di++) if (di * di + dj * dj <= k * k) disc.push([di, dj]);
+  for (let j = 0; j < hc; j++) for (let i = 0; i < wc; i++) {
+    if (!g[j * wc + i]) continue;
+    const edge = i === 0 || j === 0 || i === wc - 1 || j === hc - 1 || !g[j * wc + i - 1] || !g[j * wc + i + 1] || !g[(j - 1) * wc + i] || !g[(j + 1) * wc + i];
+    if (!edge) { d[(j + k) * W2 + i + k] = 1; continue; }
+    for (const [di, dj] of disc) d[(j + k + dj) * W2 + i + k + di] = 1;
+  }
+  return { wc, hc, rows: runs(g, wc, hc), k, drows: runs(d, W2, H2) };
+}
+/* Occupancy grid with per-row prefix sums: O(1) "is anything in this run of cells" */
+function makeOcc(Wc, Hc) {
+  const cells = Array.from({ length: Hc }, () => new Uint8Array(Wc)), pre = Array.from({ length: Hc }, () => new Int32Array(Wc + 1));
+  return {
+    // 0 when the mask fits at (x, y), otherwise how far x can jump before it could fit (past the blocking cell)
+    fits(m, x, y) {
+      if (x < 0 || y < 0 || x + m.wc > Wc || y + m.hc > Hc) return 1;
+      for (let j = 0; j < m.hc; j++) {
+        const p = pre[y + j], c = cells[y + j];
+        for (const [a, b] of m.rows[j]) if (p[x + b + 1] - p[x + a] > 0) {
+          let i = x + b;
+          while (!c[i]) i--;
+          return i - (x + a) + 1;
+        }
+      }
+      return 0;
+    },
+    add(m, x, y) {
+      const ox = x - m.k, oy = y - m.k;
+      m.drows.forEach((row, j) => {
+        const yy = oy + j;
+        if (yy < 0 || yy >= Hc || !row.length) return;
+        const c = cells[yy];
+        for (const [a, b] of row) for (let i = Math.max(0, ox + a); i <= Math.min(Wc - 1, ox + b); i++) c[i] = 1;
+        const p = pre[yy];
+        for (let i = 0; i < Wc; i++) p[i + 1] = p[i] + c[i];
+      });
+    }
+  };
+}
+/* Packs every copy of every design into one panel: copies go in largest first; each one is put at the lowest free
+   spot (voids inside other boards included) in any allowed rotation, then pushed down / left against its
+   neighbours. That is repeated for a range of panel widths and the smallest panel within the fab limits wins. */
+function autoLayout(designs, s, g, offX, offY) {
+  const lim = FAB_LIM[s.fabRules] || FAB_LIM.none;
+  // fill designs: as many copies as fit in the space the other designs leave (only when some design is not a filler)
+  const filling = designs.filter(D => dGet(D, 'fill') && multiDesign());
+  const fillers = filling.length < designs.length ? filling : [];
+  const key = JSON.stringify([designs.map(D => [D.board.uid, dQty(D), dGet(D, 'autoRot'), fillers.includes(D)]), g, offX, offY, s.fabRules]);
+  if (AUTO_CACHE && AUTO_CACHE.key === key) return AUTO_CACHE.res;
+  const t0 = performance.now(), warn = [];
+  const items = [], fillItems = [];
+  for (const D of designs) {
+    const B = D.board, base = autoPoly(B);
+    const shapes = (AUTO_ROTS[dGet(D, 'autoRot')] || [0]).map(rot => {
+      const [w, h] = rot % 180 ? [B.h, B.w] : [B.w, B.h];
+      return { rot, w, h, P: base.map(([x, y]) => { const [a, b] = rot ? rotPt(x, y, rot) : [x, y]; return [a, b]; }) };
+    });
+    if (fillers.includes(D)) fillItems.push({ D, shapes, fill: true });
+    else for (let n = 0; n < dQty(D); n++) items.push({ D, shapes });
+  }
+  items.sort((a, b) => b.D.board.w * b.D.board.h - a.D.board.w * a.D.board.h || dNum(a.D) - dNum(b.D));
+  const clr = g + 0.17; // exact clearance, covers the outline simplification of both boards
+  const wMin = Math.max(...items.map(it => Math.min(...it.shapes.map(sh => sh.w))));
+  const wSum = items.reduce((a, it) => a + Math.min(...it.shapes.map(sh => sh.w)), 0) + g * (items.length - 1);
+  const maxIn = lim.max - 2 * offX, wHi = Math.max(wMin, Math.min(maxIn, wSum + 1));
+  const hSum = items.reduce((a, it) => a + Math.max(...it.shapes.map(sh => Math.max(sh.w, sh.h))), 0) + g * items.length;
+  // grid resolution: fine enough for the smallest board, coarse enough to stay fast
+  const minDim = Math.min(...items.concat(fillItems).map(it => Math.min(it.shapes[0].w, it.shapes[0].h)));
+  let r = clamp(minDim / 24, 0.25, 1.0);
+  r = Math.max(r, Math.sqrt(wHi * hSum / 600000));
+  const k = Math.ceil((g + 0.2) / r) + 2;
+  // the copies of one design share their shapes, so each mask is made once
+  for (const it of items.concat(fillItems)) for (const sh of it.shapes) if (!sh.m) {
+    sh.m = rasterMask(sh.P.map(([x, y]) => [x + sh.w / 2, y + sh.h / 2]), sh.w, sh.h, r, k);
+  }
+  const Hc = Math.ceil(hSum / r) + 4 * k + 4;
+  // firstRot: the first (largest) board is laid in this rotation – the rest fit around it, so each start is tried
+  const run = (Wi, firstRot, doFill) => {
+    const Wc = Math.floor(Wi / r + 1e-9), occ = makeOcc(Wc, Hc), placed = [];
+    let Hcur = 0, Wcur = 0;
+    for (const it of items) {
+      let best = null;
+      for (const sh of it.shapes) {
+        if (!placed.length && sh.rot !== firstRot) continue;
+        const m = sh.m;
+        if (m.wc > Wc) continue;
+        let found = null;
+        search: for (let y = 0; y + m.hc <= Hc; y++) {
+          if (best && y * r > best.top) break; // cannot beat the best rotation any more
+          for (let x = 0; x + m.wc <= Wc;) { const j = occ.fits(m, x, y); if (!j) { found = [x, y]; break search; } x += j; }
+        }
+        if (!found) continue;
+        // smallest bounding box so far, then lowest, then leftmost
+        const top = Math.max(Hcur, found[1] * r + sh.h), key = [top * Math.max(Wcur, found[0] * r + sh.w), found[1], found[0]];
+        if (!best || key[0] < best.key[0] - 1e-6 || (Math.abs(key[0] - best.key[0]) <= 1e-6 && (key[1] < best.key[1] || (key[1] === best.key[1] && key[2] < best.key[2])))) best = { sh, x: found[0], y: found[1], key, top };
+      }
+      if (!best) return null;
+      put(it, best.sh, best.x, best.y);
+    }
+    // fillers: as many as fit inside the box the other boards already take, lowest / leftmost spot first
+    let nFill = 0;
+    if (doFill && fillItems.length) {
+      const Wcb = Math.floor(Wcur / r + 1e-9), Hcb = Math.floor(Hcur / r + 1e-9);
+      for (const it of fillItems) for (let guard = 0; guard < 400; guard++) {
+        let best = null;
+        for (const sh of it.shapes) {
+          const m = sh.m;
+          if (m.wc > Wcb || m.hc > Hcb) continue;
+          search: for (let y = 0; y + m.hc <= Hcb; y++) {
+            if (best && y > best.y) break;
+            for (let x = 0; x + m.wc <= Wcb;) {
+              const j = occ.fits(m, x, y);
+              if (!j) { if (!best || y < best.y || (y === best.y && x < best.x)) best = { sh, x, y }; break search; }
+              x += j;
+            }
+          }
+        }
+        if (!best) break;
+        put(it, best.sh, best.x, best.y);
+        nFill++;
+      }
+    }
+    return { placed, w: Math.max(...placed.map(p => p.cx + p.sh.w / 2)), h: Hcur, nFill };
+    // put a board at raster cell (x, y), then push it down / left against its neighbours with the real outlines
+    function put(it, sh, x, y) {
+      let cx = x * r + sh.w / 2, cy = y * r + sh.h / 2;
+      for (let iter = 0; iter < 6; iter++) {
+        let moved = false;
+        for (const [ex, ey] of [[0, -1], [-1, 0]]) {
+          const lim2 = ey ? cy - sh.h / 2 : cx - sh.w / 2;
+          if (lim2 <= 1e-9) continue;
+          const P = sh.P.map(([x, y]) => [x + cx, y + cy]), pb = polyBox(P);
+          let t = lim2;
+          for (const q of placed) {
+            const qb = q.box;
+            if (ey ? (qb[2] < pb[0] - clr || qb[0] > pb[2] + clr || qb[3] < pb[1] - t - clr || qb[1] > pb[3] + clr)
+                   : (qb[3] < pb[1] - clr || qb[1] > pb[3] + clr || qb[2] < pb[0] - t - clr || qb[0] > pb[2] + clr)) continue;
+            t = Math.min(t, slideDist(P, q.P, ex, ey, clr, t));
+          }
+          if (t > 1e-3) { cx += ex * t; cy += ey * t; moved = true; }
+        }
+        if (!moved) break;
+      }
+      const P = sh.P.map(([x, y]) => [x + cx, y + cy]);
+      placed.push({ D: it.D, sh, cx, cy, P, box: polyBox(P), fill: !!it.fill });
+      occ.add(sh.m, Math.floor((cx - sh.w / 2) / r), Math.floor((cy - sh.h / 2) / r));
+      Hcur = Math.max(Hcur, cy + sh.h / 2); Wcur = Math.max(Wcur, cx + sh.w / 2);
+    }
+  };
+  // each filler counts as half its area in the score, so a slightly larger panel that holds many more can win
+  const fillUnit = fillItems.length ? fillItems.reduce((a, it) => a + it.D.board.w * it.D.board.h, 0) / fillItems.length * 0.5 : 0;
+  const cands = new Set();
+  for (let i = 0; i <= 10; i++) cands.add(+(wMin + (wHi - wMin) * i / 10).toFixed(3));
+  if (lim.min - 2 * offX > wMin && lim.min - 2 * offX < wHi) cands.add(lim.min - 2 * offX);
+  const scoreOf = t => {
+    const Wp = t.w + 2 * offX, Hp = t.h + 2 * offY;
+    const over = Math.max(0, Wp - lim.max) + Math.max(0, Hp - lim.max);
+    return Object.assign(t, { over, score: Math.max(Wp, lim.min) * Math.max(Hp, lim.min) + over * 1e7 + Math.abs(Wp - Hp) * 1e-3 - t.nFill * fillUnit });
+  };
+  // the main boards for every width and starting rotation; fillers only for the few best of those (they are slow)
+  const tries = [];
+  for (const Wi of cands) for (const fr0 of items[0].shapes.map(sh => sh.rot)) {
+    const t = run(Wi, fr0, false);
+    if (t) tries.push(Object.assign(scoreOf(t), { Wi, fr0 }));
+  }
+  tries.sort((a, b) => a.score - b.score);
+  let best = tries[0] || null;
+  if (fillItems.length && best) {
+    const seen = new Set();
+    best = null;
+    for (const t0 of tries) {
+      const sig = t0.placed.map(p => p.sh.rot + '@' + p.cx.toFixed(1) + ',' + p.cy.toFixed(1)).join(' '); // same layout from another width
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      if (seen.size > 6 || t0.score > tries[0].score * 1.15) break;
+      const t = scoreOf(run(t0.Wi, t0.fr0, true));
+      if (!best || t.score < best.score) best = t;
+    }
+  }
+  if (!best) return { list: [], w: 0, h: 0, warn: ['Auto placement found no layout.'] };
+  if (best.over > 0) warn.push('Auto placement: the boards do not fit in ' + lim.max + ' × ' + lim.max + ' mm – fewer copies or smaller boards.');
+  // copies numbered per design from the bottom-left, row by row
+  const list = best.placed.map(p => ({ D: p.D, rot: p.sh.rot, x: p.cx - p.sh.w / 2, y: p.cy - p.sh.h / 2, w: p.sh.w, h: p.sh.h, fill: p.fill }))
+    .sort((a, b) => dNum(a.D) - dNum(b.D) || Math.round(a.y) - Math.round(b.y) || a.x - b.x);
+  const res = { list, w: best.w, h: best.h, warn, ms: performance.now() - t0 };
+  AUTO_CACHE = { key, res };
+  return res;
+}
+
+/* designs: the loaded designs, each with a .board. Every design becomes a block of cols × rows copies; the blocks
+   are placed side by side (or stacked) with the design spacing between them. */
+function buildPanel(designs, s, drop = new Set()) {
+  const warn = [];
+  const vcut = s.sep === 'vcut';
+  const sx = vcut ? 0 : s.hspace, sy = vcut ? 0 : s.vspace, dg = vcut ? 0 : s.designGap;
+  const fr = s.frame, fg = vcut || fr === 'none' ? 0 : s.frameGap;
+  const hasLR = fr === 'frame' || fr === 'rails_lr', hasTB = fr === 'frame' || fr === 'rails_tb';
+  // rail widths: fwX for the left / right rails, fwY for the top / bottom rails
+  const fwX = hasLR ? s.frameWidthLR : 0, fwY = hasTB ? s.frameWidth : 0;
+  const offX = hasLR ? fwX + fg : 0, offY = hasTB ? fwY + fg : 0;
+  const copies = [];
+  const pushCopy = (D, q, x0, y0, i) => {
+    const B = D.board;
+    copies.push({ D, B, dn: dNum(D), i, c: q.c || 0, r: q.r || 0, rot: q.rot, w: q.w, h: q.h, x0, y0, x1: x0 + q.w, y1: y0 + q.h,
+      dx: x0 - B.minX, dy: y0 - B.minY, cx: x0 + q.w / 2, cy: y0 + q.h / 2, bcx: (B.minX + B.maxX) / 2, bcy: (B.minY + B.maxY) / 2 });
+  };
+  let W, H;
+  if (s.layoutMode === 'auto' && vcut) warn.push('Auto placement needs tabs + mouse bites – a V-cut panel uses the grid.');
+  if (isAuto(s)) {
+    const A = autoLayout(designs, s, Math.max(sx, sy), offX, offY);
+    warn.push(...A.warn);
+    const n = new Map();
+    for (const q of A.list) {
+      if (drop.has(q)) continue;
+      const i = n.get(q.D) || 0; n.set(q.D, i + 1); pushCopy(q.D, q, offX + q.x, offY + q.y, i);
+      copies[copies.length - 1].q = q;
+    }
+    if (drop.size) warn.push(drop.size + ' filler cop' + (drop.size === 1 ? 'y was' : 'ies were') + ' left out – no tab could hold ' + (drop.size === 1 ? 'it' : 'them') + '.');
+    W = 2 * offX + A.w; H = 2 * offY + A.h;
+  } else {
+    const horiz = s.designArr !== 'v';
+    const blocks = designs.map(D => Object.assign({ D, B: D.board }, blockLayout(D, sx, sy, !vcut && !!dGet(D, 'nest'))));
+    const cross = Math.max(...blocks.map(b => horiz ? b.h : b.w));
+    let along = 0;
+    for (const b of blocks) {
+      const slack = cross - (horiz ? b.h : b.w), sh = s.designAlign === 'center' ? slack / 2 : s.designAlign === 'end' ? slack : 0;
+      const bx = offX + (horiz ? along : sh), by = offY + (horiz ? sh : along), B = b.B, dn = dNum(b.D);
+      const bcx = (B.minX + B.maxX) / 2, bcy = (B.minY + B.maxY) / 2;
+      b.list.forEach((q, i) => {
+        const x0 = bx + q.x, y0 = by + q.y;
+        copies.push({ D: b.D, B, dn, i, c: q.c, r: q.r, rot: q.rot, w: q.w, h: q.h, x0, y0, x1: x0 + q.w, y1: y0 + q.h,
+          dx: x0 - B.minX, dy: y0 - B.minY, cx: x0 + q.w / 2, cy: y0 + q.h / 2, bcx, bcy });
+      });
+      along += (horiz ? b.w : b.h) + dg;
+    }
+    along -= dg;
+    W = 2 * offX + (horiz ? along : cross); H = 2 * offY + (horiz ? cross : along);
+  }
+  // odd-shaped boards: tabs are placed by looking at the real outlines instead of the bounding boxes
+  const outlineMode = !vcut && copies.some(cp => !cp.B.rectangular);
+  for (const cp of copies) if (cp.rot || outlineMode) {
+    // outline in panel coordinates, for tab placement around rotated / odd-shaped boards
+    cp.poly = cp.B.polySegs.map(([x1, y1, x2, y2]) => [...cpXY(cp, x1, y1), ...cpXY(cp, x2, y2)]);
+  }
+  const frameRects = [];
+  if (fr === 'frame') frameRects.push([0, 0, W, H, 'outer'], [fwX, fwY, W - fwX, H - fwY, 'inner']);
+  if (fr === 'rails_tb') frameRects.push([0, 0, W, fwY], [0, H - fwY, W, H]);
+  if (fr === 'rails_lr') frameRects.push([0, 0, fwX, H], [W - fwX, 0, W, H]);
+
+  const add = { cuTop: [], cuBot: [], maskTop: [], maskBot: [], silkTop: [], npth: [] };
+  let outline = [], vcuts = [], bites = 0, fillets = 0;
+  const boardSegs = cp => cp.B.segs.map(sg => cpSeg(cp, sg));
+
+  if (vcut) {
+    outline = rectSegs(0, 0, W, H);
+    for (const cp of copies) for (const lp of cp.B.loops) {
+      if (lp === cp.B.outerLoop) continue;
+      for (let k = 0; k + 1 < lp.length; k++) {
+        const [x1, y1] = cpXY(cp, lp[k][0], lp[k][1]), [x2, y2] = cpXY(cp, lp[k + 1][0], lp[k + 1][1]);
+        outline.push({ t: 'L', x1, y1, x2, y2 });
+      }
+    }
+    // a score line runs across the whole panel, so it is only possible where it does not cut through a board
+    const xs = new Set(), ys = new Set();
+    for (const cp of copies) { xs.add(+cp.x0.toFixed(4)); xs.add(+cp.x1.toFixed(4)); ys.add(+cp.y0.toFixed(4)); ys.add(+cp.y1.toFixed(4)); }
+    let blocked = 0;
+    for (const x of xs) if (x > 1e-3 && x < W - 1e-3) { if (copies.some(cp => cp.x0 < x - 1e-3 && cp.x1 > x + 1e-3)) blocked++; else vcuts.push([x, 0, x, H]); }
+    for (const y of ys) if (y > 1e-3 && y < H - 1e-3) { if (copies.some(cp => cp.y0 < y - 1e-3 && cp.y1 > y + 1e-3)) blocked++; else vcuts.push([0, y, W, y]); }
+    vcuts.sort((a, b) => (a[0] === a[2]) === (b[0] === b[2]) ? a[0] + a[1] - b[0] - b[1] : a[0] === a[2] ? -1 : 1);
+    if (blocked) warn.push(blocked + ' board edge(s) cannot be V-cut because the score line would cut through another board – use tabs, or boards / rotations of matching size.');
+    if (designs.some(D => !D.board.rectangular)) warn.push('V-cut only suits rectangular boards – ' + (multiDesign() ? 'an outline' : 'this outline') + ' is not rectangular.');
+    if (copies.length === 1 && fr === 'none') warn.push('A single board without a frame has no V-cut lines.');
+  } else {
+    let segs = [];
+    for (const cp of copies) segs.push(...boardSegs(cp));
+    for (const R of frameRects) {
+      // the inside corners of a full frame are concave too – round them like the tabs
+      const rf = R[4] === 'inner' && s.fillet && fg > 0 ? (s.filletAuto ? fg / 2 : s.filletR) : 0;
+      segs.push(...(rf > 1e-4 ? roundRectSegs(R[0], R[1], R[2], R[3], rf) : rectSegs(R[0], R[1], R[2], R[3])));
+      if (rf > 1e-4) fillets += 4;
+    }
+    const rects = [], bridges = [];
+    const tw = s.tabWidth;
+    // Where a horizontal / vertical line hits the outline of a board copy
+    // all crossings of a copy's outline with the horizontal line y (or vertical line x), in panel coordinates
+    // outline segments bucketed per mm of y (horizontal lines) or x (vertical lines), so a line only looks at a few
+    const bucket = (cp, byY) => {
+      const key = byY ? '_bY' : '_bX';
+      if (cp[key]) return cp[key];
+      const m = new Map();
+      for (const sg of cp.poly) {
+        const a = byY ? sg[1] : sg[0], b = byY ? sg[3] : sg[2];
+        for (let k = Math.floor(Math.min(a, b)), e = Math.floor(Math.max(a, b)); k <= e; k++) { let l = m.get(k); if (!l) m.set(k, l = []); l.push(sg); }
+      }
+      return (cp[key] = m);
+    };
+    const crossX = (cp, y) => {
+      const out = [];
+      for (const [x1, y1, x2, y2] of bucket(cp, true).get(Math.floor(y)) || []) if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) out.push(x1 + (y - y1) * (x2 - x1) / (y2 - y1));
+      return out;
+    };
+    const crossY = (cp, x) => {
+      const out = [];
+      for (const [x1, y1, x2, y2] of bucket(cp, false).get(Math.floor(x)) || []) if ((x1 <= x && x2 > x) || (x2 <= x && x1 > x)) out.push(y1 + (x - x1) * (y2 - y1) / (x2 - x1));
+      return out;
+    };
+    const pick = (xs, wantMax, lim, dflt) => {
+      let best = null;
+      for (const x of xs) if (wantMax ? (x <= lim && (best === null || x > best)) : (x >= lim && (best === null || x < best))) best = x;
+      return best === null ? dflt : best;
+    };
+    const hitX = (cp, y, wantMax, lim) => {
+      if (cp.poly) return pick(crossX(cp, y), wantMax, lim, wantMax ? cp.x1 : cp.x0);
+      let best = null;
+      const yy = y - cp.dy;
+      for (const [x1, y1, x2, y2] of cp.B.polySegs) {
+        if ((y1 <= yy && y2 > yy) || (y2 <= yy && y1 > yy)) {
+          const x = x1 + (yy - y1) * (x2 - x1) / (y2 - y1) + cp.dx;
+          if (wantMax ? (x <= lim && (best === null || x > best)) : (x >= lim && (best === null || x < best))) best = x;
+        }
+      }
+      return best === null ? (wantMax ? cp.x1 : cp.x0) : best;
+    };
+    const hitY = (cp, x, wantMax, lim) => {
+      if (cp.poly) return pick(crossY(cp, x), wantMax, lim, wantMax ? cp.y1 : cp.y0);
+      let best = null;
+      const xx = x - cp.dx;
+      for (const [x1, y1, x2, y2] of cp.B.polySegs) {
+        if ((x1 <= xx && x2 > xx) || (x2 <= xx && x1 > xx)) {
+          const y = y1 + (xx - x1) * (y2 - y1) / (x2 - x1) + cp.dy;
+          if (wantMax ? (y <= lim && (best === null || y > best)) : (y >= lim && (best === null || y < best))) best = y;
+        }
+      }
+      return best === null ? (wantMax ? cp.y1 : cp.y0) : best;
+    };
+    // fixed: the row position, or a function of v for a row that follows a sloped / curved board edge
+    const bitesAlong = (fixed, a0, a1, vertical) => {
+      if (!s.mousebites) return;
+      const n = Math.max(2, Math.floor((a1 - a0) / s.mbSpacing) + 1), span = (n - 1) * s.mbSpacing, st = (a0 + a1) / 2 - span / 2;
+      for (let k = 0; k < n; k++) {
+        const v = st + k * s.mbSpacing, f = typeof fixed === 'function' ? fixed(v) : fixed;
+        add.npth.push(vertical ? { x: f, y: v, d: s.mbDia } : { x: v, y: f, d: s.mbDia });
+        bites++;
+      }
+    };
+    // Bridge outline for one tab, in local coordinates: u runs across the gap (A side at la, B side at rb),
+    // v runs along the board edge. map() turns (u, v) into panel (x, y). Concave corners where the tab meets
+    // a board or the frame get mill fillets, so the router never has to cut a sharp inside corner.
+    const filletFor = gap => s.fillet ? clamp(s.filletAuto ? gap / 2 : s.filletR, 0, Math.max(0, gap / 2)) : 0;
+    // hA(v) / hB(v) give where the A and B sides (board outline or frame) cross the line at v. The fillet ends are
+    // taken from those crossings, so the bridge always meets the clipped outline – on a straight edge the fillet is a
+    // true quarter circle, on a curved one (e.g. a rounded board corner) it falls back to a straight chamfer.
+    const tabGeneric = (hA, hB, v0, v1, map, gap) => {
+      const la0 = hA(v0), la1 = hA(v1), rb0 = hB(v0), rb1 = hB(v1);
+      // the nominal gap caps the radius – near a rounded board corner the local gap is wider than the cutter
+      const r = filletFor(Math.min(gap, Math.min(rb0, rb1) - Math.max(la0, la1)));
+      const ends = [[v0, -1, la0, rb0], [v1, 1, la1, rb1]].map(([v, sg, la, rb]) => ({ v, sg, la, rb, vo: v + sg * r, lo: hA(v + sg * r), ro: hB(v + sg * r) }));
+      const uMin = Math.min(...ends.map(e => Math.min(e.la, e.lo))) - 0.01, uMax = Math.max(...ends.map(e => Math.max(e.rb, e.ro))) + 0.01;
+      const c1 = map(uMin, v0 - r), c2 = map(uMax, v1 + r);
+      rects.push([Math.min(c1[0], c2[0]), Math.min(c1[1], c2[1]), Math.max(c1[0], c2[0]), Math.max(c1[1], c2[1])]);
+      const line = (a, b) => {
+        const [x1, y1] = map(...a), [x2, y2] = map(...b);
+        // shorter than the chaining tolerance: the neighbours already meet, a stub would only confuse the chaining
+        if (Math.hypot(x2 - x1, y2 - y1) > 0.005) bridges.push({ t: 'L', x1, y1, x2, y2 });
+      };
+      const arc = (a, b, c) => {
+        const [x1, y1] = map(...a), [x2, y2] = map(...b), [cx, cy] = map(...c);
+        bridges.push({ t: 'A', x1, y1, x2, y2, cx, cy, cw: (x1 - cx) * (y2 - cy) - (y1 - cy) * (x2 - cx) < 0 });
+      };
+      for (const e of ends) {
+        if (r > 1e-4) {
+          if (Math.abs(e.lo - e.la) < 0.005) arc([e.la, e.vo], [e.la + r, e.v], [e.la + r, e.vo]); else line([e.lo, e.vo], [e.la + r, e.v]);
+          if (Math.abs(e.ro - e.rb) < 0.005) arc([e.rb - r, e.v], [e.rb, e.vo], [e.rb - r, e.vo]); else line([e.rb - r, e.v], [e.ro, e.vo]);
+          fillets += 2;
+        }
+        line([e.la + r, e.v], [e.rb - r, e.v]);
+      }
+      return { la0, la1, rb0, rb1 };
+    };
+    // Tab across a vertical gap (left-right link). A is on the left, Bc on the right; null means the frame at fxA/fxB.
+    // curveA / curveB: that side is a slope or curve – its mouse bites follow the board edge instead of a straight row
+    const tabX = (A, Bc, gx, y0, y1, fxA, fxB, gap, curveA, curveB) => {
+      const t = tabGeneric(v => A ? hitX(A, v, true, gx) : fxA, v => Bc ? hitX(Bc, v, false, gx) : fxB, y0, y1, (u, v) => [u, v], gap);
+      if (A) bitesAlong(curveA ? v => hitX(A, v, true, gx) - s.mbOffset : (t.la0 + t.la1) / 2 - s.mbOffset, y0, y1, true);
+      if (Bc) bitesAlong(curveB ? v => hitX(Bc, v, false, gx) + s.mbOffset : (t.rb0 + t.rb1) / 2 + s.mbOffset, y0, y1, true);
+    };
+    // Tab across a horizontal gap (bottom-top link). A is below, Bc above.
+    const tabY = (A, Bc, gy, x0, x1, fyA, fyB, gap, curveA, curveB) => {
+      const t = tabGeneric(v => A ? hitY(A, v, true, gy) : fyA, v => Bc ? hitY(Bc, v, false, gy) : fyB, x0, x1, (u, v) => [v, u], gap);
+      if (A) bitesAlong(curveA ? v => hitY(A, v, true, gy) - s.mbOffset : (t.la0 + t.la1) / 2 - s.mbOffset, x0, x1, false);
+      if (Bc) bitesAlong(curveB ? v => hitY(Bc, v, false, gy) + s.mbOffset : (t.rb0 + t.rb1) / 2 + s.mbOffset, x0, x1, false);
+    };
+    // Evenly spaced tab spans along an edge. Tabs whose fillets would touch are merged into one wider tab,
+    // otherwise the board edge between them would be cut away and the outline could not close.
+    let merged = false, trimmed = false;
+    let fewer = false;
+    const spans = (start, len, n, gap) => {
+      const r = filletFor(gap), out = [];
+      // a short edge (small board) gets only as many tabs as fit side by side
+      const fit = Math.max(1, Math.floor((len - 2 * r - 0.4 + 2 * r + 0.3) / (tw + 2 * r + 0.3) + 1e-9));
+      if (n > fit) { n = fit; fewer = true; }
+      for (let k = 0; k < n; k++) {
+        const c = start + len * (k + 1) / (n + 1);
+        // keep the tab and its fillets on this edge, clear of the board corners
+        const sp = [Math.max(start + r + 0.2, c - tw / 2), Math.min(start + len - r - 0.2, c + tw / 2)];
+        if (sp[1] - sp[0] < 0.2) continue;
+        if (sp[1] - sp[0] < tw - 1e-6) trimmed = true;
+        const last = out[out.length - 1];
+        if (last && sp[0] - last[1] < 2 * r + 0.3) { last[1] = sp[1]; merged = true; } else out.push(sp);
+      }
+      return out;
+    };
+    if (designs.some(D => tw > Math.min(D.board.w, D.board.h) * 0.9)) warn.push('The tabs are too wide for the board edge.');
+    // What lies across the gap from one edge of copy cp, over the strip [v0, v1] along that edge: the nearest
+    // board copy in the way, the frame, or nothing. dir: r(ight), l(eft), u(p), d(own).
+    const isH = dir => dir === 'r' || dir === 'l';
+    const across = (cp, dir, v0, v1) => {
+      let best = null;
+      for (const o of copies) {
+        if (o === cp) continue;
+        const d = dir === 'r' ? o.x0 - cp.x1 : dir === 'l' ? cp.x0 - o.x1 : dir === 'u' ? o.y0 - cp.y1 : cp.y0 - o.y1;
+        const lo = isH(dir) ? o.y0 : o.x0, hi = isH(dir) ? o.y1 : o.x1;
+        if (d < -1e-6 || hi <= v0 + 1e-6 || lo >= v1 - 1e-6) continue;
+        if (!best || d < best.d) best = { o, d, full: lo <= v0 + 1e-6 && hi >= v1 - 1e-6 };
+      }
+      const fd = dir === 'r' ? (hasLR ? W - fwX - cp.x1 : null) : dir === 'l' ? (hasLR ? cp.x0 - fwX : null) : dir === 'u' ? (hasTB ? H - fwY - cp.y1 : null) : (hasTB ? cp.y0 - fwY : null);
+      if (fd !== null && (!best || fd < best.d)) best = { o: null, d: fd, full: true };
+      return best;
+    };
+    // Same question answered with the real outlines (odd shapes, nested copies): lines across the strip are traced
+    // from this copy's outline to the first other outline (or the frame). Every line must meet the same thing,
+    // otherwise the tab would run into a corner – then {partial: true}.
+    const acrossOutline = (cp, dir, v0, v1, relax) => {
+      v0 -= 0.15; v1 += 0.15; // a little past the fillet ends, so a tab never ends right on a neighbour's corner
+      const hz = isH(dir), sg = dir === 'r' || dir === 'u' ? 1 : -1, n = 7;
+      const fpos = hz ? (hasLR ? (sg > 0 ? W - fwX : -fwX) : null) : (hasTB ? (sg > 0 ? H - fwY : -fwY) : null);
+      const objs = [];
+      let aMax = -Infinity, bMin = Infinity, aMin = Infinity, bMax = -Infinity;
+      for (let k = 0; k < n; k++) {
+        const v = v0 + 1e-4 + (v1 - v0 - 2e-4) * k / (n - 1);
+        const own = (hz ? crossX(cp, v) : crossY(cp, v)).map(x => x * sg);
+        if (!own.length) return { partial: true };
+        const a = Math.max(...own);
+        let best = null, bd = Infinity;
+        for (const o of copies) {
+          if (o === cp || (hz ? (v <= o.y0 || v >= o.y1) : (v <= o.x0 || v >= o.x1))) continue;
+          if ((sg > 0 ? (hz ? o.x1 : o.y1) : -(hz ? o.x0 : o.y0)) <= a) continue;
+          for (const x of (hz ? crossX(o, v) : crossY(o, v))) { const t = x * sg - a; if (t > 1e-6 && t < bd) { bd = t; best = o; } }
+        }
+        if (fpos !== null && fpos - a > -1e-6 && fpos - a < bd) { bd = Math.max(0, fpos - a); best = 'frame'; }
+        objs.push(best);
+        if (best) { aMax = Math.max(aMax, a); aMin = Math.min(aMin, a); bMin = Math.min(bMin, a + bd); bMax = Math.max(bMax, a + bd); }
+      }
+      if (objs.every(o => !o)) return null;
+      // both edges must be roughly straight across the tab – a step (inside corner of an L) is no place for a tab
+      const bend = Math.max(1.5, s.tabWidth / 3);
+      // relax (last resort for a board with no tab): the far side may be a slope – the tab then gets bites on this side only
+      const slant = bMax - bMin > bend;
+      if (objs.some(o => o !== objs[0]) || aMax > bMin + 1e-6 || aMax - aMin > bend || (slant && !(relax && bMax - bMin <= Math.max(bend, 2 * s.tabWidth)))) return { partial: true };
+      return { o: objs[0] === 'frame' ? null : objs[0], d: bMin - aMax, full: true, gx: sg * (aMax + bMin) / 2, slant };
+    };
+    const done = []; // tabs already made between two copies (outline mode), so the other side does not repeat them
+    // the configured gap for this kind of link – a longer tab over empty space keeps the normal fillet size
+    // (auto placement has no design spacing – every board keeps the board spacing)
+    const nominal = (cp, dir, hit) => hit.o ? (hit.o.D === cp.D || !(dg > 0) || isAuto(s) ? (isH(dir) ? sx : sy) : dg) : fg;
+    // a gap just over the setting (nested copies keep a hair of extra clearance) is used as is, so the fillets meet
+    const gapOf = (cp, dir, hit) => { const n = nominal(cp, dir, hit); return n && hit.d > n + 0.1 ? n : hit.d; };
+    const maxLen = Math.max(s.maxTab, sx, sy, dg, fg) + 1e-6;
+    let gapless = false, tooLong = 0;
+    const linked = new Set();
+    // tabs along one edge of one copy; returns how many were made (at most maxNew)
+    const tabEdge = (cp, dir, relax, maxNew) => {
+        let made = 0;
+        const start = isH(dir) ? cp.y0 : cp.x0, len = isH(dir) ? cp.h : cp.w;
+        const look = outlineMode ? (c, d, v0, v1) => acrossOutline(c, d, v0, v1, relax) : across;
+        let whole = look(cp, dir, start, start + len);
+        if (!whole && !outlineMode) return 0;
+        if (!whole || whole.partial) whole = { o: cp, d: Infinity }; // mixed edge: size the fillets for a board link
+        const g0 = gapOf(cp, dir, whole), rr = filletFor(isFinite(g0) ? g0 : 0);
+        // 'ok' – tab made, 'final' – nothing to do here (gapless, done from the other side), 'fail' / 'long' – no tab here
+        const attempt = (a0, a1) => {
+          const hit = look(cp, dir, a0 - rr, a1 + rr);
+          if (!hit || hit.partial) return 'fail';
+          if (hit.o) {
+            if (outlineMode) {
+              // each stretch between two copies is tabbed once – skip it when the other side already did
+              const m = 2 * rr + 0.3;
+              if (done.some(t => t.h === isH(dir) && ((t.a === cp && t.b === hit.o) || (t.a === hit.o && t.b === cp)) && t.v0 < a1 + m && t.v1 > a0 - m)) return 'final';
+            } else {
+              // each pair of facing boards is tabbed once, from the board with the shorter (or equal) edge
+              const oLen = isH(dir) ? hit.o.h : hit.o.w;
+              if (dir === 'r' || dir === 'u' ? len > oLen + 1e-6 : len >= oLen - 1e-6) return 'final';
+            }
+            if (hit.d <= 0.05) { gapless = true; return 'final'; }
+            if (!hit.full) return 'fail'; // the tab would run into the corner of the other board
+          } else if (hit.d <= 1e-6) return 'final';
+          if (hit.d > maxLen) return 'long';
+          const gap = gapOf(cp, dir, hit), ra = filletFor(gap);
+          if (ra > rr + 1e-9) {
+            // this link has bigger fillets than the edge was planned with – they must still land on the same edges
+            const h2 = look(cp, dir, a0 - ra, a1 + ra);
+            if (!h2 || h2.partial || h2.o !== hit.o || !h2.full) return 'fail';
+          }
+          const undo = [rects.length, bridges.length, add.npth.length, bites, fillets];
+          const sl = !!hit.slant; // the other side is a slope: its mouse bites follow that edge
+          if (dir === 'r') tabX(cp, hit.o, hit.gx ?? cp.x1 + hit.d / 2, a0, a1, 0, W - fwX, gap, false, sl);
+          else if (dir === 'l') tabX(hit.o, cp, hit.gx ?? cp.x0 - hit.d / 2, a0, a1, fwX, 0, gap, sl, false);
+          else if (dir === 'u') tabY(cp, hit.o, hit.gx ?? cp.y1 + hit.d / 2, a0, a1, 0, H - fwY, gap, false, sl);
+          else tabY(hit.o, cp, hit.gx ?? cp.y0 - hit.d / 2, a0, a1, fwY, 0, gap, sl, false);
+          // odd shapes: two tabs from different boards can land on the same stretch of gap – keep the first one
+          if (outlineMode && rects.slice(undo[0]).some(R => rects.slice(0, undo[0]).some(Q => R[0] < Q[2] + 0.3 && R[2] > Q[0] - 0.3 && R[1] < Q[3] + 0.3 && R[3] > Q[1] - 0.3))) {
+            rects.length = undo[0]; bridges.length = undo[1]; add.npth.length = undo[2]; bites = undo[3]; fillets = undo[4];
+            return 'fail';
+          }
+          if (hit.o) done.push({ a: cp, b: hit.o, h: isH(dir), v0: a0, v1: a1 });
+          edgeTabs.push([a0, a1]);
+          linked.add(cp); if (hit.o) linked.add(hit.o);
+          made++;
+          return 'ok';
+        };
+        const edgeTabs = [];
+        for (const [a0, a1] of spans(start, len, relax ? 1 : isH(dir) ? s.tabsV : s.tabsH, isFinite(g0) ? g0 : 0)) {
+          if (made >= maxNew) break;
+          let res = attempt(a0, a1);
+          if ((res === 'fail' || res === 'long') && outlineMode) {
+            // odd shapes: slide the tab along the edge to the nearest place where it meets a straight stretch
+            const lo = start + rr + 0.2, hi = start + len - rr - 0.2, m = 2 * rr + 0.3;
+            for (let k = 1; k <= 2 * len && res !== 'ok' && res !== 'final'; k++) {
+              const dlt = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5, b0 = a0 + dlt, b1 = a1 + dlt;
+              if (b0 < lo || b1 > hi || edgeTabs.some(t => t[0] < b1 + m && t[1] > b0 - m)) continue;
+              const r2 = attempt(b0, b1);
+              if (r2 === 'ok' || r2 === 'final') res = r2;
+            }
+          }
+          if (res === 'long' && !relax) tooLong++;
+        }
+        return made;
+    };
+    for (const cp of copies) for (const dir of ['r', 'l', 'u', 'd']) tabEdge(cp, dir, false, Infinity);
+    // odd shapes: a board that got no tab at all may still be held by tabs that meet a slanted neighbour
+    if (outlineMode && (s.tabsH + s.tabsV) > 0) for (const cp of copies) {
+      if (linked.has(cp)) continue;
+      let made = 0;
+      for (const dir of ['r', 'l', 'u', 'd']) if (made < 2) made += tabEdge(cp, dir, true, 2 - made);
+    }
+    if (merged) warn.push('Some tabs were so close together that they were merged into one wider tab.');
+    if (fewer) warn.push('Short edges got fewer tabs than set – only as many as fit side by side.');
+    if (trimmed) warn.push('Some tabs were narrowed to keep them and their fillets off the board corners.');
+    if (gapless) warn.push('Board spacing is 0 mm – the boards touch and cannot have tabs (use V-cut).');
+    if (fr !== 'none' && fg === 0) warn.push('Gap to frame is 0 mm – the boards are not tabbed to the frame.');
+    if ((s.tabsH + s.tabsV) === 0 && copies.length > 1) warn.push('No tabs – the boards will not be connected.');
+    if (tooLong) warn.push(tooLong + ' tab(s) left out: the empty space they would bridge is longer than “Longest tab over empty space”.');
+    if ((multiDesign() || outlineMode || copies.some(cp => cp.rot)) && (s.tabsH + s.tabsV) > 0 && (copies.length > 1 || fr !== 'none')) {
+      // auto placement: fillers that no tab can hold are taken out and the panel is made again
+      const looseFill = copies.filter(cp => !linked.has(cp) && cp.q && cp.q.fill);
+      if (looseFill.length && drop.size < 400) return buildPanel(designs, s, new Set([...drop, ...looseFill.map(cp => cp.q)]));
+      const loose = copies.filter(cp => !linked.has(cp)).map(cp => (multiDesign() ? 'D' + cp.dn + ' ' : '') + '#' + (cp.i + 1));
+      if (loose.length) warn.push('Not connected by any tab: ' + loose.join(', ') + ' – change the alignment, spacing or tab count.');
+    }
+    outline = clipSegs(segs, rects).concat(bridges);
+    if (s.mousebites && s.mbDia >= tw) warn.push('The mouse bite hole is wider than the tab.');
+  }
+
+  // Fiducials, tooling holes, text
+  if (fr !== 'none') {
+    const tb = hasTB;
+    const fw = tb ? fwY : fwX, railC = fw / 2; // the rails that carry fiducials, holes and text
+    const pts = (off, n) => {
+      if (tb) {
+        const all = [[off, H - railC], [W - off, H - railC], [off, railC], [W - off, railC]];
+        return n === 2 ? [all[2], all[1]] : all.slice(0, n);
+      }
+      const all = [[railC, H - off], [W - railC, H - off], [railC, off], [W - railC, off]];
+      return n === 2 ? [all[2], all[1]] : all.slice(0, n);
+    };
+    const nf = +s.fiducials, nt = +s.tooling;
+    if (nf) for (const [x, y] of pts(s.fidOffset, nf)) {
+      add.cuTop.push({ x, y, d: s.fidCopper }); add.maskTop.push({ x, y, d: s.fidMask });
+      if (s.fidBottom) { add.cuBot.push({ x, y, d: s.fidCopper }); add.maskBot.push({ x, y, d: s.fidMask }); }
+    }
+    if (nt) for (const [x, y] of pts(s.toolOffset, nt)) add.npth.push({ x, y, d: s.toolDia });
+    if (nf && nt && Math.abs(s.fidOffset - s.toolOffset) < (s.fidMask + s.toolDia) / 2 + 0.5) warn.push('Fiducials are too close to the tooling holes.');
+    if (fw < Math.max(nf ? s.fidMask : 0, nt ? s.toolDia : 0) + 1) warn.push('The frame is too narrow for the fiducials / holes.');
+    if (s.textOn && s.text.trim()) {
+      const str = s.text.trim(), h = s.textSize, tw2 = textWidth(str, h);
+      const first = s.textRail === 'top';
+      const lines = tb ? textLines(str, W / 2, first ? H - railC : railC, h, 0) : textLines(str, first ? railC : W - railC, H / 2, h, 90);
+      for (const l of lines) add.silkTop.push({ line: l, w: Math.max(0.1, h * 0.12) });
+      const room = (tb ? W : H) - 2 * (Math.max(nf ? s.fidOffset : 0, nt ? s.toolOffset : 0) + 1.5);
+      if (tw2 > room) warn.push('The text does not fit between the fiducials / holes.');
+      if (h > fw - 0.5) warn.push('The text is taller than the frame.');
+    }
+    if (s.fabRules !== 'none' && Math.min(hasTB ? fwY : Infinity, hasLR ? fwX : Infinity) < 5) warn.push('JLCPCB/PCBWay SMT assembly needs rails of at least 5 mm.');
+  }
+
+  const polys = outline.map(sg => tessSeg(sg));
+  const { loops, open } = chainLoops(polys);
+  if (open.length) warn.push('The panel outline does not close in ' + open.length + ' place(s). The tabs are probably too wide or too many for the edge, run into each other, or sit on a curved part of the outline – try narrower or fewer tabs.');
+  // fab rules (JLCPCB capabilities: panels 70–250 mm standard / 10–250 mm economic assembly, ≥ 2 mm routed gap,
+  // mouse-bite tabs ≥ 5 mm wide, rails needed for standard assembly)
+  const rules = s.fabRules, jlc = rules === 'jlc_std' || rules === 'jlc_eco';
+  if (W > 500 || H > 500) warn.push('The panel is larger than 500 mm – most fabs will not accept it.');
+  else if (jlc && (W > 250 || H > 250)) warn.push('JLCPCB assembly panels can be at most 250 × 250 mm (now ' + fmt(W, 1) + ' × ' + fmt(H, 1) + ').');
+  if (rules === 'jlc_std' && (W < 70 || H < 70)) warn.push('JLCPCB SMT assembly needs at least 70 × 70 mm (now ' + fmt(W, 1) + ' × ' + fmt(H, 1) + ').');
+  if (rules === 'jlc_eco' && (W < 10 || H < 10)) warn.push('JLCPCB assembly needs at least 10 × 10 mm.');
+  if (rules === 'jlc_std' && fr === 'none') warn.push('JLCPCB standard assembly needs edge rails with fiducials – choose a frame type.');
+  if (jlc && !vcut) {
+    if (copies.length > 1 && Math.min(sx, sy, multiDesign() && !isAuto(s) ? dg : Infinity) < 2) warn.push('JLCPCB needs at least 2 mm between routed boards.');
+    if (s.tabWidth < 5 && s.mousebites) warn.push('JLCPCB asks for mouse-bite tabs at least 5 mm wide (now ' + fmt(s.tabWidth, 1) + ' mm).');
+  }
+  return { W, H, copies, outline, vcuts, add, loops, bites, fillets, warn };
+}
+
+/* ---------------------------------------------------------------- Raster */
+
+const MAX_TEX = 4096;
+const MARGIN = 1;
+
+function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
+
+/* fr = {minX, maxY, S} – frame in mm, S in px/mm */
+function renderGerber(G, ctx, fr) {
+  const u = G.units === 'in' ? 25.4 : 1, k = fr.S * u;
+  const setT = () => ctx.setTransform(k, 0, 0, -k, -fr.minX * fr.S, fr.maxY * fr.S);
+  const cache = new Map();
+  const apImg = code => {
+    if (cache.has(code)) return cache.get(code);
+    const shapes = apShapes(G, code);
+    let ext = 0;
+    for (const sh of shapes) {
+      if (sh.circle) ext = Math.max(ext, Math.hypot(sh.circle[0], sh.circle[1]) + sh.circle[2]);
+      else for (const [x, y] of sh.pts) ext = Math.max(ext, Math.hypot(x, y));
+    }
+    const sz = Math.ceil(2 * ext * k) + 4;
+    if (!shapes.length || sz > 8000) { cache.set(code, null); return null; }
+    const c = makeCanvas(sz, sz), g = c.getContext('2d');
+    g.setTransform(k, 0, 0, -k, sz / 2, sz / 2);
+    g.fillStyle = '#fff';
+    for (const sh of shapes) {
+      g.globalCompositeOperation = sh.on ? 'source-over' : 'destination-out';
+      g.beginPath();
+      if (sh.circle) g.arc(sh.circle[0], sh.circle[1], Math.max(sh.circle[2], 0), 0, TAU);
+      else { g.moveTo(sh.pts[0][0], sh.pts[0][1]); for (const p of sh.pts) g.lineTo(p[0], p[1]); g.closePath(); }
+      g.fill('evenodd');
+    }
+    const r = { c, half: sz / 2 };
+    cache.set(code, r);
+    return r;
+  };
+  const arcTo = (path, s) => {
+    const r = Math.hypot(s.x1 - s.cx, s.y1 - s.cy);
+    const [a1, sw] = arcSweep(s);
+    path.arc(s.cx, s.cy, r, a1, a1 + sw, sw < 0);
+  };
+  ctx.save();
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let path = null, pathAp = null, pathPol = null, pathFill = false;
+  const flush = () => {
+    if (!path) return;
+    setT();
+    ctx.globalCompositeOperation = pathPol === 'C' ? 'destination-out' : 'source-over';
+    if (pathFill) ctx.fill(path, 'nonzero');
+    else {
+      const a = G.aps[pathAp];
+      ctx.lineWidth = Math.max(a && a.params[0] || 0, 1 / k);
+      ctx.stroke(path);
+    }
+    path = null;
+  };
+  for (const op of G.ops) {
+    const comp = op.pol === 'C' ? 'destination-out' : 'source-over';
+    if (op.t === 'F') {
+      flush();
+      const im = apImg(op.ap);
+      if (!im) continue;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = comp;
+      ctx.drawImage(im.c, (op.x * u - fr.minX) * fr.S - im.half, (fr.maxY - op.y * u) * fr.S - im.half);
+    } else if (op.t === 'R') {
+      flush();
+      setT();
+      ctx.globalCompositeOperation = comp;
+      for (const c of op.contours) {
+        const p = new Path2D();
+        p.moveTo(c.x0, c.y0);
+        for (const s of c.segs) { if (s.t === 'L') p.lineTo(s.x2, s.y2); else arcTo(p, s); }
+        p.closePath();
+        ctx.fill(p, 'evenodd');
+      }
+    } else {
+      const a = G.aps[op.ap];
+      if (!a) continue;
+      if (Math.hypot(op.x2 - op.x1, op.y2 - op.y1) < 1e-9 && op.t === 'L') {
+        flush();
+        const im = apImg(op.ap);
+        if (!im) continue;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalCompositeOperation = comp;
+        ctx.drawImage(im.c, (op.x1 * u - fr.minX) * fr.S - im.half, (fr.maxY - op.y1 * u) * fr.S - im.half);
+        continue;
+      }
+      const isRect = a.name === 'R' && op.t === 'L';
+      const fill = isRect;
+      if (!path || pathAp !== op.ap || pathPol !== op.pol || pathFill !== fill) { flush(); path = new Path2D(); pathAp = op.ap; pathPol = op.pol; pathFill = fill; }
+      if (isRect) {
+        const w = a.params[0] / 2, h = (a.params[1] || a.params[0]) / 2, pts = [];
+        for (const [px, py] of [[op.x1, op.y1], [op.x2, op.y2]]) pts.push([px - w, py - h], [px + w, py - h], [px + w, py + h], [px - w, py + h]);
+        const hull = convexHull(pts);
+        path.moveTo(hull[0][0], hull[0][1]);
+        for (const p of hull) path.lineTo(p[0], p[1]);
+        path.closePath();
+      } else if (op.t === 'L') { path.moveTo(op.x1, op.y1); path.lineTo(op.x2, op.y2); }
+      else { path.moveTo(op.x1, op.y1); arcTo(path, op); }
+    }
+  }
+  flush();
+  ctx.restore();
+}
+function convexHull(pts) {
+  const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const q of p) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (let i = p.length - 1; i >= 0; i--) { const q = p[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+function renderDrill(D, ctx, fr) {
+  ctx.save();
+  ctx.setTransform(fr.S, 0, 0, -fr.S, -fr.minX * fr.S, fr.maxY * fr.S);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff'; ctx.lineCap = 'round';
+  const p = new Path2D();
+  for (const h of D.holes) { const d = D.tools[h.t] || 0.3; p.moveTo(h.x + d / 2, h.y); p.arc(h.x, h.y, d / 2, 0, TAU); }
+  ctx.fill(p);
+  for (const sl of D.slots) {
+    ctx.lineWidth = D.tools[sl.t] || 0.5;
+    ctx.beginPath(); ctx.moveTo(sl.x1, sl.y1); ctx.lineTo(sl.x2, sl.y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+const SIDE_KINDS = { top: { cu: 'cuTop', mask: 'maskTop', silk: 'silkTop' }, bottom: { cu: 'cuBot', mask: 'maskBot', silk: 'silkBot' } };
+
+function rasterizeBoard(B) {
+  const minX = B.minX - MARGIN, minY = B.minY - MARGIN, maxX = B.maxX + MARGIN, maxY = B.maxY + MARGIN;
+  const Sb = Math.min(40, MAX_TEX / (maxX - minX), MAX_TEX / (maxY - minY));
+  const fr = { minX, minY, maxX, maxY, S: Sb };
+  const out = { fr, layers: {} };
+  const get = kind => {
+    if (!out.layers[kind]) out.layers[kind] = makeCanvas((maxX - minX) * Sb, (maxY - minY) * Sb);
+    return out.layers[kind].getContext('2d');
+  };
+  for (const kind of ['cuTop', 'cuBot', 'maskTop', 'maskBot', 'silkTop', 'silkBot', 'drill']) get(kind);
+  for (const L of B.layers) {
+    if (L.g && ['cuTop', 'cuBot', 'maskTop', 'maskBot', 'silkTop', 'silkBot'].includes(L.kind)) renderGerber(L.g, get(L.kind), fr);
+    if (L.d) renderDrill(L.d, get('drill'), fr);
+  }
+  return out;
+}
+
+const MASK_COL = { green: ['#0f6a32', 0.82], black: ['#141618', 0.9], blue: ['#123f8c', 0.84], red: ['#a3191c', 0.84], white: ['#eeeeea', 0.9], purple: ['#4c2379', 0.85], yellow: ['#d4b10a', 0.86] };
+const tmpA = makeCanvas(1, 1), tmpB = makeCanvas(1, 1);
+
+function loopsPath(loops, fr) {
+  const p = new Path2D();
+  for (const lp of loops) {
+    lp.forEach((q, i) => { const X = (q[0] - fr.minX) * fr.S, Y = (fr.maxY - q[1]) * fr.S; i ? p.lineTo(X, Y) : p.moveTo(X, Y); });
+    p.closePath();
+  }
+  return p;
+}
+function tinted(src, color, tmp) {
+  tmp.width = src.width; tmp.height = src.height;
+  const g = tmp.getContext('2d');
+  g.globalCompositeOperation = 'source-over';
+  g.drawImage(src, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color; g.fillRect(0, 0, tmp.width, tmp.height);
+  return tmp;
+}
+/* Layer alpha masks → coloured image */
+function compose(fr, L, loops, s) {
+  const out = makeCanvas((fr.maxX - fr.minX) * fr.S, (fr.maxY - fr.minY) * fr.S), ctx = out.getContext('2d');
+  const C = colors(s);
+  ctx.save();
+  ctx.clip(loopsPath(loops, fr), 'evenodd');
+  ctx.fillStyle = C.sub; ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(tinted(L.cu, C.cu, tmpA), 0, 0);
+  // solder mask: a full layer with the openings cut out
+  tmpB.width = out.width; tmpB.height = out.height;
+  const g = tmpB.getContext('2d');
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = C.mask; g.globalAlpha = 1; g.fillRect(0, 0, out.width, out.height);
+  // copper under the mask shows as a lighter tint
+  g.globalAlpha = 0.28; g.drawImage(tinted(L.cu, '#ffffff', tmpA), 0, 0); g.globalAlpha = 1;
+  g.globalCompositeOperation = 'destination-out'; g.drawImage(L.mask, 0, 0);
+  ctx.globalAlpha = C.maskA; ctx.drawImage(tmpB, 0, 0); ctx.globalAlpha = 1;
+  // silkscreen, clipped at mask openings the way fabs do it
+  const silk = tinted(L.silk, C.silk, tmpA), sg = silk.getContext('2d');
+  sg.globalCompositeOperation = 'destination-out'; sg.drawImage(L.mask, 0, 0); sg.drawImage(L.drill, 0, 0);
+  ctx.drawImage(silk, 0, 0);
+  ctx.drawImage(tinted(L.drill, C.hole, tmpA), 0, 0);
+  ctx.restore();
+  return out;
+}
+/* Board images (top/bottom) – only redone when the board or the appearance changes */
+function boardImages(D) {
+  const key = S.maskColor + '|' + S.finish;
+  if (D.img && D.img.key === key && D.img.raster === D.raster) return D.img;
+  const R = D.raster, res = { key, raster: R };
+  for (const side of ['top', 'bottom']) {
+    const k = SIDE_KINDS[side];
+    res[side] = compose(R.fr, { cu: R.layers[k.cu], mask: R.layers[k.mask], silk: R.layers[k.silk], drill: R.layers.drill }, D.board.loops, S);
+  }
+  D.img = res;
+  return res;
+}
+function colors(s) {
+  const [mc, ma] = MASK_COL[s.maskColor] || MASK_COL.green;
+  return {
+    mask: mc, maskA: ma, sub: '#c8b27a', hole: '#16191c',
+    silk: s.maskColor === 'white' || s.maskColor === 'yellow' ? '#1a1a1a' : '#f3f3ee',
+    cu: s.finish === 'enig' ? '#d8a542' : '#cfd3d6'
+  };
+}
+/* Builds the 'top' and 'bottom' images for a single board or the panel */
+function makeImages(what) {
+  const P = PANEL;
+  if (what === 'single') {
+    const D = curDesign(), BI = boardImages(D);
+    return { fr: D.raster.fr, top: BI.top, bottom: BI.bottom, loops: D.board.loops, D };
+  }
+  const minX = -MARGIN, minY = -MARGIN, maxX = P.W + MARGIN, maxY = P.H + MARGIN;
+  const Sp = Math.min(Math.max(...loadedDesigns().map(D => D.raster.fr.S)), 24, MAX_TEX / (maxX - minX), MAX_TEX / (maxY - minY));
+  const fr = { minX, minY, maxX, maxY, S: Sp };
+  const C = colors(S);
+  const res = { fr, loops: P.loops };
+  const toPx = (x, y) => [(x - minX) * Sp, (maxY - y) * Sp];
+  for (const side of ['top', 'bottom']) {
+    const c = makeCanvas((maxX - minX) * Sp, (maxY - minY) * Sp), g = c.getContext('2d');
+    g.save();
+    g.clip(loopsPath(P.loops, fr), 'evenodd');
+    // frame / tabs: substrate + mask
+    g.fillStyle = C.sub; g.fillRect(0, 0, c.width, c.height);
+    g.globalAlpha = C.maskA; g.fillStyle = C.mask; g.fillRect(0, 0, c.width, c.height); g.globalAlpha = 1;
+    // board copies (already clipped to their own outline)
+    g.imageSmoothingEnabled = true;
+    for (const cp of P.copies) {
+      const R = cp.D.raster, BI = boardImages(cp.D), iw = (R.fr.maxX - R.fr.minX) * Sp, ih = (R.fr.maxY - R.fr.minY) * Sp;
+      if (!cp.rot) {
+        const [px, py] = toPx(R.fr.minX + cp.dx, R.fr.maxY + cp.dy);
+        g.drawImage(BI[side], px, py, iw, ih);
+      } else {
+        // the board image is centred on the board centre; canvas y points down, so CCW is a negative angle
+        const [px, py] = toPx(cp.cx, cp.cy);
+        g.save(); g.translate(px, py); g.rotate(-cp.rot * Math.PI / 180);
+        g.drawImage(BI[side], -iw / 2, -ih / 2, iw, ih);
+        g.restore();
+      }
+    }
+    const dot = (x, y, d, col) => { const [px, py] = toPx(x, y); g.fillStyle = col; g.beginPath(); g.arc(px, py, d / 2 * Sp, 0, TAU); g.fill(); };
+    const isTop = side === 'top';
+    for (const it of P.add[isTop ? 'maskTop' : 'maskBot']) dot(it.x, it.y, it.d, C.sub);
+    for (const it of P.add[isTop ? 'cuTop' : 'cuBot']) dot(it.x, it.y, it.d, C.cu);
+    if (isTop) {
+      g.strokeStyle = C.silk; g.lineCap = 'round';
+      for (const it of P.add.silkTop) {
+        g.lineWidth = it.w * Sp; g.beginPath();
+        g.moveTo(...toPx(it.line[0], it.line[1])); g.lineTo(...toPx(it.line[2], it.line[3])); g.stroke();
+      }
+    }
+    for (const it of P.add.npth) dot(it.x, it.y, it.d, C.hole);
+    g.restore();
+    res[side] = c;
+  }
+  return res;
+}
+
+/* ---------------------------------------------------------------- 3D view */
+
+const V = { what: 'panel', mode: '3d', images: null, view2d: null };
+const T3 = { ok: typeof THREE !== 'undefined' };
+
+function init3D() {
+  if (!T3.ok) return;
+  const host = $('v3d');
+  T3.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  T3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  host.appendChild(T3.renderer.domElement);
+  T3.scene = new THREE.Scene();
+  T3.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 10000);
+  T3.camera.up.set(0, 0, 1);
+  T3.controls = new THREE.OrbitControls(T3.camera, T3.renderer.domElement);
+  T3.controls.enableDamping = true;
+  T3.controls.addEventListener('change', render3D);
+  T3.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.65);
+  dl.position.set(-0.6, -1, 2.2);
+  T3.scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dl2.position.set(0.5, 0.8, -1.5);
+  T3.scene.add(dl2);
+  T3.maxTex = T3.renderer.capabilities.maxTextureSize;
+  const tick = () => { if (T3.controls.update()) render3D(); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+function resize3D() {
+  if (!T3.ok) return;
+  const host = $('v3d'), w = host.clientWidth, h = host.clientHeight;
+  if (!w || !h) return;
+  T3.renderer.setSize(w, h, false);
+  T3.renderer.domElement.style.width = '100%'; T3.renderer.domElement.style.height = '100%';
+  T3.camera.aspect = w / h;
+  T3.camera.updateProjectionMatrix();
+  render3D();
+}
+function render3D() { if (T3.ok && V.mode === '3d') T3.renderer.render(T3.scene, T3.camera); }
+function disposeGroup(g) {
+  g.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) for (const m of [].concat(o.material)) { if (m.map) m.map.dispose(); m.dispose(); }
+  });
+}
+function update3D(fit) {
+  if (!T3.ok || !V.images) return;
+  if (T3.group) { T3.scene.remove(T3.group); disposeGroup(T3.group); }
+  const { fr, top, bottom, loops } = V.images;
+  const th = parseFloat(S.thickness) || 1.6;
+  const shapes = nestLoops(loops).map(o => {
+    const sh = new THREE.Shape(o.outer.map(p => new THREE.Vector2(p[0], p[1])));
+    for (const h of o.holes) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1]))));
+    return sh;
+  });
+  const grp = new THREE.Group();
+  const body = new THREE.ExtrudeGeometry(shapes, { depth: th, bevelEnabled: false, curveSegments: 4 });
+  grp.add(new THREE.Mesh(body, new THREE.MeshStandardMaterial({ color: 0xb59f62, roughness: 0.85 })));
+  const fw = fr.maxX - fr.minX, fh = fr.maxY - fr.minY;
+  const face = (img, z, back) => {
+    const tex = new THREE.CanvasTexture(img);
+    tex.anisotropy = T3.renderer.capabilities.getMaxAnisotropy();
+    tex.repeat.set(1 / fw, 1 / fh);
+    tex.offset.set(-fr.minX / fw, -fr.minY / fh);
+    if ('encoding' in tex) tex.encoding = THREE.sRGBEncoding;
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shapes, 4), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0.05, side: back ? THREE.BackSide : THREE.FrontSide }));
+    m.position.z = z;
+    return m;
+  };
+  grp.add(face(top, th + 0.004, false));
+  grp.add(face(bottom, -0.004, true));
+  T3.scene.add(grp);
+  T3.group = grp;
+  T3.renderer.outputEncoding = THREE.sRGBEncoding;
+  if (fit || !T3.fitted) fit3D();
+  render3D();
+}
+function fit3D() {
+  if (!T3.ok || !V.images) return;
+  const { fr } = V.images;
+  const cx = (fr.minX + fr.maxX) / 2, cy = (fr.minY + fr.maxY) / 2, t = Math.tan(T3.camera.fov * Math.PI / 360);
+  const dist = Math.max((fr.maxY - fr.minY) / (2 * t), (fr.maxX - fr.minX) / (2 * t * (T3.camera.aspect || 1))) * 1.2;
+  T3.controls.target.set(cx, cy, 0);
+  T3.camera.position.set(cx, cy - dist * 0.55, dist * 0.85);
+  T3.camera.near = dist / 100; T3.camera.far = dist * 20;
+  T3.camera.updateProjectionMatrix();
+  T3.controls.update();
+  T3.fitted = true;
+  render3D();
+}
+
+/* ---------------------------------------------------------------- 2D view */
+
+const V2 = { scale: 4, cx: 0, cy: 0, fitted: false };
+function fit2D() {
+  if (!V.images) return;
+  const c = $('v2d'), { fr } = V.images;
+  const w = c.clientWidth || 800, h = c.clientHeight || 600;
+  V2.scale = Math.min(w / (fr.maxX - fr.minX), h / (fr.maxY - fr.minY)) * 0.9;
+  V2.cx = (fr.minX + fr.maxX) / 2; V2.cy = (fr.minY + fr.maxY) / 2;
+  V2.fitted = true;
+  draw2D();
+}
+function draw2D() {
+  const c = $('v2d');
+  if (c.hidden) return;
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (!V.images) return;
+  const { fr } = V.images, img = V.mode === 'bottom' ? V.images.bottom : V.images.top;
+  const m = V.mode === 'bottom' ? -1 : 1;
+  // screen: X = w/2 + m*s*(x-cx), Y = h/2 + s*(cy-y) → draw (x, -y) in user space
+  ctx.setTransform(dpr * m * V2.scale, 0, 0, dpr * V2.scale, dpr * (w / 2 - m * V2.scale * V2.cx), dpr * (h / 2 + V2.scale * V2.cy));
+  ctx.imageSmoothingEnabled = V2.scale < fr.S * 1.5;
+  ctx.drawImage(img, fr.minX, -fr.maxY, fr.maxX - fr.minX, fr.maxY - fr.minY);
+  const lw = 1 / V2.scale;
+  if (V.what === 'panel' && PANEL) {
+    if (PANEL.vcuts.length) {
+      ctx.strokeStyle = '#ff4d4d'; ctx.lineWidth = 1.5 * lw; ctx.setLineDash([6 * lw, 4 * lw]);
+      ctx.beginPath();
+      for (const [x1, y1, x2, y2] of PANEL.vcuts) { ctx.moveTo(x1, -y1); ctx.lineTo(x2, -y2); }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  // dimensions
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const SB = V.images.D ? V.images.D.board : null;
+  const W0 = SB ? SB.w : PANEL.W, H0 = SB ? SB.h : PANEL.H;
+  const ox = SB ? SB.minX : 0, oy = SB ? SB.minY : 0;
+  const sx = x => w / 2 + m * V2.scale * (x - V2.cx), sy = y => h / 2 - V2.scale * (y - V2.cy);
+  ctx.strokeStyle = ctx.fillStyle = getComputedStyle(document.body).color;
+  ctx.globalAlpha = 0.75; ctx.lineWidth = 1; ctx.font = '12px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+  const yb = sy(oy) + 18, xa = sx(ox), xb = sx(ox + W0);
+  ctx.beginPath(); ctx.moveTo(xa, yb); ctx.lineTo(xb, yb); ctx.moveTo(xa, yb - 4); ctx.lineTo(xa, yb + 4); ctx.moveTo(xb, yb - 4); ctx.lineTo(xb, yb + 4); ctx.stroke();
+  ctx.fillText(fmt(W0, 2) + ' mm', (xa + xb) / 2, yb + 15);
+  const xr = Math.max(sx(ox), sx(ox + W0)) + 18, ya = sy(oy), yt = sy(oy + H0);
+  ctx.beginPath(); ctx.moveTo(xr, ya); ctx.lineTo(xr, yt); ctx.moveTo(xr - 4, ya); ctx.lineTo(xr + 4, ya); ctx.moveTo(xr - 4, yt); ctx.lineTo(xr + 4, yt); ctx.stroke();
+  ctx.save(); ctx.translate(xr + 14, (ya + yt) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(fmt(H0, 2) + ' mm', 0, 0); ctx.restore();
+  ctx.globalAlpha = 1;
+}
+function init2D() {
+  const c = $('v2d');
+  let drag = null;
+  c.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; c.setPointerCapture(e.pointerId); c.classList.add('drag'); });
+  c.addEventListener('pointerup', () => { drag = null; c.classList.remove('drag'); });
+  c.addEventListener('pointermove', e => {
+    const m = V.mode === 'bottom' ? -1 : 1;
+    const r = c.getBoundingClientRect();
+    const mx = V2.cx + m * (e.clientX - r.left - r.width / 2) / V2.scale, my = V2.cy - (e.clientY - r.top - r.height / 2) / V2.scale;
+    $('coord').textContent = 'X ' + mx.toFixed(2) + '  Y ' + my.toFixed(2) + ' mm';
+    if (!drag) return;
+    V2.cx -= m * (e.clientX - drag.x) / V2.scale; V2.cy += (e.clientY - drag.y) / V2.scale;
+    drag = { x: e.clientX, y: e.clientY };
+    draw2D();
+  });
+  c.addEventListener('wheel', e => {
+    e.preventDefault();
+    const m = V.mode === 'bottom' ? -1 : 1, r = c.getBoundingClientRect();
+    const px = e.clientX - r.left - r.width / 2, py = e.clientY - r.top - r.height / 2;
+    const mx = V2.cx + m * px / V2.scale, my = V2.cy - py / V2.scale;
+    V2.scale = clamp(V2.scale * Math.exp(-e.deltaY * 0.0015), 0.2, 400);
+    V2.cx = mx - m * px / V2.scale; V2.cy = my + py / V2.scale;
+    draw2D();
+  }, { passive: false });
+}
+
+/* ---------------------------------------------------------------- Update */
+
+let updTimer = null;
+function scheduleUpdate(delay = 120) { clearTimeout(updTimer); updTimer = setTimeout(update, delay); $('busy').textContent = 'Updating…'; }
+let lastWhat = null, lastDims = null;
+function update() {
+  $('busy').textContent = '';
+  if (!hasBoard()) return;
+  const t0 = performance.now();
+  PANEL = buildPanel(loadedDesigns(), S);
+  V.images = makeImages(V.what);
+  // refit when the view changes or the panel size changes by more than 15 %
+  const dims = V.images.fr, dw = dims.maxX - dims.minX, dh = dims.maxY - dims.minY;
+  const whatKey = V.what + (V.what === 'single' ? ':' + dNum(V.images.D) : '');
+  const refit = lastWhat !== whatKey || !lastDims || Math.abs(dw / lastDims[0] - 1) > 0.15 || Math.abs(dh / lastDims[1] - 1) > 0.15;
+  lastWhat = whatKey;
+  if (refit) lastDims = [dw, dh];
+  update3D(refit);
+  if (refit || !V2.fitted) fit2D(); else draw2D();
+  updateStats(performance.now() - t0);
+}
+function updateStats(ms) {
+  const P = PANEL, DS = loadedDesigns(), B = DS[0].board;
+  const n = P.copies.length, multi = multiDesign();
+  const parts = [
+    '<span>Panel <b>' + fmt(P.W, 2) + ' × ' + fmt(P.H, 2) + ' mm</b></span>',
+    ...(multi
+      ? DS.map(D => '<span>D' + dNum(D) + ' <b>' + fmt(D.board.w, 2) + ' × ' + fmt(D.board.h, 2) + ' mm × ' + copiesOf(P, D).length + '</b></span>')
+      : ['<span>Board <b>' + fmt(B.w, 2) + ' × ' + fmt(B.h, 2) + ' mm</b></span>']),
+    multi || isAuto(S) ? '<span>Copies <b>' + n + '</b>' + (isAuto(S) ? ' (auto placed)' : '') + '</span>' : '<span>Copies <b>' + S.cols + ' × ' + S.rows + ' = ' + n + '</b></span>',
+    ...(P.copies.some(cp => cp.rot) ? ['<span>Rotated <b>' + P.copies.filter(cp => cp.rot).length + '</b></span>'] : []),
+    '<span>Area <b>' + fmt(P.W * P.H / 100, 1) + ' cm²</b></span>',
+    S.sep === 'vcut' ? '<span>V-cut lines <b>' + P.vcuts.length + '</b></span>' : '<span>Mouse bites <b>' + P.bites + '</b></span>',
+    '<span>Updated in <b>' + Math.round(ms) + ' ms</b></span>'
+  ];
+  if (S.sep !== 'vcut' && P.fillets) parts.splice(parts.length - 1, 0, '<span>Fillets <b>' + P.fillets + '</b></span>');
+  const warns = [...new Set([...DS.flatMap(D => D.board.warn.map(w => multi ? 'D' + dNum(D) + ': ' + w : w)), ...P.warn])];
+  const nCu = DS.map(D => D.board.layers.filter(l => /^cu/.test(l.kind)).length);
+  if (multi && new Set(nCu).size > 1) warns.push('The designs have different copper layer counts (' + nCu.join(' / ') + ') – the panel is made with the most layers.');
+  for (const D of DS) {
+    const cpl = mergedTable(D, 'cpl'), bom = mergedTable(D, 'bom'), nc = copiesOf(P, D).length, tag = multi ? ' D' + dNum(D) : '';
+    if (cpl) {
+      const o = cplOrigin(cpl, D.board, S.cplOrigin);
+      parts.push('<span>CPL' + tag + ' <b>' + o.total + ' × ' + nc + ' = ' + o.total * nc + '</b> (origin: ' + esc(o.label) + ')</span>');
+      if (o.inside < o.total) warns.push((o.total - o.inside) + ' CPL parts' + (multi ? ' of D' + dNum(D) : '') + ' fall outside the board – check “CPL coordinate origin”.');
+    }
+    if (bom) parts.push('<span>BOM' + tag + ' <b>' + bom.rows.length + ' lines</b></span>');
+  }
+  $('stats').innerHTML = parts.join('') + warns.map(w => '<span class="warn">⚠ ' + esc(w) + '</span>').join('');
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const curDesign = () => { const L = loadedDesigns(); return L.find(D => dNum(D) === V.design) || L[0]; };
+function setView(what, mode) {
+  if (what) V.what = what;
+  if (mode) V.mode = mode;
+  for (const b of document.querySelectorAll('[data-what]')) b.setAttribute('aria-pressed', b.dataset.what === V.what);
+  for (const b of document.querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', b.dataset.mode === V.mode);
+  const is3d = V.mode === '3d';
+  $('v3d').hidden = !is3d;
+  $('v2d').hidden = is3d;
+  $('coord').hidden = is3d || !hasBoard();
+  updateDesignPick();
+  if (!hasBoard()) return;
+  if (what) update();
+  else if (is3d) { resize3D(); render3D(); }
+  else { if (!V2.fitted) fit2D(); else draw2D(); }
+}
+/* "Single board" view: which design to show (only offered when there are several) */
+function updateDesignPick() {
+  const L = loadedDesigns(), sel = $('design-sel');
+  $('design-pick').hidden = !(V.what === 'single' && L.length > 1);
+  sel.innerHTML = L.map(D => '<option value="' + dNum(D) + '">D' + dNum(D) + ' · ' + esc(D.name) + '</option>').join('');
+  const c = curDesign();
+  if (c) sel.value = dNum(c);
+}
+
+/* ---------------------------------------------------------------- Loading */
+
+async function readFiles(fileList) {
+  const raw = [];
+  let zipName = null;
+  for (const f of fileList) {
+    if (/\.zip$/i.test(f.name)) {
+      if (typeof JSZip === 'undefined') { alert('The ZIP library did not load (needs an internet connection). Load the files individually instead.'); continue; }
+      zipName = zipName || f.name.replace(/\.zip$/i, '');
+      const z = await JSZip.loadAsync(f);
+      for (const name of Object.keys(z.files)) {
+        const e = z.files[name];
+        if (e.dir || /(^|\/)(__MACOSX|\.)/.test(name)) continue;
+        raw.push({ name, text: await e.async('string') });
+      }
+    } else raw.push({ name: f.name, text: await f.text() });
+  }
+  return { raw, zipName };
+}
+function designName(raw, zipName) {
+  const first = raw.map(r => r.name.split('/').pop()).find(n => /-(F_Cu|Edge_Cuts)/i.test(n));
+  return zipName || (first ? first.replace(/-(F_Cu|Edge_Cuts).*$/i, '') : null);
+}
+const newDesign = name => ({ name: name || 'design', entries: [], board: null, raster: null, img: null, open: false, cols: 1, rows: 1, rotPat: 'none', rotAngle: '90', nest: false, qty: 1, autoRot: 'free', fill: false });
+/* target: undefined – a new project (replaces everything), 'new' – an additional design,
+   or a design object – the files are added to that design (same-named files are replaced) */
+async function loadFiles(fileList, target) {
+  const { raw, zipName } = await readFiles(fileList);
+  if (!raw.length) return;
+  // CPL/BOM files dropped on their own are added to the current board instead of replacing it
+  const kinds = raw.map(r => detectKind(r.name, r.text).kind);
+  if (!target && DESIGNS.length && kinds.every(k => k === 'cpl' || k === 'bom')) target = DESIGNS[0];
+  if (target && target !== 'new') { addEntries(target, raw, true); return; }
+  const proj = designName(raw, zipName);
+  const name = proj || raw[0].name.split('/').pop().replace(/\.[^.]*$/, '');
+  if (target === 'new') {
+    const D = newDesign(name);
+    DESIGNS.push(D);
+    addEntries(D, raw, false);
+    return;
+  }
+  if (proj) { S.project = proj.replace(/[^\w.-]+/g, '_'); buildSettingsUI(); saveSettings(); }
+  DESIGNS = [newDesign(name)];
+  V.design = 1;
+  addEntries(DESIGNS[0], raw, false);
+}
+function addEntries(D, raw, replaceSame) {
+  if (replaceSame) for (const r of raw) D.entries = D.entries.filter(e => e.name !== r.name.split('/').pop());
+  D.entries = D.entries.concat(raw.map(r => {
+    const det = detectKind(r.name, r.text);
+    return { name: r.name.split('/').pop(), text: r.text, kind: det.kind, idx: det.idx || 1 };
+  })).sort((a, b) => KINDS.findIndex(k => k[0] === a.kind) - KINDS.findIndex(k => k[0] === b.kind));
+  for (const e of D.entries) if (!e.parsedAs || e.parsedAs !== e.kind) parseEntry(e);
+  rebuildDesign(D);
+  refreshDesigns(true);
+}
+function removeDesign(D) {
+  const i = DESIGNS.indexOf(D);
+  if (i < 0 || DESIGNS.length < 2) return;
+  // the next design becomes D1, which takes its copy counts from the Layout settings
+  if (i === 0) { for (const k of D_KEYS) S[k] = DESIGNS[1][k]; saveSettings(); refreshFields(); refreshVisibility(); }
+  DESIGNS.splice(i, 1);
+  V.design = 1;
+  refreshDesigns(true);
+}
+function parseEntry(e) {
+  e.g = null; e.d = null; e.t = null; e.error = null; e.parsedAs = e.kind;
+  try {
+    if (e.kind === 'pth' || e.kind === 'npth') { e.d = parseExcellon(e.text, e.name); e.d.plated = e.kind === 'pth'; }
+    else if (e.kind === 'cpl' || e.kind === 'bom') {
+      e.t = parseTable(e.text, e.name.replace(/(\.[^.]*)?$/, '.csv'));
+      if (!e.t) e.error = 'No designator column found';
+    }
+    else if (e.kind !== 'ignore') e.g = parseGerber(e.text);
+  } catch (err) { console.error(err); e.error = String(err); }
+}
+const ARROW = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.2 2.5 7.8 6l-3.6 3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const designMeta = D => D.board ? fmt(D.board.w, 1) + ' × ' + fmt(D.board.h, 1) + ' mm' + (!multiDesign() ? '' : isAuto(S) ? (dGet(D, 'fill') ? ' · fill' : ' · ×' + dQty(D)) : ' · ' + dCols(D) + '×' + dRows(D) + (dGet(D, 'rotPat') !== 'none' ? ' ↻' : '')) : 'no Gerber data';
+/* One collapsible block per design: header (arrow, D#, name) toggles the layer list, closed by default */
+function renderFileList() {
+  const host = $('files');
+  host.innerHTML = '';
+  const multi = multiDesign();
+  DESIGNS.forEach((D, di) => {
+    const n = di + 1, bid = 'dbody' + n;
+    const box = document.createElement('div');
+    box.className = 'design';
+    box._design = D;
+    box.innerHTML = '<button type="button" class="dhead" aria-expanded="' + D.open + '" aria-controls="' + bid + '" title="' + esc(D.name) + ' – show / hide its files">' + ARROW +
+      '<span class="dtag">D' + n + '</span><span class="dname">' + esc(D.name) + '</span><span class="dmeta' + (D.board ? '' : ' err') + '">' + designMeta(D) + '</span></button>' +
+      '<div class="dbody" id="' + bid + '"' + (D.open ? '' : ' hidden') + '></div>';
+    const head = box.querySelector('.dhead'), body = box.querySelector('.dbody');
+    head.addEventListener('click', () => { D.open = !D.open; head.setAttribute('aria-expanded', D.open); body.hidden = !D.open; });
+    if (multi) {
+      const cnt = document.createElement('div');
+      cnt.className = 'dcount';
+      const auto = isAuto(S);
+      const setD = (k, v) => {
+        if (D === DESIGNS[0]) { S[k] = v; saveSettings(); refreshFields(); } else D[k] = v;
+        head.querySelector('.dmeta').textContent = designMeta(D);
+        if (angL) angL.hidden = dGet(D, 'rotPat') === 'none';
+        scheduleUpdate();
+      };
+      const numL = (lab, k, max) => {
+        const l = document.createElement('label');
+        l.innerHTML = lab + '<div class="inp"><input type="number" inputmode="numeric" min="1" max="' + max + '" step="1"></div>';
+        const inp = l.querySelector('input');
+        inp.value = dGet(D, k);
+        inp.addEventListener('input', () => { const v = parseInt(inp.value, 10); if (isFinite(v)) setD(k, clamp(v, 1, max)); });
+        cnt.appendChild(l);
+      };
+      const selL = (lab, k, opts) => {
+        const l = document.createElement('label');
+        l.innerHTML = lab + '<div class="inp"><select>' + opts.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select></div>';
+        const sel = l.querySelector('select');
+        sel.value = dGet(D, k);
+        sel.addEventListener('change', () => setD(k, sel.value));
+        cnt.appendChild(l);
+        return l;
+      };
+      let angL = null;
+      if (auto) {
+        // auto placement: only how many copies and which rotations are allowed
+        numL('Copies', 'qty', 200);
+        selL('Rotations', 'autoRot', AUTO_ROT);
+        const fl = document.createElement('label');
+        fl.className = 'dchk';
+        fl.innerHTML = '<input type="checkbox"> Fill leftover space (as many as fit)';
+        const fb = fl.querySelector('input');
+        fb.checked = !!dGet(D, 'fill');
+        cnt.querySelector('input[type=number]').disabled = fb.checked;
+        fb.addEventListener('change', () => { cnt.querySelector('input[type=number]').disabled = fb.checked; setD('fill', fb.checked); });
+        cnt.appendChild(fl);
+      } else {
+        numL('Columns (X)', 'cols', 40);
+        numL('Rows (Y)', 'rows', 40);
+        // rotation and nesting of this design's copies
+        selL('Rotate copies', 'rotPat', ROT_PAT);
+        angL = selL('Angle', 'rotAngle', ROT_ANG);
+        angL.hidden = dGet(D, 'rotPat') === 'none';
+        const nestL = document.createElement('label');
+        nestL.className = 'dchk';
+        nestL.innerHTML = '<input type="checkbox"> Nest copies (interlock odd shapes)';
+        const nb = nestL.querySelector('input');
+        nb.checked = !!dGet(D, 'nest');
+        nb.addEventListener('change', () => setD('nest', nb.checked));
+        nestL.hidden = S.sep !== 'tabs';
+        cnt.appendChild(nestL);
+      }
+      body.appendChild(cnt);
+    }
+    const files = document.createElement('div');
+    files.className = 'files';
+    for (const e of D.entries) {
+      const row = document.createElement('div');
+      row.className = 'file';
+      row.innerHTML = '<code title="' + esc(e.name + (e.error ? ' – ' + e.error : '')) + '">' + (e.error ? '⚠ ' : '') + esc(e.name) + '</code><select aria-label="Layer type: ' + esc(e.name) + '">' + KINDS.map(k => '<option value="' + k[0] + '">' + k[1] + '</option>').join('') + '</select>';
+      const sel = row.querySelector('select');
+      sel.value = e.kind;
+      sel.addEventListener('change', () => {
+        e.kind = sel.value;
+        if (e.kind === 'cuIn') e.idx = Math.max(1, ...D.entries.filter(x => x !== e && x.kind === 'cuIn').map(x => x.idx + 1));
+        parseEntry(e);
+        rebuildDesign(D);
+        refreshDesigns(false);
+      });
+      files.appendChild(row);
+    }
+    body.appendChild(files);
+    const acts = document.createElement('div');
+    acts.className = 'dacts';
+    acts.innerHTML = '<button type="button" class="btn sec2 sm">Load files…</button>' + (multi ? '<button type="button" class="btn sec2 sm danger">Remove design</button>' : '');
+    acts.children[0].title = 'Add Gerber, drill, CPL or BOM files to D' + n;
+    acts.children[0].addEventListener('click', () => pickFiles(D));
+    if (multi) acts.children[1].addEventListener('click', () => removeDesign(D));
+    body.appendChild(acts);
+    host.appendChild(box);
+  });
+}
+function refreshFields() { for (const sec of SCHEMA) for (const f of sec.fields) if (f._show) f._show(); }
+let ADD_TARGET = null;
+function pickFiles(target) { ADD_TARGET = target; $('file-add').click(); }
+const tablesOf = (D, kind) => D.entries.filter(e => e.kind === kind && e.t);
+/* All CPL files of a design (e.g. KiCad top + bottom .pos) merged into one table */
+function mergedTable(D, kind) {
+  const ts = tablesOf(D, kind).map(e => e.t);
+  if (!ts.length) return null;
+  if (kind === 'bom') {
+    const same = ts.filter(t => t.head.join('|') === ts[0].head.join('|'));
+    return { head: ts[0].head, rows: same.flatMap(t => t.rows), type: kind };
+  }
+  const head = ['Ref', 'Val', 'Package', 'PosX', 'PosY', 'Rot', 'Side'], rows = [];
+  for (const t of ts) {
+    const c = ['ref', 'val', 'pkg', 'x', 'y', 'rot', 'side'].map(k => findCol(t.head, k));
+    for (const r of t.rows) rows.push(c.map(i => i >= 0 ? (r[i] || '') : ''));
+  }
+  return { head, rows, type: kind };
+}
+const anyTable = kind => loadedDesigns().some(D => mergedTable(D, kind));
+function rebuildDesign(D) {
+  const t0 = performance.now();
+  D.board = buildBoard(D.entries.filter(e => e.kind !== 'cpl' && e.kind !== 'bom').map(e => ({ name: e.name, kind: e.kind, idx: e.idx, g: e.g, d: e.d })));
+  D.raster = D.board ? rasterizeBoard(D.board) : null;
+  D.img = null;
+  D.ms = performance.now() - t0;
+}
+/* After designs were added, removed or changed: file lists, info line, buttons, view */
+function refreshDesigns(fit) {
+  renderFileList();
+  refreshVisibility();
+  $('btn-add-design').hidden = !DESIGNS.length;
+  const L = loadedDesigns();
+  if (!L.length) { $('board-info').textContent = 'Could not find any Gerber data.'; return; }
+  const nFiles = DESIGNS.reduce((a, D) => a + D.entries.length, 0);
+  const nCu = Math.max(...L.map(D => D.board.layers.filter(l => /^cu/.test(l.kind)).length));
+  const nHoles = L.reduce((a, D) => a + D.board.layers.reduce((b, l) => b + (l.d ? l.d.holes.length + l.d.slots.length : 0), 0), 0);
+  const ms = Math.round(L.reduce((a, D) => a + (D.ms || 0), 0));
+  const head = multiDesign() ? L.map(D => 'D' + dNum(D) + ' ' + fmt(D.board.w, 2) + ' × ' + fmt(D.board.h, 2) + ' mm').join(' · ') : 'Board ' + fmt(L[0].board.w, 2) + ' × ' + fmt(L[0].board.h, 2) + ' mm';
+  $('board-info').textContent = head + ' · ' + nCu + ' copper layer' + (nCu === 1 ? '' : 's') + ' · ' + nHoles + ' holes · ' + nFiles + ' files (' + ms + ' ms)';
+  const cpl = anyTable('cpl'), bom = anyTable('bom');
+  $('drop').hidden = true;
+  $('btn-export').disabled = false;
+  $('btn-cpl').disabled = !cpl;
+  $('btn-bom').disabled = !bom;
+  $('btn-cpl').title = cpl ? '' : 'Load a CPL / pick-and-place file first';
+  $('btn-bom').title = bom ? '' : 'Load a BOM file first';
+  if (fit) { T3.fitted = false; V2.fitted = false; lastWhat = null; }
+  setView();
+  update();
+}
+
+/* ---------------------------------------------------------------- Export */
+
+const N6 = v => Math.round(v * 1e6);
+/* Aperture macro primitive with its length parameters multiplied by k (unit conversion). Indexes count the primitive
+   code as 0; exposure, vertex counts and rotations are left alone. */
+const PRIM_LEN = { 1: [2, 3, 4], 2: [2, 3, 4, 5, 6], 20: [2, 3, 4, 5, 6], 21: [2, 3, 4, 5], 22: [2, 3, 4, 5], 5: [3, 4, 5], 6: [1, 2, 3, 4, 5, 7, 8], 7: [1, 2, 3, 4, 5] };
+function scalePrim(p, k) {
+  if (k === 1 || /^0(\s|$)/.test(p) || p[0] === '$') return p;
+  const a = p.split(','), code = parseInt(a[0], 10);
+  const idx = code === 4 ? a.map((_, i) => i).filter(i => i >= 3 && i < a.length - 1) : PRIM_LEN[code];
+  if (!idx) return p;
+  for (const i of idx) if (i < a.length) a[i] = '(' + a[i] + ')x' + +k.toFixed(10);
+  return a.join(',');
+}
+const apNum = v => String(+(+v).toFixed(6));
+/* Aperture macro primitive turned by deg (CCW) about the macro origin: the rotation parameter is increased */
+const PRIM_ROT = { 1: 5, 2: 7, 20: 7, 21: 6, 22: 6, 5: 6, 6: 9, 7: 6 };
+function rotatePrim(p, deg) {
+  if (!deg || /^0(\s|$)/.test(p) || p[0] === '$') return p;
+  const a = p.split(','), code = parseInt(a[0], 10);
+  const i = code === 4 ? a.length - 1 : PRIM_ROT[code];
+  if (i == null) return p;
+  if (i >= a.length) { if (code === 1 && a.length === 5) a.push(String(deg)); return a.join(','); }
+  a[i] = '(' + a[i] + ')+' + deg;
+  return a.join(',');
+}
+/* parts: [{G, copies}] – the same layer of one or more designs, each placed at its copies. Several designs are
+   merged into one file: apertures are renumbered, macros renamed (_D1, _D2 …) and, when the designs use
+   different units, everything is converted to mm. One design in its own units is written as before. */
+function emitGerber(parts, extra, fileFunction) {
+  parts = parts.filter(p => p.G);
+  const u = parts.length && parts.every(p => p.G.units === 'in') ? 25.4 : 1;
+  const out = [];
+  const ffn = fileFunction || parts.map(p => p.G.fileFunction).find(Boolean);
+  if (ffn) out.push('%TF.FileFunction,' + ffn + '*%');
+  out.push(u === 1 ? '%FSLAX46Y46*%' : '%FSLAX26Y26*%', u === 1 ? '%MOMM*%' : '%MOIN*%');
+  const rotsOf = p => [...new Set(p.copies.map(cp => cp.rot || 0))].sort((a, b) => a - b);
+  const plain = parts.length === 1 && (parts[0].G.units === 'in' ? 25.4 : 1) === u && rotsOf(parts[0]).every(r => r === 0);
+  let next = 10;
+  const prep = parts.map((p, pi) => {
+    const G = p.G, km = G.units === 'in' ? 25.4 : 1, k = km / u, apMaps = {};
+    if (plain) {
+      const apMap = apMaps[0] = {};
+      out.push(...G.macroText);
+      for (const code of Object.keys(G.apText).sort((a, b) => a - b)) { out.push(G.apText[code]); apMap[code] = +code; }
+      next = G.maxAp + 1;
+    } else {
+      // one set of apertures (and macros) per rotation used by this design's copies
+      for (const r of rotsOf(p)) {
+        const sfx = (parts.length > 1 ? '_D' + (p.tag || pi + 1) : '') + (r ? '_R' + r : ''), mac = {}, apMap = apMaps[r] = {};
+        for (const [name, prims] of Object.entries(G.macros)) { mac[name] = name + sfx; out.push('%AM' + mac[name] + '*\n' + prims.map(q => rotatePrim(scalePrim(q, k), r)).join('*\n') + '*%'); }
+        for (const code of Object.keys(G.aps).sort((a, b) => a - b)) {
+          const a = G.aps[code], isMac = !!mac[a.name];
+          const prm = a.params.map((v, i) => isMac || (a.name === 'P' && (i === 1 || i === 2)) ? v : v * k);
+          if (r && !isMac) {
+            if ((a.name === 'R' || a.name === 'O') && r % 180 && prm.length >= 2) [prm[0], prm[1]] = [prm[1], prm[0]];
+            if (a.name === 'P' && prm.length >= 2) { while (prm.length < 3) prm.push(0); prm[2] = (prm[2] + r) % 360; }
+          }
+          apMap[code] = next++;
+          out.push('%ADD' + apMap[code] + (isMac ? mac[a.name] : a.name) + (prm.length ? ',' + prm.map(apNum).join('X') : '') + '*%');
+        }
+      }
+    }
+    return { G, k, km, apMaps, copies: p.copies };
+  });
+  // extra apertures (fiducials, text)
+  if (!parts.length) next = 10;
+  const extraAp = new Map();
+  const apFor = d => { const k = d.toFixed(4); if (!extraAp.has(k)) { extraAp.set(k, next++); out.push('%ADD' + extraAp.get(k) + 'C,' + (d / u).toFixed(6) + '*%'); } return extraAp.get(k); };
+  for (const it of extra || []) apFor(it.line ? it.w : it.d);
+  out.push('G75*', '%LPD*%', 'G01*');
+  let pol = 'D', ap = null, cx = null, cy = null, mode = 'G01';
+  const XY = (x, y) => 'X' + N6(x) + 'Y' + N6(y);
+  const setMode = m => { if (m !== mode) { out.push(m + '*'); mode = m; } };
+  const moveTo = (x, y) => { if (cx === null || N6(x) !== N6(cx) || N6(y) !== N6(cy)) out.push(XY(x, y) + 'D02*'); cx = x; cy = y; };
+  const segTo = s => {
+    if (s.t === 'L') { setMode('G01'); out.push(XY(s.x2, s.y2) + 'D01*'); }
+    else { setMode(s.cw ? 'G02' : 'G03'); out.push(XY(s.x2, s.y2) + 'I' + N6(s.cx - s.x1) + 'J' + N6(s.cy - s.y1) + 'D01*'); }
+    cx = s.x2; cy = s.y2;
+  };
+  // mp maps file coordinates to output coordinates for one copy (units, placement, rotation)
+  const tf = (s, mp) => {
+    const o = { t: s.t, cw: s.cw };
+    [o.x1, o.y1] = mp(s.x1, s.y1); [o.x2, o.y2] = mp(s.x2, s.y2);
+    if (s.t === 'A') [o.cx, o.cy] = mp(s.cx, s.cy);
+    return o;
+  };
+  const emitOp = (op, apMap, mp) => {
+    if (op.t !== 'R' && (op.ap == null || apMap[op.ap] == null)) return;
+    if (op.pol !== pol) { out.push('%LP' + op.pol + '*%'); pol = op.pol; }
+    if (op.t === 'R') {
+      out.push('G36*');
+      for (const c of op.contours) {
+        cx = null; moveTo(...mp(c.x0, c.y0));
+        for (const s of c.segs) segTo(tf(s, mp));
+      }
+      out.push('G37*');
+      return;
+    }
+    const code = apMap[op.ap];
+    if (code !== ap) { out.push('D' + code + '*'); ap = code; }
+    if (op.t === 'F') { [cx, cy] = mp(op.x, op.y); out.push(XY(cx, cy) + 'D03*'); return; }
+    moveTo(...mp(op.x1, op.y1));
+    segTo(tf(op, mp));
+  };
+  for (const P of prep) for (const cp of P.copies) {
+    const k = P.k, km = P.km, dx = cp.dx / u, dy = cp.dy / u;
+    const mp = cp.rot ? (x, y) => { const [a, b] = cpXY(cp, x * km, y * km); return [a / u, b / u]; } : (x, y) => [x * k + dx, y * k + dy];
+    for (const op of P.G.ops) emitOp(op, P.apMaps[cp.rot || 0], mp);
+  }
+  if (pol !== 'D') { out.push('%LPD*%'); pol = 'D'; }
+  for (const it of extra || []) {
+    const code = apFor(it.line ? it.w : it.d);
+    if (code !== ap) { out.push('D' + code + '*'); ap = code; }
+    if (it.line) { cx = null; moveTo(it.line[0] / u, it.line[1] / u); setMode('G01'); out.push(XY(it.line[2] / u, it.line[3] / u) + 'D01*'); cx = it.line[2] / u; cy = it.line[3] / u; }
+    else { out.push(XY(it.x / u, it.y / u) + 'D03*'); cx = it.x / u; cy = it.y / u; }
+  }
+  out.push('M02*');
+  return out.join('\n') + '\n';
+}
+function emitOutline(segs, extraLines, fn) {
+  const out = ['%TF.FileFunction,' + fn + '*%', '%FSLAX46Y46*%', '%MOMM*%', '%ADD10C,0.100000*%', 'G75*', '%LPD*%', 'G01*', 'D10*'];
+  let mode = 'G01', cx = null, cy = null;
+  const XY = (x, y) => 'X' + N6(x) + 'Y' + N6(y);
+  for (const s of segs) {
+    if (cx === null || N6(s.x1) !== N6(cx) || N6(s.y1) !== N6(cy)) out.push(XY(s.x1, s.y1) + 'D02*');
+    const m = s.t === 'L' ? 'G01' : (s.cw ? 'G02' : 'G03');
+    if (m !== mode) { out.push(m + '*'); mode = m; }
+    out.push(s.t === 'L' ? XY(s.x2, s.y2) + 'D01*' : XY(s.x2, s.y2) + 'I' + N6(s.cx - s.x1) + 'J' + N6(s.cy - s.y1) + 'D01*');
+    cx = s.x2; cy = s.y2;
+  }
+  if (mode !== 'G01') out.push('G01*');
+  for (const [x1, y1, x2, y2] of extraLines || []) { out.push(XY(x1, y1) + 'D02*', XY(x2, y2) + 'D01*'); }
+  out.push('M02*');
+  return out.join('\n') + '\n';
+}
+function emitDrill(holes, slots, plated) {
+  const tools = [], tid = d => { const k = d.toFixed(3); let i = tools.indexOf(k); if (i < 0) { tools.push(k); i = tools.length - 1; } return i + 1; };
+  const H = holes.map(h => ({ ...h, T: tid(h.d) })), SL = slots.map(s => ({ ...s, T: tid(s.d) }));
+  const out = ['M48', '; DRILL file', '; FORMAT={-:-/ absolute / metric / decimal}',
+    plated === null ? '; #@! TF.FileFunction,MixedPlating,1,2' : plated ? '; #@! TF.FileFunction,Plated,1,2,PTH' : '; #@! TF.FileFunction,NonPlated,1,2,NPTH',
+    'FMAT,2', 'METRIC'];
+  tools.forEach((d, i) => out.push('T' + (i + 1) + 'C' + d));
+  out.push('%', 'G90', 'G05');
+  const c = v => v.toFixed(3);
+  tools.forEach((d, i) => {
+    const t = i + 1, hs = H.filter(h => h.T === t), ss = SL.filter(s => s.T === t);
+    if (!hs.length && !ss.length) return;
+    out.push('T' + t);
+    for (const h of hs) out.push('X' + c(h.x) + 'Y' + c(h.y));
+    for (const s of ss) out.push('G00X' + c(s.x1) + 'Y' + c(s.y1), 'M15', 'G01X' + c(s.x2) + 'Y' + c(s.y2), 'M16', 'G05');
+  });
+  out.push('T0', 'M30');
+  return out.join('\n') + '\n';
+}
+function fileNames(fab, p) {
+  if (fab === 'jlc') return {
+    cuTop: 'Gerber_TopLayer.GTL', cuBot: 'Gerber_BottomLayer.GBL', cuIn: n => 'Gerber_InnerLayer' + n + '.G' + n,
+    maskTop: 'Gerber_TopSolderMaskLayer.GTS', maskBot: 'Gerber_BottomSolderMaskLayer.GBS',
+    silkTop: 'Gerber_TopSilkscreenLayer.GTO', silkBot: 'Gerber_BottomSilkscreenLayer.GBO',
+    pasteTop: 'Gerber_TopPasteMaskLayer.GTP', pasteBot: 'Gerber_BottomPasteMaskLayer.GBP',
+    outline: 'Gerber_BoardOutlineLayer.GKO', vcut: 'Gerber_MechanicalLayer2_VCUT.GM2',
+    pth: 'Drill_PTH_Through.DRL', npth: 'Drill_NPTH_Through.DRL', merged: 'Drill_Through.DRL', other: n => 'Gerber_' + n
+  };
+  if (fab === 'pcbway') return {
+    cuTop: p + '.GTL', cuBot: p + '.GBL', cuIn: n => p + '.G' + n,
+    maskTop: p + '.GTS', maskBot: p + '.GBS', silkTop: p + '.GTO', silkBot: p + '.GBO', pasteTop: p + '.GTP', pasteBot: p + '.GBP',
+    outline: p + '.GKO', vcut: p + '-VCUT.GM2', pth: p + '-PTH.DRL', npth: p + '-NPTH.DRL', merged: p + '.DRL', other: n => p + '-' + n
+  };
+  return {
+    cuTop: p + '-F_Cu.gbr', cuBot: p + '-B_Cu.gbr', cuIn: n => p + '-In' + n + '_Cu.gbr',
+    maskTop: p + '-F_Mask.gbr', maskBot: p + '-B_Mask.gbr', silkTop: p + '-F_Silkscreen.gbr', silkBot: p + '-B_Silkscreen.gbr',
+    pasteTop: p + '-F_Paste.gbr', pasteBot: p + '-B_Paste.gbr', outline: p + '-Edge_Cuts.gbr', vcut: p + '-User_Comments_VCUT.gbr',
+    pth: p + '-PTH.drl', npth: p + '-NPTH.drl', merged: p + '.drl', other: n => p + '-' + n
+  };
+}
+function buildExport() {
+  const P = PANEL, fab = S.fab, DS = loadedDesigns();
+  const proj = (S.project || 'panel').replace(/[^\w.-]+/g, '_');
+  const names = fileNames(fab, proj);
+  const files = {}, used = new Set(), extraDone = new Set();
+  const put = (name, text) => {
+    let n = name, k = 2;
+    while (used.has(n.toLowerCase())) n = name.replace(/(\.[^.]+)$/, '_' + (k++) + '$1');
+    used.add(n.toLowerCase());
+    files[n] = text;
+  };
+  const cuCounts = DS.map(D => D.board.layers.filter(l => /^cu/.test(l.kind)).length);
+  const totalCu = Math.max(...cuCounts), cuDiffer = new Set(cuCounts).size > 1;
+  // The same layer of every design goes into one file. Layers are matched by type (inner copper by number);
+  // a design with two files of one type gets them matched in order. Other Gerbers stay one file per source file.
+  const groups = new Map();
+  for (const D of DS) {
+    const seen = {};
+    for (const L of D.board.layers) {
+      if (!L.g || L.kind === 'outline') continue;
+      const base = L.kind === 'cuIn' ? 'cuIn' + L.idx : L.kind === 'other' ? 'other:' + dNum(D) + ':' + L.name : L.kind;
+      seen[base] = (seen[base] || 0) + 1;
+      const key = base + '#' + seen[base];
+      if (!groups.has(key)) groups.set(key, { L, parts: [] });
+      groups.get(key).parts.push({ G: L.g, copies: copiesOf(P, D), tag: dNum(D) });
+    }
+  }
+  for (const { L, parts } of groups.values()) {
+    let extra = null;
+    if (P.add[L.kind] && !extraDone.has(L.kind)) { extra = P.add[L.kind]; extraDone.add(L.kind); }
+    let ffn = parts.map(p => p.G.fileFunction).find(Boolean);
+    if (L.kind === 'cuTop') ffn = (!cuDiffer && ffn) || 'Copper,L1,Top';
+    if (L.kind === 'cuBot') ffn = (!cuDiffer && ffn) || 'Copper,L' + Math.max(2, totalCu) + ',Bot';
+    if (L.kind === 'cuIn' && cuDiffer) ffn = 'Copper,L' + (L.idx + 1) + ',Inr';
+    const name = L.kind === 'cuIn' ? names.cuIn(L.idx) : L.kind === 'other' ? names.other(L.name) : names[L.kind];
+    put(name, emitGerber(parts, extra, ffn));
+  }
+  // Only a silkscreen layer (frame text) is created when the source has none. A copper or mask file is never
+  // created from scratch – a mask holding only fiducial openings would make the fab cover every pad.
+  for (const kind of ['silkTop']) {
+    if (!extraDone.has(kind) && P.add[kind].length) put(names[kind], emitGerber([], P.add[kind], null));
+  }
+  const vInOutline = S.sep === 'vcut' && S.vcutLayer === 'outline';
+  put(names.outline, emitOutline(P.outline, vInOutline ? P.vcuts : [], 'Profile,NP'));
+  if (S.sep === 'vcut' && !vInOutline && P.vcuts.length) put(names.vcut, emitOutline([], P.vcuts, 'Other,VCUT'));
+  // drills
+  const pth = { holes: [], slots: [] }, npth = { holes: [], slots: [] };
+  for (const D of DS) for (const L of D.board.layers) {
+    if (!L.d) continue;
+    const dst = L.d.plated === false ? npth : pth;
+    for (const cp of copiesOf(P, D)) {
+      for (const h of L.d.holes) { const [x, y] = cpXY(cp, h.x, h.y); dst.holes.push({ x, y, d: L.d.tools[h.t] || 0.3 }); }
+      for (const s of L.d.slots) { const [x1, y1] = cpXY(cp, s.x1, s.y1), [x2, y2] = cpXY(cp, s.x2, s.y2); dst.slots.push({ x1, y1, x2, y2, d: L.d.tools[s.t] || 0.5 }); }
+    }
+  }
+  for (const h of P.add.npth) npth.holes.push(h);
+  if (S.mergeDrill) put(names.merged, emitDrill(pth.holes.concat(npth.holes), pth.slots.concat(npth.slots), null));
+  else {
+    if (pth.holes.length || pth.slots.length) put(names.pth, emitDrill(pth.holes, pth.slots, true));
+    if (npth.holes.length || npth.slots.length) put(names.npth, emitDrill(npth.holes, npth.slots, false));
+  }
+  return { files, zipName: proj + '_' + fab + '.zip' };
+}
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const projName = () => (S.project || 'board').replace(/[^\w.-]+/g, '_');
+async function doExport() {
+  if (!hasBoard()) return;
+  const st = $('export-status');
+  if (typeof JSZip === 'undefined') { st.textContent = 'The ZIP library did not load – check the internet connection.'; return; }
+  st.textContent = 'Generating…';
+  update();
+  const { files, zipName } = buildExport();
+  const zip = new JSZip();
+  for (const [n, t] of Object.entries(files)) zip.file(n, t);
+  download(await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }), zipName);
+  const P = PANEL;
+  st.innerHTML = 'Downloaded <b>' + esc(zipName) + '</b> (' + Object.keys(files).length + ' files' + (multiDesign() ? ', ' + loadedDesigns().length + ' designs merged' : '') + '). Board size ' + fmt(P.W, 2) + ' × ' + fmt(P.H, 2) + ' mm.';
+}
+function doTable(kind) {
+  if (!hasBoard()) return;
+  update();
+  const st = $('export-status');
+  if (!anyTable(kind)) return;
+  const name = projName() + (kind === 'cpl' ? '_CPL.csv' : '_BOM.csv');
+  const r = kind === 'cpl' ? panelCPL(PANEL) : panelBOM(PANEL);
+  download(new Blob([r.csv], { type: 'text/csv' }), name);
+  const cps = PANEL.copies, a = cps[0], b = cps[cps.length - 1];
+  st.innerHTML = 'Downloaded <b>' + esc(name) + '</b> – ' + r.parts + ' placements, designators ' + esc(refName(a.i, 'R1', a.dn)) + ' … ' + esc(refName(b.i, 'R1', b.dn)) + '.' +
+    (r.outside ? ' <span style="color:var(--warn)">⚠ ' + r.outside + ' parts fall outside the board – check “CPL coordinate origin”.</span>' : '');
+}
+function exportSettings() {
+  const data = { app: 'gerber-panelizer', version: 1, saved: new Date().toISOString(), settings: Object.assign({}, S) };
+  download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), projName() + '_panel-settings.json');
+  $('set-status').textContent = 'Settings exported.';
+}
+async function importSettings(file) {
+  const st = $('set-status');
+  try {
+    const data = JSON.parse(await file.text());
+    const n = applySettings(data && data.settings ? data.settings : data);
+    if (!n) { st.textContent = 'No known settings found in ' + file.name + '.'; return; }
+    buildSettingsUI(); renderFileList(); saveSettings(); scheduleUpdate(0);
+    st.textContent = 'Imported ' + n + ' settings from ' + file.name + '.';
+  } catch (err) { st.textContent = 'Could not read ' + file.name + ': ' + err.message; }
+}
+
+/* ---------------------------------------------------------------- Demo board (KiCad style) */
+
+function demoFiles() {
+  const f = v => Math.round(v * 1e6), P = (x, y) => 'X' + f(x) + 'Y' + f(y);
+  const x0 = 100, y0 = -95, w = 45, h = 30, r = 2;
+  const hdr = fn => '%TF.GenerationSoftware,Demo,Gerber Panelizer*%\n%TF.FileFunction,' + fn + '*%\n%FSLAX46Y46*%\nG04 Demo board*\n%MOMM*%\n%LPD*%\nG01*\n';
+  const RR = '%AMRoundRect*\n0 Rectangle with rounded corners*\n0 $1 Rounding radius*\n0 $2 $3 $4 $5 $6 $7 $8 $9 X,Y pos of 4 corners*\n4,1,4,$2,$3,$4,$5,$6,$7,$8,$9,$2,$3,0*\n1,1,$1+$1,$2,$3*\n1,1,$1+$1,$4,$5*\n1,1,$1+$1,$6,$7*\n1,1,$1+$1,$8,$9*\n20,1,$1+$1,$2,$3,$4,$5,0*\n20,1,$1+$1,$4,$5,$6,$7,0*\n20,1,$1+$1,$6,$7,$8,$9,0*\n20,1,$1+$1,$8,$9,$2,$3,0*%\n';
+  const rrAd = (code, wx, hy, rr) => { const a = wx / 2 - rr, b = hy / 2 - rr; return '%ADD' + code + 'RoundRect,' + [rr, -a, -b, a, -b, a, b, -a, b].map(v => v.toFixed(6)).join('X') + '*%\n'; };
+  // outline
+  let edge = hdr('Profile,NP') + '%ADD10C,0.100000*%\nD10*\nG75*\n';
+  edge += P(x0 + r, y0) + 'D02*\nG01*\n' + P(x0 + w - r, y0) + 'D01*\nG03*\n' + P(x0 + w, y0 + r) + 'I0J' + f(r) + 'D01*\nG01*\n' + P(x0 + w, y0 + h - r) + 'D01*\nG03*\n' + P(x0 + w - r, y0 + h) + 'I' + f(-r) + 'J0D01*\nG01*\n' + P(x0 + r, y0 + h) + 'D01*\nG03*\n' + P(x0, y0 + h - r) + 'I0J' + f(-r) + 'D01*\nG01*\n' + P(x0, y0 + r) + 'D01*\nG03*\n' + P(x0 + r, y0) + 'I' + f(r) + 'J0D01*\nG01*\n';
+  // internal cutout
+  edge += P(x0 + 36, y0 + 12) + 'D02*\n' + P(x0 + 41, y0 + 12) + 'D01*\n' + P(x0 + 41, y0 + 18) + 'D01*\n' + P(x0 + 36, y0 + 18) + 'D01*\n' + P(x0 + 36, y0 + 12) + 'D01*\nM02*\n';
+  // components
+  const hdrPins = [0, 1, 2, 3].map(i => [x0 + 5, y0 + 9 + i * 2.54]);
+  const smd = [];
+  [[16, 8], [16, 13], [16, 18], [24, 22], [28, 22]].forEach(([px, py]) => { smd.push([x0 + px - 0.95, y0 + py], [x0 + px + 0.95, y0 + py]); });
+  const qfn = [];
+  for (let i = 0; i < 6; i++) { qfn.push([x0 + 24 + i * 0.65, y0 + 7]); qfn.push([x0 + 24 + i * 0.65, y0 + 14]); }
+  const vias = [[x0 + 12, y0 + 20], [x0 + 20, y0 + 5], [x0 + 30, y0 + 18], [x0 + 22, y0 + 25]];
+  const cu = (side, grow) => {
+    let s = hdr('Copper,L' + (side === 'top' ? '1,Top' : '2,Bot')) + RR;
+    s += '%ADD10C,' + (1.7 + grow).toFixed(6) + '*%\n%ADD11R,' + (1.7 + grow).toFixed(6) + 'X' + (1.7 + grow).toFixed(6) + '*%\n' + rrAd(12, 1.0 + grow, 1.3 + grow, 0.25) + '%ADD13R,' + (0.35 + grow).toFixed(6) + 'X' + (1.0 + grow).toFixed(6) + '*%\n%ADD14C,0.250000*%\n%ADD15C,0.500000*%\n%ADD16C,' + (0.6 + grow).toFixed(6) + '*%\n%ADD17C,' + (6 + grow).toFixed(6) + '*%\n';
+    s += 'D11*\n' + P(...hdrPins[0]) + 'D03*\nD10*\n' + hdrPins.slice(1).map(p => P(...p) + 'D03*\n').join('');
+    if (side === 'top') {
+      s += 'D12*\n' + smd.map(p => P(...p) + 'D03*\n').join('');
+      s += 'D13*\n' + qfn.map(p => P(...p) + 'D03*\n').join('');
+      if (grow === 0) {
+        s += 'D15*\n' + P(...hdrPins[0]) + 'D02*\n' + P(x0 + 10, y0 + 9) + 'D01*\n' + P(smd[0][0], y0 + 8) + 'D01*\n';
+        s += 'D14*\n' + P(smd[1][0], smd[1][1]) + 'D02*\n' + P(x0 + 20, y0 + 8) + 'D01*\n' + P(x0 + 20, y0 + 5) + 'D01*\n';
+        s += P(...hdrPins[1]) + 'D02*\n' + P(x0 + 12, y0 + 11.54) + 'D01*\n' + P(x0 + 12, y0 + 13) + 'D01*\n' + P(smd[2][0], y0 + 13) + 'D01*\n';
+        s += P(smd[5][0], y0 + 18) + 'D02*\n' + P(x0 + 30, y0 + 18) + 'D01*\n';
+        s += 'G75*\n' + P(smd[3][0], y0 + 13) + 'D02*\nG02*\n' + P(x0 + 24, y0 + 7) + 'I' + f(x0 + 24 - smd[3][0]) + 'J0D01*\nG01*\n';
+        for (let i = 0; i < 6; i++) s += P(x0 + 24 + i * 0.65, y0 + 14) + 'D02*\n' + P(x0 + 24 + i * 0.65, y0 + 16 + i * 0.4) + 'D01*\n';
+        s += 'G36*\n' + P(x0 + 33, y0 + 21) + 'D02*\n' + P(x0 + 43, y0 + 21) + 'D01*\n' + P(x0 + 43, y0 + 28) + 'D01*\n' + P(x0 + 33, y0 + 28) + 'D01*\n' + P(x0 + 33, y0 + 21) + 'D01*\nG37*\n';
+        s += '%LPC*%\nD16*\n' + P(x0 + 38, y0 + 24.5) + 'D03*\n%LPD*%\n';
+      }
+    } else if (grow === 0) {
+      s += 'G36*\n' + P(x0 + 1, y0 + 1) + 'D02*\n' + P(x0 + w - 1, y0 + 1) + 'D01*\n' + P(x0 + w - 1, y0 + 10) + 'D01*\n' + P(x0 + 34, y0 + 10) + 'D01*\n' + P(x0 + 34, y0 + 20) + 'D01*\n' + P(x0 + w - 1, y0 + 20) + 'D01*\n' + P(x0 + w - 1, y0 + h - 1) + 'D01*\n' + P(x0 + 1, y0 + h - 1) + 'D01*\n' + P(x0 + 1, y0 + 1) + 'D01*\nG37*\n';
+      s += '%LPC*%\nD17*\n' + P(x0 + 4, y0 + 4) + 'D03*\n' + P(x0 + w - 4, y0 + h - 4) + 'D03*\n%ADD18C,2.400000*%\nD18*\n' + hdrPins.map(p => P(...p) + 'D03*\n').join('') + '%ADD19C,1.000000*%\nD19*\n' + vias.map(p => P(...p) + 'D03*\n').join('') + '%LPD*%\n';
+      s += 'D11*\n' + P(...hdrPins[0]) + 'D03*\nD10*\n' + hdrPins.slice(1).map(p => P(...p) + 'D03*\n').join('');
+    }
+    if (grow === 0) s += 'D16*\n' + vias.map(p => P(...p) + 'D03*\n').join('');
+    return s + 'M02*\n';
+  };
+  const mask = side => cu(side, 0.1).replace(/Copper,L1,Top|Copper,L2,Bot/, side === 'top' ? 'Soldermask,Top' : 'Soldermask,Bot').replace(/D16\*\n(X[^\n]*\n)+/, '');
+  const silk = side => {
+    let s = hdr(side === 'top' ? 'Legend,Top' : 'Legend,Bot') + '%ADD10C,0.150000*%\nD10*\n';
+    const box = (ax, ay, bx, by) => P(ax, ay) + 'D02*\n' + P(bx, ay) + 'D01*\n' + P(bx, by) + 'D01*\n' + P(ax, by) + 'D01*\n' + P(ax, ay) + 'D01*\n';
+    const mir = side === 'top' ? 1 : -1;
+    const txt = (str, cx, cy, hh) => textLines(str, 0, cy, hh, 0).map(l => [cx + mir * l[0], l[1], cx + mir * l[2], l[3]]).map(l => P(l[0], l[1]) + 'D02*\n' + P(l[2], l[3]) + 'D01*\n').join('');
+    if (side === 'top') {
+      s += box(x0 + 3.6, y0 + 7.6, x0 + 6.4, y0 + 17.6) + box(x0 + 23, y0 + 9, x0 + 28.9, y0 + 12);
+      s += txt('DEMO V1', x0 + 22, y0 + 26.5, 1.6) + txt('J1', x0 + 5, y0 + 19.5, 1) + txt('U1', x0 + 26, y0 + 10.5, 0.8);
+      [[16, 8], [16, 13], [16, 18]].forEach(([px, py], i) => s += txt('R' + (i + 1), x0 + px, y0 + py + 1.6, 0.8));
+    } else s += txt('BENCH PANEL TEST', x0 + 18, y0 + 27, 1.4);
+    return s + 'M02*\n';
+  };
+  const paste = () => hdr('Paste,Top') + RR + rrAd(12, 1.0, 1.3, 0.25) + '%ADD13R,0.350000X1.000000*%\nD12*\n' + smd.map(p => P(...p) + 'D03*\n').join('') + 'D13*\n' + qfn.map(p => P(...p) + 'D03*\n').join('') + 'M02*\n';
+  const c3 = v => v.toFixed(3);
+  let pth = 'M48\n; DRILL file {KiCad 8} date demo\n; FORMAT={-:-/ absolute / metric / decimal}\n; #@! TF.FileFunction,Plated,1,2,PTH\nFMAT,2\nMETRIC\nT1C0.300\nT2C1.000\nT3C0.800\n%\nG90\nG05\n';
+  pth += 'T1\n' + vias.map(p => 'X' + c3(p[0]) + 'Y' + c3(p[1]) + '\n').join('') + 'T2\n' + hdrPins.map(p => 'X' + c3(p[0]) + 'Y' + c3(p[1]) + '\n').join('');
+  pth += 'T3\nG00X' + c3(x0 + 9) + 'Y' + c3(y0 + 24) + '\nM15\nG01X' + c3(x0 + 11) + 'Y' + c3(y0 + 24) + '\nM16\nG05\nT0\nM30\n';
+  const npth = 'M48\n; DRILL file {KiCad 8} date demo\n; FORMAT={-:-/ absolute / metric / decimal}\n; #@! TF.FileFunction,NonPlated,1,2,NPTH\nFMAT,2\nMETRIC\nT1C3.200\n%\nG90\nG05\nT1\nX' + c3(x0 + 4) + 'Y' + c3(y0 + 4) + '\nX' + c3(x0 + w - 4) + 'Y' + c3(y0 + h - 4) + '\nT0\nM30\n';
+  // KiCad CSV position file (absolute coordinates) and a JLC-style BOM
+  const parts = [['J1', 'Conn_01x04', 'PinHeader_1x04_P2.54mm', 5, 12.81, 90], ['R1', '10k', 'R_0805', 16, 8, 0], ['R2', '10k', 'R_0805', 16, 13, 0],
+    ['R3', '4k7', 'R_0805', 16, 18, 0], ['C1', '100nF', 'C_0805', 24, 22, 0], ['C2', '100nF', 'C_0805', 28, 22, 0], ['U1', 'TPS7A02', 'DFN-12', 25.63, 10.5, 0]];
+  const cpl = 'Ref,Val,Package,PosX,PosY,Rot,Side\n' + parts.map(q => [q[0], '"' + q[1] + '"', '"' + q[2] + '"', (x0 + q[3]).toFixed(4), (y0 + q[4]).toFixed(4), q[5].toFixed(4), 'top'].join(',')).join('\n') + '\n';
+  const bom = 'Comment,Designator,Footprint,LCSC Part #,Quantity\n"10k","R1,R2","R_0805","C17414",2\n"4k7","R3","R_0805","C17673",1\n"100nF","C1,C2","C_0805","C49678",2\n"TPS7A02","U1","DFN-12","",1\n"Conn_01x04","J1","PinHeader_1x04_P2.54mm","",1\n';
+  return [
+    { name: 'demo-F_Cu.gbr', text: cu('top', 0) }, { name: 'demo-B_Cu.gbr', text: cu('bottom', 0) },
+    { name: 'demo-F_Mask.gbr', text: mask('top') }, { name: 'demo-B_Mask.gbr', text: mask('bottom') },
+    { name: 'demo-F_Silkscreen.gbr', text: silk('top') }, { name: 'demo-B_Silkscreen.gbr', text: silk('bottom') },
+    { name: 'demo-F_Paste.gbr', text: paste() }, { name: 'demo-Edge_Cuts.gbr', text: edge },
+    { name: 'demo-PTH.drl', text: pth }, { name: 'demo-NPTH.drl', text: npth },
+    { name: 'demo-top-pos.csv', text: cpl }, { name: 'demo-BOM.csv', text: bom }
+  ];
+}
+
+/* ---------------------------------------------------------------- UI events */
+
+function initUI() {
+  buildSettingsUI();
+  init3D();
+  init2D();
+  const fileIn = $('file-in');
+  const open = () => fileIn.click();
+  $('btn-open').addEventListener('click', open);
+  $('btn-open2').addEventListener('click', open);
+  fileIn.addEventListener('change', () => { if (fileIn.files.length) loadFiles([...fileIn.files]).catch(err => alert('Error: ' + err)); fileIn.value = ''; });
+  const fileAdd = $('file-add');
+  fileAdd.addEventListener('change', () => { if (fileAdd.files.length) loadFiles([...fileAdd.files], ADD_TARGET).catch(err => alert('Error: ' + err)); fileAdd.value = ''; });
+  $('btn-add-design').addEventListener('click', () => pickFiles('new'));
+  $('design-sel').addEventListener('change', () => { V.design = +$('design-sel').value; update(); });
+  const demo = () => { S.project = 'demo'; buildSettingsUI(); DESIGNS = [newDesign('demo')]; V.design = 1; addEntries(DESIGNS[0], demoFiles(), false); };
+  $('btn-demo').addEventListener('click', demo);
+  $('btn-demo2').addEventListener('click', demo);
+  $('btn-export').addEventListener('click', () => doExport().catch(err => { $('export-status').textContent = 'Error: ' + err; console.error(err); }));
+  $('btn-cpl').addEventListener('click', () => doTable('cpl'));
+  $('btn-bom').addEventListener('click', () => doTable('bom'));
+  $('btn-save-set').addEventListener('click', exportSettings);
+  const setIn = $('set-in');
+  $('btn-load-set').addEventListener('click', () => setIn.click());
+  setIn.addEventListener('change', () => { if (setIn.files.length) importSettings(setIn.files[0]); setIn.value = ''; });
+  $('btn-reset').addEventListener('click', () => { const p = S.project; Object.assign(S, DEF, { project: p }); buildSettingsUI(); renderFileList(); saveSettings(); scheduleUpdate(0); $('set-status').textContent = 'All settings reset to defaults.'; });
+  $('btn-fit').addEventListener('click', () => { if (V.mode === '3d') fit3D(); else fit2D(); });
+  for (const b of document.querySelectorAll('[data-what]')) b.addEventListener('click', () => setView(b.dataset.what, null));
+  for (const b of document.querySelectorAll('[data-mode]')) b.addEventListener('click', () => setView(null, b.dataset.mode));
+  const vp = $('viewport');
+  ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); $('drop').classList.add('over'); if (hasBoard()) $('drop').hidden = false; }));
+  ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === 'dragleave' && e.relatedTarget) return; $('drop').classList.remove('over'); if (hasBoard()) $('drop').hidden = true; }));
+  // dropped on a design block → added to that design; on the "add design" button → a new design; elsewhere → new project
+  document.addEventListener('drop', e => {
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    const box = e.target.closest && e.target.closest('.design'), add = e.target.closest && e.target.closest('#btn-add-design');
+    loadFiles([...e.dataTransfer.files], box ? box._design : add ? 'new' : undefined).catch(err => alert('Error: ' + err));
+  });
+  new ResizeObserver(() => { resize3D(); draw2D(); }).observe(vp);
+  if (!T3.ok) { V.mode = 'top'; for (const b of document.querySelectorAll('[data-mode="3d"]')) b.disabled = true; }
+  setView();
+  resize3D();
+}
+initUI();
+</script>
+</body>
+</html>

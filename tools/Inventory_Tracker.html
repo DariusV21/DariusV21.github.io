@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bench / Electronics Inventory</title>
+  <style>
+    /* ============================================================
+       TOKENS
+       ============================================================ */
+    :root{
+      --bg:           #0e1210;
+      --bg-elev:      #141a17;
+      --bg-elev-2:    #1a221e;
+      --line:         #25302b;
+      --line-soft:    #1d2622;
+      --text:         #e7eee8;
+      --text-dim:     #93a39a;
+      --text-faint:   #5e6e66;
+      --accent:       #ff8a3d;
+      --accent-dim:   #6b4322;
+      --accent-text:  #1a0f04;
+      --good:         #5fd38d;
+      --bad:          #ff6b6b;
+      --focus:        #ff8a3d;
+      --radius:       6px;
+      --mono: "JetBrains Mono", "SF Mono", "Cascadia Mono", Consolas, monospace;
+      --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --shadow: 0 8px 24px -8px rgba(0,0,0,0.5);
+    }
+
+    [data-theme="light"]{
+      --bg:           #f3f1ea;
+      --bg-elev:      #fbfaf6;
+      --bg-elev-2:    #ffffff;
+      --line:         #d8d3c4;
+      --line-soft:    #e6e2d6;
+      --text:         #1c211d;
+      --text-dim:     #5b6259;
+      --text-faint:   #95988e;
+      --accent:       #c4621a;
+      --accent-dim:   #f0d3b4;
+      --accent-text:  #fff8f0;
+      --good:         #1e8e5a;
+      --bad:          #c43d3d;
+      --focus:        #c4621a;
+      --shadow: 0 8px 24px -8px rgba(40,30,10,0.18);
+    }
+
+    *{ box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--sans);
+      -webkit-font-smoothing:antialiased;
+      transition:background .25s ease, color .25s ease;
+    }
+    ::selection{ background:var(--accent); color:var(--accent-text); }
+
+    ::-webkit-scrollbar{ width:10px; height:10px; }
+    ::-webkit-scrollbar-track{ background:transparent; }
+    ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:5px; }
+    ::-webkit-scrollbar-thumb:hover{ background:var(--text-faint); }
+
+    a{ color:var(--accent); }
+
+    button{ font-family:inherit; }
+    input, select, textarea{ font-family:inherit; }
+
+    :focus-visible{
+      outline:2px solid var(--focus);
+      outline-offset:1px;
+    }
+
+    /* ============================================================
+       LAYOUT SHELL
+       ============================================================ */
+    .shell{
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+    }
+
+    header.bench-header{
+      display:flex;
+      align-items:center;
+      gap:18px;
+      padding:14px 22px;
+      border-bottom:1px solid var(--line);
+      background:var(--bg-elev);
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    .brand{
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      white-space:nowrap;
+    }
+    .brand .mark{
+      font-family:var(--mono);
+      font-weight:700;
+      font-size:18px;
+      letter-spacing:-0.02em;
+      color:var(--accent);
+    }
+    .brand .sub{
+      font-size:11px;
+      color:var(--text-faint);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      font-weight:600;
+    }
+
+    .search-wrap{
+      flex:1;
+      position:relative;
+      max-width:640px;
+    }
+    .search-wrap svg{
+      position:absolute;
+      left:13px;
+      top:50%;
+      transform:translateY(-50%);
+      width:15px;
+      height:15px;
+      color:var(--text-faint);
+      pointer-events:none;
+    }
+    #searchInput{
+      width:100%;
+      padding:10px 14px 10px 38px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text);
+      font-size:14px;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    #searchInput::placeholder{ color:var(--text-faint); }
+    #searchInput:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-dim);
+      outline:none;
+    }
+
+    .header-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+    }
+
+    .icon-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:36px;
+      height:36px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text-dim);
+      cursor:pointer;
+      transition:border-color .15s, color .15s, transform .1s;
+    }
+    .icon-btn:hover{ color:var(--text); border-color:var(--text-faint); }
+    .icon-btn:active{ transform:scale(.94); }
+    .icon-btn svg{ width:17px; height:17px; }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      padding:9px 16px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text);
+      font-size:13.5px;
+      font-weight:600;
+      cursor:pointer;
+      transition:border-color .15s, background .15s, transform .1s, opacity .15s;
+      white-space:nowrap;
+    }
+    .btn:hover{ border-color:var(--text-faint); }
+    .btn:active{ transform:scale(.97); }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+    .btn svg{ width:15px; height:15px; }
+
+    .btn-accent{
+      background:var(--accent);
+      border-color:var(--accent);
+      color:var(--accent-text);
+    }
+    .btn-accent:hover{ filter:brightness(1.06); border-color:var(--accent); }
+
+    .btn-ghost{
+      background:transparent;
+    }
+
+    .btn-danger{
+      color:var(--bad);
+    }
+    .btn-danger:hover{ border-color:var(--bad); }
+
+    /* ============================================================
+       MAIN GRID
+       ============================================================ */
+    .main{
+      flex:1;
+      display:grid;
+      grid-template-columns:1fr 380px;
+      min-height:0;
+      overflow:hidden;
+    }
+
+    @media (max-width: 980px){
+      .main{ grid-template-columns:1fr; }
+    }
+
+    .table-pane{
+      overflow:auto;
+      padding:18px 22px 40px;
+      min-width:0;
+    }
+
+    .meta-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+      font-size:12px;
+      color:var(--text-faint);
+      font-family:var(--mono);
+    }
+    .meta-row .status-dot{
+      display:inline-block;
+      width:7px; height:7px;
+      border-radius:50%;
+      margin-right:6px;
+      background:var(--text-faint);
+      vertical-align:middle;
+    }
+    .meta-row .status-dot.live{ background:var(--good); box-shadow:0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+    .meta-row .status-dot.err{ background:var(--bad); box-shadow:0 0 0 3px color-mix(in srgb, var(--bad) 25%, transparent); }
+    .meta-row .status-dot.busy{ background:var(--accent); animation:pulse 1s ease-in-out infinite; }
+    @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+    .filters-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .filter-select{
+      padding:7px 10px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text-dim);
+      font-size:12.5px;
+      font-family:var(--sans);
+      cursor:pointer;
+      max-width:170px;
+    }
+    .filter-select:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-dim);
+      outline:none;
+    }
+    .filter-select.active{
+      border-color:var(--accent);
+      color:var(--text);
+    }
+    #clearFiltersBtn{ padding:6px 12px; font-size:12px; }
+
+    .table-wrap {
+      position: relative;
+      overflow: auto;
+      max-height: calc(100vh - 185px);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13.5px;
+      background:var(--bg-elev);
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    thead th{
+      background:var(--bg-elev-2);
+      text-align:left;
+      font-size:11px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--text-faint);
+      font-weight:700;
+      padding:11px 14px;
+      border-bottom:2px solid var(--line);
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+      z-index:5;
+      position: sticky;
+      top: 0;
+      box-shadow: 0 1px 0 var(--line);
+    }
+    thead th:hover{ color:var(--text-dim); }
+    thead th .arrow{ font-size:10px; margin-left:4px; opacity:.7; }
+    thead th:first-child {
+      width: 36px;
+      min-width: 36px;
+      max-width: 36px;
+      text-align: center;
+    }
+    thead th input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    tbody tr{
+      border-bottom:1px solid var(--line-soft);
+      cursor:pointer;
+      transition:background .1s ease;
+    }
+    tbody tr:last-child{ border-bottom:none; }
+    tbody tr:hover{ background:var(--bg-elev-2); }
+    tbody tr.selected{
+      background:color-mix(in srgb, var(--accent) 14%, var(--bg-elev));
+    }
+    tbody tr.selected:hover{
+      background:color-mix(in srgb, var(--accent) 18%, var(--bg-elev));
+    }
+
+    tbody td{
+      padding:9px 14px;
+      vertical-align:middle;
+      color:var(--text);
+      user-select:text;
+      -webkit-user-select:text;
+    }
+    tbody td:not(:first-child):not(.col-link){ cursor:text; }
+    td:first-child {
+      text-align: center;
+      width: 36px;
+      min-width: 36px;
+      max-width: 36px;
+    }
+    td input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+    td.col-value, td.col-price, td.col-qty, td.col-mpn{
+      font-family:var(--mono);
+      white-space:nowrap;
+    }
+    td.col-qty{ text-align:right; font-weight:600; }
+    td.col-qty.low{ color:var(--bad); }
+    td.col-price{ color:var(--text-dim); }
+    td.col-type{
+      white-space:nowrap;
+    }
+    .type-chip{
+      display:inline-block;
+      padding:2px 9px;
+      border-radius:99px;
+      background:var(--bg-elev-2);
+      border:1px solid var(--line);
+      font-size:11.5px;
+      color:var(--text-dim);
+      font-family:var(--mono);
+    }
+    td.col-desc, td.col-comments{
+      color:var(--text-dim);
+      max-width:220px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    td.col-location{
+      font-family:var(--mono);
+      font-size:12.5px;
+      color:var(--text-dim);
+      white-space:nowrap;
+    }
+    td.col-link a{
+      color:var(--text-faint);
+      display:inline-flex;
+    }
+    td.col-link svg{ width:15px; height:15px; }
+    td.col-link a:hover{ color:var(--accent); }
+
+    .empty-state{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:70px 20px;
+      text-align:center;
+      color:var(--text-faint);
+      gap:10px;
+    }
+    .empty-state svg{ width:38px; height:38px; opacity:.5; margin-bottom:6px; }
+    .empty-state strong{ color:var(--text-dim); font-size:15px; }
+    .empty-state span{ font-size:13px; max-width:320px; }
+
+    td.col-manufacturer, td.col-mpn {
+      font-family:var(--mono);
+      font-size:12.5px;
+      color:var(--text-dim);
+      white-space:nowrap;
+    }
+    td.col-manufacturer { max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+
+    /* ============================================================
+       EDIT PANEL
+       ============================================================ */
+    .edit-pane{
+      border-left:1px solid var(--line);
+      background:var(--bg-elev);
+      overflow-y:auto;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    @media (max-width: 980px){
+      .edit-pane{
+        border-left:none;
+        border-top:1px solid var(--line);
+      }
+    }
+
+    .edit-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .edit-header h2{
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--text-dim);
+      margin:0;
+    }
+    .pill{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:3px 9px;
+      border-radius:99px;
+      background:var(--accent-dim);
+      color:var(--accent);
+      font-weight:700;
+    }
+    .pill.new{ background:var(--bg-elev-2); color:var(--text-faint); }
+
+    .dup-warning{
+      display:flex;
+      align-items:flex-start;
+      gap:9px;
+      padding:10px 12px;
+      border-radius:var(--radius);
+      background:color-mix(in srgb, var(--bad) 12%, var(--bg-elev-2));
+      border:1px solid color-mix(in srgb, var(--bad) 35%, var(--line));
+      color:var(--bad);
+      font-size:12.5px;
+      line-height:1.45;
+    }
+    .dup-warning svg{ width:16px; height:16px; flex-shrink:0; margin-top:1px; }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .field label{
+      font-size:11.5px;
+      font-weight:600;
+      color:var(--text-faint);
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .field input, .field textarea{
+      padding:9px 11px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text);
+      font-size:13.5px;
+      resize:vertical;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    .field input:focus, .field textarea:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-dim);
+      outline:none;
+    }
+    .field textarea{ min-height:56px; font-family:var(--sans); }
+    .field input[data-mono]{ font-family:var(--mono); }
+
+    .field-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .qty-control{
+      display:flex;
+      align-items:stretch;
+      gap:8px;
+    }
+    .qty-control input{
+      flex:1;
+      text-align:center;
+      font-family:var(--mono);
+      font-weight:700;
+      font-size:16px;
+    }
+    .qty-btn{
+      width:44px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text);
+      font-size:18px;
+      font-weight:700;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:background .12s, border-color .12s, transform .08s;
+      font-family:var(--mono);
+    }
+    .qty-btn:hover{ border-color:var(--accent); color:var(--accent); }
+    .qty-btn:active{ transform:scale(.92); }
+    .qty-btn.minus:hover{ border-color:var(--bad); color:var(--bad); }
+    .qty-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+    .qty-flash{
+      animation:flashGood .5s ease;
+    }
+    @keyframes flashGood{
+      0%{ box-shadow:0 0 0 3px var(--good); }
+      100%{ box-shadow:0 0 0 0px transparent; }
+    }
+
+    .edit-actions{
+      display:flex;
+      gap:10px;
+      margin-top:4px;
+    }
+    .edit-actions .btn{ flex:1; justify-content:center; }
+    .delete-hint{
+      margin:0;
+      font-size:11.5px;
+      color:var(--text-faint);
+      line-height:1.5;
+      text-align:center;
+    }
+
+    .edit-empty{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      color:var(--text-faint);
+      gap:10px;
+      padding:50px 10px;
+    }
+    .edit-empty svg{ width:34px; height:34px; opacity:.45; }
+    .edit-empty strong{ color:var(--text-dim); font-size:14px; }
+    .edit-empty span{ font-size:12.5px; max-width:240px; }
+
+    .divider{
+      height:1px;
+      background:var(--line);
+      margin:2px 0;
+    }
+
+    /* Toast */
+    #toastHost{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      z-index:100;
+    }
+    .toast{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:11px 16px;
+      border-radius:var(--radius);
+      background:var(--bg-elev-2);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      font-size:13px;
+      color:var(--text);
+      animation:slideIn .2s ease;
+      min-width:200px;
+    }
+    @keyframes slideIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+    .toast.success{ border-left:3px solid var(--good); }
+    .toast.error{ border-left:3px solid var(--bad); }
+    .toast.info{ border-left:3px solid var(--accent); }
+
+    /* Settings modal */
+    .modal-overlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.55);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:80;
+      padding:20px;
+    }
+    .modal{
+      background:var(--bg-elev);
+      border:1px solid var(--line);
+      border-radius:10px;
+      box-shadow:var(--shadow);
+      width:100%;
+      max-width:480px;
+      padding:22px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    .modal h3{ margin:0; font-size:16px; }
+    .modal p.hint{ margin:0; font-size:12.5px; color:var(--text-faint); line-height:1.5; }
+    .modal .field input{ width:100%; }
+    .modal-actions{ display:flex; justify-content:flex-end; gap:10px; }
+
+    .hidden{ display:none !important; }
+
+    footer.bench-footer{
+      padding:8px 22px;
+      border-top:1px solid var(--line);
+      background:var(--bg-elev);
+      font-size:11px;
+      color:var(--text-faint);
+      font-family:var(--mono);
+      display:flex;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:4px 16px;
+    }
+
+    /* Auto-save indicator */
+    .auto-save-indicator {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      color:var(--text-faint);
+      font-family:var(--mono);
+    }
+    .auto-save-indicator .dot {
+      width:6px;
+      height:6px;
+      border-radius:50%;
+      background:var(--text-faint);
+      transition: background 0.3s;
+    }
+    .auto-save-indicator .dot.saving {
+      background:var(--accent);
+      animation:pulse 0.8s ease-in-out infinite;
+    }
+    .auto-save-indicator .dot.saved {
+      background:var(--good);
+    }
+
+    /* Bulk actions bar */
+    .bulk-actions {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:8px 14px;
+      background:var(--bg-elev-2);
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      margin-bottom:12px;
+    }
+    .bulk-actions .count {
+      font-size:12px;
+      color:var(--text-dim);
+      font-family:var(--mono);
+    }
+    .bulk-actions .btn {
+      padding:5px 12px;
+      font-size:12px;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+<div class="shell">
+
+  <header class="bench-header">
+    <div class="brand">
+      <span class="mark">BENCH/</span>
+      <span class="sub">Inventory</span>
+    </div>
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Search — e.g. &quot;10k 0805&quot;" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-accent" id="newRowBtn" title="Add new part">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New part
+      </button>
+      <button class="btn" id="exportBtn" title="Export to CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <a class="btn" id="labelsLink" href="../index.html#tools" title="Back to Portfolio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+        Back to Portfolio
+      </a>
+      <button class="icon-btn" id="refreshBtn" title="Reload from sheet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="Connection settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="table-pane">
+      <div class="meta-row">
+        <div><span class="status-dot" id="statusDot"></span><span id="statusText">Idle</span></div>
+        <div>
+          <span id="rowCount">0 parts</span>
+          <span class="auto-save-indicator" id="autoSaveIndicator">
+            <span class="dot" id="autoSaveDot"></span>
+            <span id="autoSaveText">Auto-save</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="filters-row" id="filtersRow">
+        <select id="filterType" class="filter-select">
+          <option value="">All types</option>
+        </select>
+        <select id="filterPackage" class="filter-select">
+          <option value="">All packages</option>
+        </select>
+        <select id="filterLocation" class="filter-select">
+          <option value="">All locations</option>
+        </select>
+        <button class="btn btn-ghost hidden" id="clearFiltersBtn">Clear filters</button>
+      </div>
+
+      <div class="bulk-actions hidden" id="bulkActions">
+        <span class="count" id="selectedCount">0 selected</span>
+        <button class="btn" id="bulkExportBtn">Export selected</button>
+        <button class="btn" id="bulkCopyBtn" title="Copy selected rows to clipboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+        <button class="btn btn-accent" id="sendToLabelsBtn" title="Send Value + Package to the label generator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"/></svg>
+          Send to Labels
+        </button>
+      </div>
+
+      <div id="tableWrap">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll"></th>
+                <th data-key="type">Type<span class="arrow"></span></th>
+                <th data-key="value">Value<span class="arrow"></span></th>
+                <th data-key="package">Package<span class="arrow"></span></th>
+                <th data-key="price">Price<span class="arrow"></span></th>
+                <th data-key="quantity">Qty<span class="arrow"></span></th>
+                <th data-key="manufacturer">Mfr<span class="arrow"></span></th>
+                <th data-key="part_no">MPN<span class="arrow"></span></th>
+                <th>Datasheet</th>
+                <th data-key="description">Description<span class="arrow"></span></th>
+                <th data-key="comments">Comments<span class="arrow"></span></th>
+                <th data-key="location">Location<span class="arrow"></span></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="empty-state hidden" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <strong>No parts match</strong>
+        <span>Try fewer search terms, or clear the search box to see the full inventory.</span>
+      </div>
+    </section>
+
+    <aside class="edit-pane" id="editPane">
+      <div class="edit-empty" id="editEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <strong>No part selected</strong>
+        <span>Click a row to edit it, or press "New part" to add one to the inventory.</span>
+      </div>
+
+      <form id="editForm" class="hidden" autocomplete="off">
+        <div class="edit-header">
+          <h2>Edit part</h2>
+          <span class="pill" id="editPill">#0</span>
+        </div>
+
+        <div class="dup-warning hidden" id="dupWarning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="dupWarningText"></span>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f_type">Type</label>
+            <input id="f_type" name="type" required placeholder="Resistor">
+          </div>
+          <div class="field">
+            <label for="f_value">Value</label>
+            <input id="f_value" name="value" data-mono required placeholder="10k">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f_package">Package</label>
+            <input id="f_package" name="package" placeholder="0805, TO-92, etc.">
+          </div>
+          <div class="field">
+            <label for="f_price">Price</label>
+            <input id="f_price" name="price" data-mono placeholder="0.02">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f_manufacturer">Manufacturer</label>
+            <input id="f_manufacturer" name="manufacturer" placeholder="Texas Instruments, etc.">
+          </div>
+          <div class="field">
+            <label for="f_part_no">MPN</label>
+            <input id="f_part_no" name="part_no" data-mono placeholder="LM358N, 100k-0805-1%">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f_quantity">Quantity on hand</label>
+          <div class="qty-control">
+            <button type="button" class="qty-btn minus" id="qtyMinus" title="Subtract 1">&minus;</button>
+            <input id="f_quantity" name="quantity" data-mono inputmode="numeric" placeholder="0">
+            <button type="button" class="qty-btn plus" id="qtyPlus" title="Add 1">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f_location">Location</label>
+          <input id="f_location" name="location" data-mono placeholder="Drawer A3">
+        </div>
+
+        <div class="field">
+          <label for="f_datasheet">Datasheet URL</label>
+          <input id="f_datasheet" name="datasheet" data-mono placeholder="https://...">
+        </div>
+
+        <div class="field">
+          <label for="f_description">Description</label>
+          <textarea id="f_description" name="description" placeholder="100nF X7R ceramic capacitor, 0805"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="f_comments">Comments</label>
+          <textarea id="f_comments" name="comments" placeholder="Bought from Mouser, batch 2024"></textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="edit-actions">
+          <button type="submit" class="btn btn-accent" id="saveBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save
+          </button>
+          <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+        </div>
+        <p class="delete-hint">Deleting parts isn't available here — remove rows directly in the Google Sheet if you need to.</p>
+      </form>
+    </aside>
+  </div>
+
+  <footer class="bench-footer">
+    <span id="footerLeft">Not connected to a Google Sheet yet</span>
+    <span id="footerValue">Total value: —</span>
+    <span id="footerRight">Double-click a cell to copy it · click the datasheet icon to open it</span>
+  </footer>
+</div>
+
+<div id="toastHost"></div>
+
+<div class="modal-overlay hidden" id="settingsModal">
+  <div class="modal">
+    <h3>Connection settings</h3>
+    <p class="hint">
+      Paste the deployed Google Apps Script Web App URL below. It's saved in this browser only
+      (localStorage) — you can also hardcode it in the script as <code>GOOGLE_SCRIPT_URL</code>.
+    </p>
+    <div class="field">
+      <label for="scriptUrlInput">Web App URL</label>
+      <input id="scriptUrlInput" data-mono placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="settingsCancel">Cancel</button>
+      <button class="btn btn-accent" id="settingsSave">Save &amp; reload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ============================================================
+   CONFIGURATION
+   ============================================================ */
+let GOOGLE_SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+const STORAGE_KEY = "bench_inventory_script_url";
+const THEME_KEY = "bench_inventory_theme";
+const savedUrl = localStorage.getItem(STORAGE_KEY);
+if (savedUrl) GOOGLE_SCRIPT_URL = savedUrl;
+
+const COLUMNS = ["type","value","package","price","quantity","manufacturer","part_no","datasheet","description","comments","location"];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let rows = [];
+let filtered = [];
+let selectedId = null;
+let sortKey = null;
+let sortDir = 1;
+let isNewRecord = false;
+let nextTempId = -1;
+let selectedIds = new Set(); // for multi-select
+let autoSaveTimer = null;
+let isAutoSaving = false;
+let filterType = "";
+let filterPackage = "";
+let filterLocation = "";
+
+/* ============================================================
+   DOM REFS
+   ============================================================ */
+const $ = (sel) => document.querySelector(sel);
+const tableBody   = $("#tableBody");
+const emptyState  = $("#emptyState");
+const tableWrap   = $("#tableWrap");
+const searchInput = $("#searchInput");
+const statusDot   = $("#statusDot");
+const statusText  = $("#statusText");
+const rowCountEl  = $("#rowCount");
+const footerLeft  = $("#footerLeft");
+const selectAll   = $("#selectAll");
+const bulkActions = $("#bulkActions");
+const selectedCount = $("#selectedCount");
+const autoSaveDot = $("#autoSaveDot");
+const autoSaveText = $("#autoSaveText");
+const footerValue = $("#footerValue");
+const filterTypeEl = $("#filterType");
+const filterPackageEl = $("#filterPackage");
+const filterLocationEl = $("#filterLocation");
+const clearFiltersBtn = $("#clearFiltersBtn");
+
+const editEmpty   = $("#editEmpty");
+const editForm    = $("#editForm");
+const editPill    = $("#editPill");
+const dupWarning  = $("#dupWarning");
+const dupWarningText = $("#dupWarningText");
+const fType = $("#f_type"), fValue = $("#f_value"), fPrice = $("#f_price"),
+      fQty = $("#f_quantity"), fDatasheet = $("#f_datasheet"),
+      fDesc = $("#f_description"), fComments = $("#f_comments"), fLocation = $("#f_location"),
+      fPackage = $("#f_package"), fManufacturer = $("#f_manufacturer"), fPartNo = $("#f_part_no");
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme) document.body.setAttribute("data-theme", savedTheme);
+
+  bindEvents();
+  updateFooter();
+  loadInventory();
+}
+
+function bindEvents(){
+  searchInput.addEventListener("input", () => render());
+  $("#refreshBtn").addEventListener("click", () => loadInventory(true));
+  $("#themeBtn").addEventListener("click", toggleTheme);
+  $("#newRowBtn").addEventListener("click", startNewRecord);
+  $("#cancelBtn").addEventListener("click", closeEditor);
+  $("#qtyPlus").addEventListener("click", () => bumpQuantity(1));
+  $("#qtyMinus").addEventListener("click", () => bumpQuantity(-1));
+  editForm.addEventListener("submit", handleSave);
+  fValue.addEventListener("input", checkDuplicateWarning);
+  fPackage.addEventListener("input", checkDuplicateWarning);
+  $("#exportBtn").addEventListener("click", exportCSV);
+  $("#bulkExportBtn").addEventListener("click", bulkExport);
+  $("#bulkCopyBtn").addEventListener("click", copySelectedToClipboard);
+  $("#sendToLabelsBtn").addEventListener("click", sendSelectedToLabels);
+  selectAll.addEventListener("change", toggleSelectAll);
+
+  filterTypeEl.addEventListener("change", () => { filterType = filterTypeEl.value; render(); });
+  filterPackageEl.addEventListener("change", () => { filterPackage = filterPackageEl.value; render(); });
+  filterLocationEl.addEventListener("change", () => { filterLocation = filterLocationEl.value; render(); });
+  clearFiltersBtn.addEventListener("click", () => {
+    filterType = ""; filterPackage = ""; filterLocation = "";
+    filterTypeEl.value = ""; filterPackageEl.value = ""; filterLocationEl.value = "";
+    render();
+  });
+
+  document.querySelectorAll("thead th[data-key]").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+      document.querySelectorAll("thead th .arrow").forEach(a => a.textContent = "");
+      th.querySelector(".arrow").textContent = sortDir === 1 ? "▲" : "▼";
+      render();
+    });
+  });
+
+  $("#settingsBtn").addEventListener("click", openSettings);
+  $("#settingsCancel").addEventListener("click", closeSettings);
+  $("#settingsSave").addEventListener("click", saveSettings);
+  $("#settingsModal").addEventListener("click", (e) => { if (e.target.id === "settingsModal") closeSettings(); });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { closeSettings(); }
+  });
+}
+
+function toggleTheme(){
+  const cur = document.body.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : "dark";
+  document.body.setAttribute("data-theme", next);
+  localStorage.setItem(THEME_KEY, next);
+}
+
+function updateFooter(){
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.startsWith("PASTE_")){
+    footerLeft.textContent = "Not connected — click the gear icon to set your Web App URL";
+  } else {
+    let host = GOOGLE_SCRIPT_URL;
+    try { host = new URL(GOOGLE_SCRIPT_URL).hostname; } catch(_) {}
+    footerLeft.textContent = "Connected — " + host;
+  }
+}
+
+/* ============================================================
+   SETTINGS MODAL
+   ============================================================ */
+function openSettings(){
+  $("#scriptUrlInput").value = (GOOGLE_SCRIPT_URL || "").startsWith("PASTE_") ? "" : GOOGLE_SCRIPT_URL;
+  $("#settingsModal").classList.remove("hidden");
+  setTimeout(() => $("#scriptUrlInput").focus(), 30);
+}
+function closeSettings(){
+  $("#settingsModal").classList.add("hidden");
+}
+function saveSettings(){
+  const val = $("#scriptUrlInput").value.trim();
+  if (!val){
+    localStorage.removeItem(STORAGE_KEY);
+  } else {
+    localStorage.setItem(STORAGE_KEY, val);
+    GOOGLE_SCRIPT_URL = val;
+  }
+  updateFooter();
+  closeSettings();
+  loadInventory(true);
+}
+
+/* ============================================================
+   NETWORKING
+   ============================================================ */
+function scriptConfigured(){
+  return GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.startsWith("PASTE_");
+}
+
+function setStatus(state, label){
+  statusDot.className = "status-dot " + state;
+  statusText.textContent = label;
+}
+
+async function loadInventory(manual){
+  if (!scriptConfigured()){
+    setStatus("err", "No script URL configured");
+    rows = [];
+    render();
+    return;
+  }
+  setStatus("busy", manual ? "Reloading…" : "Loading…");
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL + "?action=read", { method: "GET" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data || data.ok === false) throw new Error((data && data.error) || "Unknown error from script");
+    rows = (data.rows || []).map(normalizeRow);
+    setStatus("live", "Synced");
+    toast("Inventory loaded (" + rows.length + " parts)", "success");
+  } catch (err){
+    console.error(err);
+    setStatus("err", "Load failed");
+    toast("Couldn't load inventory: " + err.message, "error");
+  }
+  populateFilterOptions();
+  render();
+}
+
+async function pushRow(row, mode){
+  setStatus("busy", mode === "delete" ? "Deleting…" : "Saving…");
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: mode, row })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data || data.ok === false) throw new Error((data && data.error) || "Unknown error from script");
+    setStatus("live", "Synced");
+    return data;
+  } catch (err){
+    console.error(err);
+    setStatus("err", "Sync failed");
+    toast("Sync failed: " + err.message, "error");
+    throw err;
+  }
+}
+
+function normalizeRow(r){
+  const out = { id: r.id ?? r.ID ?? cryptoId() };
+  COLUMNS.forEach(c => {
+    const raw = r[c] ?? r[capitalize(c)] ?? "";
+    out[c] = String(raw ?? "");
+  });
+  return out;
+}
+function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+function cryptoId(){ return "tmp_" + Math.random().toString(36).slice(2, 10); }
+
+/* ============================================================
+   FILTER DROPDOWNS
+   ============================================================ */
+function populateFilterOptions(){
+  fillFilterSelect(filterTypeEl, "type", filterType, "All types");
+  fillFilterSelect(filterPackageEl, "package", filterPackage, "All packages");
+  fillFilterSelect(filterLocationEl, "location", filterLocation, "All locations");
+}
+
+function fillFilterSelect(selectEl, key, currentValue, allLabel){
+  const values = Array.from(new Set(rows.map(r => (r[key] || "").trim()).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }));
+  const keep = values.includes(currentValue) ? currentValue : "";
+  selectEl.innerHTML = `<option value="">${allLabel}</option>` +
+    values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+  selectEl.value = keep;
+  if (key === "type") filterType = keep;
+  if (key === "package") filterPackage = keep;
+  if (key === "location") filterLocation = keep;
+}
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+function matchesQuery(row, tokens){
+  if (tokens.length === 0) return true;
+  const haystack = COLUMNS.map(c => (row[c] || "")).join(" \u0001 ").toLowerCase();
+  return tokens.every(tok => haystack.includes(tok));
+}
+
+function getFilteredSorted(){
+  const q = searchInput.value.trim().toLowerCase();
+  const tokens = q.length ? q.split(/\s+/).filter(Boolean) : [];
+  let out = rows.filter(r =>
+    matchesQuery(r, tokens) &&
+    (!filterType || r.type === filterType) &&
+    (!filterPackage || r.package === filterPackage) &&
+    (!filterLocation || r.location === filterLocation)
+  );
+
+  if (sortKey){
+    out = out.slice().sort((a, b) => {
+      let av = a[sortKey] ?? "", bv = b[sortKey] ?? "";
+      const an = parseFloat(av), bn = parseFloat(bv);
+      let cmp;
+      if (!isNaN(an) && !isNaN(bn) && /^[\d.\-]+$/.test(String(av).trim()) && /^[\d.\-]+$/.test(String(bv).trim())){
+        cmp = an - bn;
+      } else {
+        cmp = String(av).localeCompare(String(bv), undefined, { sensitivity: "base", numeric: true });
+      }
+      return cmp * sortDir;
+    });
+  }
+  return out;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  filtered = getFilteredSorted();
+  rowCountEl.textContent = filtered.length + (filtered.length === 1 ? " part" : " parts") + (rows.length !== filtered.length ? " / " + rows.length : "");
+
+  const valueSource = selectedIds.size > 0 ? rows.filter(r => selectedIds.has(r.id)) : rows;
+  const totalValue = valueSource.reduce((sum, r) => {
+    const price = parseFloat(r.price);
+    const qty = parseFloat(r.quantity);
+    if (isNaN(price) || isNaN(qty)) return sum;
+    return sum + price * qty;
+  }, 0);
+  const scopeLabel = selectedIds.size > 0 ? ` (${selectedIds.size} selected)` : "";
+  footerValue.textContent = rows.length === 0 ? "Total value: —" : `Total value: ${totalValue.toFixed(2)} €${scopeLabel}`;
+
+  const anyFilterActive = !!(filterType || filterPackage || filterLocation);
+  clearFiltersBtn.classList.toggle("hidden", !anyFilterActive);
+  filterTypeEl.classList.toggle("active", !!filterType);
+  filterPackageEl.classList.toggle("active", !!filterPackage);
+  filterLocationEl.classList.toggle("active", !!filterLocation);
+
+  // Update selected count
+  const count = selectedIds.size;
+  if (count > 0) {
+    bulkActions.classList.remove("hidden");
+    selectedCount.textContent = count + " selected";
+  } else {
+    bulkActions.classList.add("hidden");
+  }
+
+  if (filtered.length === 0){
+    tableWrap.classList.add("hidden");
+    emptyState.classList.remove("hidden");
+    return;
+  }
+  tableWrap.classList.remove("hidden");
+  emptyState.classList.add("hidden");
+
+  const frag = document.createDocumentFragment();
+  filtered.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = row.id;
+    if (row.id === selectedId) tr.classList.add("selected");
+
+    const qtyNum = parseFloat(row.quantity);
+    const lowStock = !isNaN(qtyNum) && qtyNum <= 0;
+    const isChecked = selectedIds.has(row.id);
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="row-checkbox" ${isChecked ? 'checked' : ''}></td>
+      <td class="col-type"><span class="type-chip">${escapeHtml(row.type || "—")}</span></td>
+      <td class="col-value">${escapeHtml(row.value || "—")}</td>
+      <td class="col-package">${escapeHtml(row.package || "—")}</td>
+      <td class="col-price">${formatPrice(row.price)}</td>
+      <td class="col-qty ${lowStock ? "low" : ""}">${escapeHtml(row.quantity || "0")}</td>
+      <td class="col-manufacturer">${escapeHtml(row.manufacturer || "—")}</td>
+      <td class="col-mpn">${escapeHtml(row.part_no || "—")}</td>
+      <td class="col-link">${row.datasheet ? `<a href="${escapeAttr(row.datasheet)}" target="_blank" rel="noopener" title="Open datasheet" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : "—"}</td>
+      <td class="col-desc" title="${escapeAttr(row.description)}">${escapeHtml(row.description || "—")}</td>
+      <td class="col-comments" title="${escapeAttr(row.comments)}">${escapeHtml(row.comments || "—")}</td>
+      <td class="col-location">${escapeHtml(row.location || "—")}</td>
+    `;
+
+    const checkbox = tr.querySelector('.row-checkbox');
+    checkbox.addEventListener('change', (e) => {
+      e.stopPropagation();
+      if (checkbox.checked) {
+        selectedIds.add(row.id);
+      } else {
+        selectedIds.delete(row.id);
+      }
+      updateSelectAllState();
+      render();
+    });
+
+    tr.addEventListener("click", (e) => {
+      // Don't select row if clicking checkbox
+      if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') return;
+      // Don't hijack a text selection the user just made (drag-to-select fires a click on mouseup)
+      const sel = window.getSelection();
+      if (sel && sel.toString().length > 0) return;
+      selectRow(row.id);
+    });
+    tr.addEventListener("dblclick", (e) => {
+      const td = e.target.closest('td');
+      if (!td) return;
+      if (td.classList.contains('col-link')){
+        if (row.datasheet) window.open(row.datasheet, "_blank", "noopener");
+        return;
+      }
+      if (td.cellIndex === 0) return; // checkbox column
+      const text = (td.textContent || "").trim();
+      if (!text || text === '—') return;
+      copyText(text).then(() => {
+        toast("Copied: " + (text.length > 40 ? text.slice(0, 40) + "…" : text), "success");
+      });
+    });
+
+    frag.appendChild(tr);
+  });
+  tableBody.replaceChildren(frag);
+  updateSelectAllState();
+}
+
+function updateSelectAllState() {
+  const visibleIds = filtered.map(r => r.id);
+  const selectedVisible = visibleIds.filter(id => selectedIds.has(id));
+  if (visibleIds.length > 0 && selectedVisible.length === visibleIds.length) {
+    selectAll.checked = true;
+    selectAll.indeterminate = false;
+  } else if (selectedVisible.length > 0) {
+    selectAll.checked = false;
+    selectAll.indeterminate = true;
+  } else {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+  }
+}
+
+function toggleSelectAll(e) {
+  const checked = e.target.checked;
+  filtered.forEach(row => {
+    if (checked) {
+      selectedIds.add(row.id);
+    } else {
+      selectedIds.delete(row.id);
+    }
+  });
+  render();
+}
+
+function formatPrice(p){
+  if (p === "" || p === null || p === undefined) return "—";
+  const n = parseFloat(p);
+  if (isNaN(n)) return escapeHtml(String(p));
+  return n.toFixed(3) + " €";
+}
+
+function escapeHtml(str){
+  return String(str ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+/* ============================================================
+   SELECTION / EDIT FORM
+   ============================================================ */
+function selectRow(id){
+  selectedId = id;
+  isNewRecord = false;
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+
+  editEmpty.classList.add("hidden");
+  editForm.classList.remove("hidden");
+  editPill.textContent = "#" + String(id).slice(-6);
+  editPill.classList.remove("new");
+
+  fType.value = row.type || "";
+  fValue.value = row.value || "";
+  fPackage.value = row.package || "";
+  fPrice.value = row.price || "";
+  fQty.value = row.quantity || "0";
+  fDatasheet.value = row.datasheet || "";
+  fDesc.value = row.description || "";
+  fComments.value = row.comments || "";
+  fLocation.value = row.location || "";
+  fManufacturer.value = row.manufacturer || "";
+  fPartNo.value = row.part_no || "";
+
+  checkDuplicateWarning();
+
+  render();
+}
+
+function startNewRecord(){
+  selectedId = nextTempId--;
+  isNewRecord = true;
+
+  editEmpty.classList.add("hidden");
+  editForm.classList.remove("hidden");
+  editPill.textContent = "NEW";
+  editPill.classList.add("new");
+
+  editForm.reset();
+  fQty.value = "0";
+  dupWarning.classList.add("hidden");
+  render();
+  setTimeout(() => fType.focus(), 30);
+}
+
+function closeEditor(){
+  selectedId = null;
+  isNewRecord = false;
+  editForm.classList.add("hidden");
+  editEmpty.classList.remove("hidden");
+  dupWarning.classList.add("hidden");
+  render();
+}
+
+function readForm(){
+  return {
+    type: fType.value.trim(),
+    value: fValue.value.trim(),
+    package: fPackage.value.trim(),
+    price: fPrice.value.trim(),
+    quantity: fQty.value.trim() === "" ? "0" : fQty.value.trim(),
+    datasheet: fDatasheet.value.trim(),
+    description: fDesc.value.trim(),
+    comments: fComments.value.trim(),
+    location: fLocation.value.trim(),
+    manufacturer: fManufacturer.value.trim(),
+    part_no: fPartNo.value.trim(),
+  };
+}
+
+/* ============================================================
+   DUPLICATE DETECTION
+   ============================================================ */
+function findDuplicate(value, pkg, excludeId){
+  const v = (value || "").trim().toLowerCase();
+  const p = (pkg || "").trim().toLowerCase();
+  if (!v) return null;
+  return rows.find(r =>
+    r.id !== excludeId &&
+    (r.value || "").trim().toLowerCase() === v &&
+    (r.package || "").trim().toLowerCase() === p
+  );
+}
+
+function checkDuplicateWarning(){
+  const dupe = findDuplicate(fValue.value, fPackage.value, selectedId);
+  if (!dupe){
+    dupWarning.classList.add("hidden");
+    return;
+  }
+  const pkgLabel = dupe.package ? ` · ${escapeHtml(dupe.package)}` : "";
+  dupWarningText.innerHTML = `Already in inventory: <strong>${escapeHtml(dupe.type || "Part")} ${escapeHtml(dupe.value)}${pkgLabel}</strong> — ${escapeHtml(dupe.quantity || "0")} in stock. Saving will add a separate row.`;
+  dupWarning.classList.remove("hidden");
+}
+
+/* ============================================================
+   AUTO-SAVE (upgrade 1)
+   ============================================================ */
+function triggerAutoSave() {
+  if (isNewRecord || selectedId === null) return;
+  
+  autoSaveDot.className = 'dot saving';
+  autoSaveText.textContent = 'Saving...';
+  
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(async () => {
+    if (isAutoSaving) return;
+    isAutoSaving = true;
+    
+    try {
+      const formData = readForm();
+      if (!formData.type || !formData.value) return;
+      
+      const idx = rows.findIndex(r => r.id === selectedId);
+      if (idx === -1) return;
+      
+      const updatedRow = { id: selectedId, ...formData };
+      await pushRow(updatedRow, "update");
+      rows[idx] = updatedRow;
+      
+      autoSaveDot.className = 'dot saved';
+      autoSaveText.textContent = 'Auto-saved';
+      setTimeout(() => {
+        autoSaveDot.className = 'dot';
+        autoSaveText.textContent = 'Auto-save';
+      }, 1500);
+      
+      render();
+    } catch (err) {
+      autoSaveDot.className = 'dot';
+      autoSaveText.textContent = 'Auto-save failed';
+      setTimeout(() => {
+        autoSaveText.textContent = 'Auto-save';
+      }, 2000);
+    } finally {
+      isAutoSaving = false;
+    }
+  }, 2000); // 2-second debounce
+}
+
+// Listen to form changes for auto-save
+editForm.addEventListener('input', triggerAutoSave);
+editForm.addEventListener('change', triggerAutoSave);
+
+/* ============================================================
+   HANDLE SAVE
+   ============================================================ */
+async function handleSave(e){
+  e.preventDefault();
+  if (!scriptConfigured()){
+    toast("Set your Google Apps Script Web App URL first (gear icon)", "error");
+    return;
+  }
+  const formData = readForm();
+  if (!formData.type || !formData.value){
+    toast("Type and Value are required", "error");
+    return;
+  }
+
+  const saveBtn = $("#saveBtn");
+  saveBtn.disabled = true;
+
+  try {
+    if (isNewRecord){
+      const payloadRow = { ...formData };
+      const result = await pushRow(payloadRow, "create");
+      const newId = (result && result.id) || cryptoId();
+      const created = { id: newId, ...formData };
+      rows.push(created);
+      selectedId = newId;
+      isNewRecord = false;
+      editPill.textContent = "#" + String(newId).slice(-6);
+      editPill.classList.remove("new");
+      toast("Part added to inventory", "success");
+    } else {
+      const idx = rows.findIndex(r => r.id === selectedId);
+      if (idx === -1) throw new Error("Row no longer exists locally");
+      const updatedRow = { id: selectedId, ...formData };
+      await pushRow(updatedRow, "update");
+      rows[idx] = updatedRow;
+      toast("Saved", "success");
+    }
+    populateFilterOptions();
+    checkDuplicateWarning();
+    render();
+  } catch (err){
+    // toast already shown by pushRow
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+/* ============================================================
+   QUANTITY +1 / -1
+   ============================================================ */
+async function bumpQuantity(delta){
+  if (selectedId === null) return;
+
+  const current = parseFloat(fQty.value) || 0;
+  const next = Math.max(0, current + delta);
+  fQty.value = next;
+
+  fQty.classList.remove("qty-flash");
+  requestAnimationFrame(() => fQty.classList.add("qty-flash"));
+
+  if (isNewRecord){
+    return;
+  }
+
+  const idx = rows.findIndex(r => r.id === selectedId);
+  if (idx === -1) return;
+
+  const previousQty = rows[idx].quantity;
+  rows[idx].quantity = String(next);
+  render();
+
+  try {
+    await pushRow({ id: selectedId, quantity: String(next) }, "update");
+    triggerAutoSave(); // trigger auto-save for other fields
+  } catch (err){
+    rows[idx].quantity = previousQty;
+    fQty.value = previousQty;
+    render();
+  }
+}
+
+/* ============================================================
+   EXPORT CSV (upgrade 2)
+   ============================================================ */
+function exportCSV() {
+  const dataToExport = selectedIds.size > 0 ? 
+    rows.filter(r => selectedIds.has(r.id)) : 
+    rows;
+  
+  if (dataToExport.length === 0) {
+    toast("No data to export", "error");
+    return;
+  }
+
+  const headers = ['ID', ...COLUMNS];
+  const csvRows = [headers.join(',')];
+  
+  dataToExport.forEach(row => {
+    const values = headers.map(header => {
+      const val = row[header.toLowerCase()] || '';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    });
+    csvRows.push(values.join(','));
+  });
+
+  const csv = csvRows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `inventory_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  toast(`Exported ${dataToExport.length} parts`, "success");
+}
+
+function bulkExport() {
+  if (selectedIds.size === 0) {
+    toast("No parts selected", "error");
+    return;
+  }
+  exportCSV();
+}
+
+/* ============================================================
+   CLIPBOARD COPY
+   ============================================================ */
+async function copyText(str){
+  try {
+    await navigator.clipboard.writeText(str);
+    return true;
+  } catch (err){
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = str;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch (err2){
+      toast("Couldn't copy to clipboard", "error");
+      return false;
+    }
+  }
+}
+
+function copySelectedToClipboard(){
+  if (selectedIds.size === 0){
+    toast("No parts selected", "error");
+    return;
+  }
+  const selectedRows = rows.filter(r => selectedIds.has(r.id));
+  const lines = [COLUMNS.map(capitalize).join("\t")];
+  selectedRows.forEach(row => {
+    lines.push(COLUMNS.map(c => row[c] || "").join("\t"));
+  });
+  copyText(lines.join("\n")).then(ok => {
+    if (ok) toast(`Copied ${selectedRows.length} part(s) to clipboard`, "success");
+  });
+}
+
+/* ============================================================
+   SEND TO LABEL GENERATOR
+   ============================================================ */
+const LABEL_HANDOFF_KEY = "bench_label_handoff";
+
+function sendSelectedToLabels(){
+  if (selectedIds.size === 0){
+    toast("No parts selected", "error");
+    return;
+  }
+  const selectedRows = rows.filter(r => selectedIds.has(r.id));
+  const payload = selectedRows.map(row => ({
+    main: row.value || "",
+    sub: row.package || ""
+  }));
+  try {
+    localStorage.setItem(LABEL_HANDOFF_KEY, JSON.stringify(payload));
+  } catch (err){
+    toast("Couldn't hand off to label generator: " + err.message, "error");
+    return;
+  }
+  toast(`Sent ${payload.length} part(s) to label generator`, "success");
+  window.open("Label_Generator.html", "_blank", "noopener");
+}
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+function toast(msg, kind){
+  const host = $("#toastHost");
+  const el = document.createElement("div");
+  el.className = "toast " + (kind || "info");
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = "opacity .3s ease";
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
+}
+
+init();
+})();
+</script>
+
+</body>
+</html>

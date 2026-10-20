@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bench / Label Generator</title>
+  <style>
+    /* ============================================================
+       TOKENS (identical to the Inventory Tracker)
+       ============================================================ */
+    :root{
+      --bg:           #0e1210;
+      --bg-elev:      #141a17;
+      --bg-elev-2:    #1a221e;
+      --line:         #25302b;
+      --line-soft:    #1d2622;
+      --text:         #e7eee8;
+      --text-dim:     #93a39a;
+      --text-faint:   #5e6e66;
+      --accent:       #ff8a3d;
+      --accent-dim:   #6b4322;
+      --accent-text:  #1a0f04;
+      --good:         #5fd38d;
+      --bad:          #ff6b6b;
+      --focus:        #ff8a3d;
+      --radius:       6px;
+      --mono: "JetBrains Mono", "SF Mono", "Cascadia Mono", Consolas, monospace;
+      --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --shadow: 0 8px 24px -8px rgba(0,0,0,0.5);
+      --header-h: 65px;
+    }
+
+    [data-theme="light"]{
+      --bg:           #f3f1ea;
+      --bg-elev:      #fbfaf6;
+      --bg-elev-2:    #ffffff;
+      --line:         #d8d3c4;
+      --line-soft:    #e6e2d6;
+      --text:         #1c211d;
+      --text-dim:     #5b6259;
+      --text-faint:   #95988e;
+      --accent:       #c4621a;
+      --accent-dim:   #f0d3b4;
+      --accent-text:  #fff8f0;
+      --good:         #1e8e5a;
+      --bad:          #c43d3d;
+      --focus:        #c4621a;
+      --shadow: 0 8px 24px -8px rgba(40,30,10,0.18);
+    }
+
+    *{ box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--sans);
+      -webkit-font-smoothing:antialiased;
+      transition:background .25s ease, color .25s ease;
+    }
+    ::selection{ background:var(--accent); color:var(--accent-text); }
+
+    ::-webkit-scrollbar{ width:10px; height:10px; }
+    ::-webkit-scrollbar-track{ background:transparent; }
+    ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:5px; }
+    ::-webkit-scrollbar-thumb:hover{ background:var(--text-faint); }
+
+    a{ color:var(--accent); }
+    button{ font-family:inherit; }
+    input, select, textarea{ font-family:inherit; }
+
+    :focus-visible{
+      outline:2px solid var(--focus);
+      outline-offset:1px;
+    }
+
+    /* ============================================================
+       LAYOUT SHELL + HEADER (copied from the Inventory Tracker)
+       ============================================================ */
+    .shell{
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+    }
+
+    header.bench-header{
+      display:flex;
+      align-items:center;
+      gap:18px;
+      padding:14px 22px;
+      border-bottom:1px solid var(--line);
+      background:var(--bg-elev);
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    .brand{
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      white-space:nowrap;
+    }
+    .brand .mark{
+      font-family:var(--mono);
+      font-weight:700;
+      font-size:18px;
+      letter-spacing:-0.02em;
+      color:var(--accent);
+    }
+    .brand .sub{
+      font-size:11px;
+      color:var(--text-faint);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      font-weight:600;
+    }
+
+    /* sits where the Inventory's search box is */
+    .header-badges{
+      flex:1;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+      overflow:hidden;
+    }
+    .type-chip{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:99px;
+      background:var(--bg-elev-2);
+      border:1px solid var(--line);
+      font-size:11.5px;
+      color:var(--text-dim);
+      font-family:var(--mono);
+      white-space:nowrap;
+    }
+
+    .header-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+    }
+
+    .icon-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:36px;
+      height:36px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text-dim);
+      cursor:pointer;
+      transition:border-color .15s, color .15s, transform .1s;
+    }
+    .icon-btn:hover{ color:var(--text); border-color:var(--text-faint); }
+    .icon-btn:active{ transform:scale(.94); }
+    .icon-btn svg{ width:17px; height:17px; }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      padding:9px 16px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text);
+      font-size:13.5px;
+      font-weight:600;
+      cursor:pointer;
+      text-decoration:none;
+      transition:border-color .15s, background .15s, transform .1s, opacity .15s;
+      white-space:nowrap;
+    }
+    .btn:hover{ border-color:var(--text-faint); }
+    .btn:active{ transform:scale(.97); }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; }
+    .btn svg{ width:15px; height:15px; flex-shrink:0; }
+    .btn-accent{
+      background:var(--accent);
+      border-color:var(--accent);
+      color:var(--accent-text);
+    }
+    .btn-accent:hover{ filter:brightness(1.06); border-color:var(--accent); }
+    .btn-ghost{ background:transparent; }
+    .btn-sm{ padding:6px 12px; font-size:12px; }
+
+    /* ============================================================
+       MAIN GRID
+       ============================================================ */
+    .main{
+      flex:1;
+      display:grid;
+      grid-template-columns:1fr 380px;
+      min-height:0;
+    }
+    @media (max-width: 980px){
+      .main{ grid-template-columns:1fr; }
+    }
+
+    .work-pane{
+      padding:18px 22px 40px;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+
+    .meta-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:4px 16px;
+      flex-wrap:wrap;
+      font-size:12px;
+      color:var(--text-faint);
+      font-family:var(--mono);
+    }
+    .meta-row strong{ color:var(--text-dim); font-weight:600; }
+    .status-dot{
+      display:inline-block;
+      width:7px; height:7px;
+      border-radius:50%;
+      margin-right:6px;
+      background:var(--text-faint);
+      vertical-align:middle;
+    }
+    .status-dot.live{ background:var(--good); box-shadow:0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+    .status-dot.busy{ background:var(--accent); animation:pulse 1s ease-in-out infinite; }
+    @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+    /* Cards (same surface as the inventory table wrapper) */
+    .card{
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:var(--bg-elev);
+      min-width:0;
+    }
+    .card-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      padding:10px 14px;
+      background:var(--bg-elev-2);
+      border-bottom:1px solid var(--line);
+      border-radius:var(--radius) var(--radius) 0 0;
+    }
+    .card-head h2{
+      font-size:11px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--text-faint);
+      font-weight:700;
+      margin:0;
+    }
+    .card-body{ padding:14px; }
+
+    /* ---------- Preview ---------- */
+    .preview-canvas{
+      background:
+        linear-gradient(90deg, var(--line-soft) 1px, transparent 1px),
+        linear-gradient(var(--line-soft) 1px, transparent 1px);
+      background-size: 20px 20px;
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 30px;
+      overflow-x: auto;
+    }
+    #previewContainer svg{
+      width: 100%;
+      max-width: 900px;
+      height: auto;
+      display:block;
+      margin:0 auto;
+      background: transparent;
+      box-shadow: var(--shadow);
+    }
+
+    /* ---------- Presets ---------- */
+    .presets{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .presets .lbl{
+      font-size:11px;
+      color:var(--text-faint);
+      font-family:var(--mono);
+      margin-right:2px;
+    }
+
+    /* ---------- Merge controls ---------- */
+    .merge-controls{
+      display:flex;
+      align-items:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+      padding:12px 14px;
+      border-bottom:1px solid var(--line-soft);
+    }
+    .field-mini{ display:flex; flex-direction:column; gap:6px; }
+    .field-mini label, .field label, .field-title{
+      font-size:11.5px;
+      font-weight:600;
+      color:var(--text-faint);
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .merge-controls select[multiple]{ min-width:200px; height:78px; }
+    .drag-hint{ font-size:11.5px; color:var(--text-faint); align-self:center; flex:1; min-width:180px; }
+    .merge-groups-list{ display:flex; gap:8px; flex-wrap:wrap; padding:0 14px; }
+    .merge-groups-list:not(:empty){ padding:12px 14px 0; }
+    .merge-chip{
+      display:inline-flex; align-items:center; gap:8px;
+      font-family:var(--mono); font-size:11.5px;
+      background:var(--accent-dim); color:var(--accent);
+      border-radius:99px; padding:4px 6px 4px 12px;
+      font-weight:700;
+    }
+    .merge-chip button{
+      border:none; background:rgba(0,0,0,0.15); color:inherit;
+      width:18px; height:18px; border-radius:50%; cursor:pointer;
+      font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center;
+    }
+    .merge-chip button:hover{ background:rgba(0,0,0,0.3); }
+
+    /* ---------- Cell rows (styled like the inventory table) ---------- */
+    .cells-scroll{ overflow-x:auto; }
+    .cell-row, .cell-row-head{
+      display:grid;
+      grid-template-columns: 36px 1.15fr 1.15fr 1fr 64px 44px;
+      gap:8px;
+      align-items:center;
+      min-width:620px;
+    }
+    .cell-row-head{
+      padding:11px 14px;
+      font-size:11px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--text-faint);
+      font-weight:700;
+      border-bottom:2px solid var(--line);
+    }
+    .cell-row-head span:last-child{ text-align:center; }
+    .cell-row{
+      padding:7px 14px;
+      border-bottom:1px solid var(--line-soft);
+      transition:background .1s ease;
+    }
+    .cell-row:last-child{ border-bottom:none; }
+    .cell-row:hover{ background:var(--bg-elev-2); }
+    .cell-row.merged-anchor{ background:color-mix(in srgb, var(--accent) 10%, var(--bg-elev)); }
+    .cell-row.merged-member{ display:none; }
+    .cell-row.dragging{ opacity:.35; }
+    .cell-row.drag-over{ outline:2px dashed var(--accent); outline-offset:-2px; }
+
+    .cell-idx{
+      font-family:var(--mono);
+      font-size:11px;
+      color:var(--accent);
+      background:var(--accent-dim);
+      border-radius:99px;
+      text-align:center;
+      padding:4px 0;
+      font-weight:700;
+      user-select:none;
+    }
+    .cell-idx[draggable="true"]{ cursor:grab; }
+    .cell-idx[draggable="true"]:active{ cursor:grabbing; }
+    .merge-badge{
+      display:block;
+      font-size:9px;
+      font-weight:600;
+      margin-top:2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* size + auto share a wrapper that is "invisible" on desktop */
+    .size-auto{ display:contents; }
+    .auto-cell{ display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; }
+    .auto-cell .auto-lbl{ display:none; }
+
+    /* ---------- Inputs (same as inventory edit fields) ---------- */
+    input[type="text"], input[type="number"], select{
+      width:100%;
+      padding:8px 10px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background:var(--bg-elev-2);
+      color:var(--text);
+      font-size:13.5px;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-dim);
+      outline:none;
+    }
+    input::placeholder{ color:var(--text-faint); }
+    input.main-text, input.sub-text, input[type="number"]{ font-family:var(--mono); }
+    input.size-input{ text-align:center; padding:8px 4px; }
+    input.size-input:disabled{
+      background:var(--line-soft);
+      color:var(--text-faint);
+      cursor:not-allowed;
+    }
+    input.auto-chk, input[type="checkbox"]{
+      width:17px; height:17px;
+      accent-color:var(--accent);
+      cursor:pointer;
+    }
+
+    /* ============================================================
+       SIDE PANE (settings — mirrors the inventory edit pane)
+       ============================================================ */
+    .side-pane{
+      border-left:1px solid var(--line);
+      background:var(--bg-elev);
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      position:sticky;
+      top:var(--header-h);
+      max-height:calc(100vh - var(--header-h));
+      overflow-y:auto;
+      align-self:start;
+    }
+    @media (max-width: 980px){
+      .side-pane{
+        position:static;
+        max-height:none;
+        border-left:none;
+        border-top:1px solid var(--line);
+      }
+    }
+    .side-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .side-header h2{
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--text-dim);
+      margin:0;
+    }
+    .pill{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:3px 9px;
+      border-radius:99px;
+      background:var(--accent-dim);
+      color:var(--accent);
+      font-weight:700;
+    }
+    .group-title{
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.07em;
+      text-transform:uppercase;
+      color:var(--text-dim);
+      margin:0;
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+    }
+    .group-title .hint-inline{
+      text-transform:none;
+      letter-spacing:normal;
+      font-weight:500;
+      font-size:10.5px;
+      color:var(--text-faint);
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .field-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .color-field{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 8px;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:var(--bg-elev-2);
+      cursor:pointer;
+    }
+    .color-field span{ font-size:12.5px; color:var(--text-dim); }
+    .color-field input[type="color"]{
+      width:28px; height:24px;
+      border:1px solid var(--line);
+      border-radius:4px;
+      padding:0;
+      background:transparent;
+      cursor:pointer;
+      flex-shrink:0;
+    }
+    .toggle-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size:13px;
+      color:var(--text-dim);
+    }
+    .switch{ position:relative; width:38px; height:22px; flex-shrink:0; }
+    .switch input{ opacity:0; width:0; height:0; }
+    .slider-pill{
+      position:absolute; inset:0;
+      background:var(--line);
+      border-radius:22px;
+      transition:background .15s ease;
+      cursor:pointer;
+    }
+    .slider-pill::before{
+      content:"";
+      position:absolute;
+      width:16px; height:16px;
+      left:3px; top:3px;
+      background:var(--text);
+      border-radius:50%;
+      transition:transform .15s ease;
+    }
+    .switch input:checked + .slider-pill{ background:var(--accent); }
+    .switch input:checked + .slider-pill::before{ transform:translateX(16px); background:var(--accent-text); }
+    .switch input:focus-visible + .slider-pill{ outline:2px solid var(--focus); outline-offset:1px; }
+
+    .divider{ height:1px; background:var(--line); margin:2px 0; }
+    .io-row{ display:flex; gap:10px; }
+    .io-row .btn{ flex:1; justify-content:center; }
+
+    /* ============================================================
+       TOASTS + FOOTER
+       ============================================================ */
+    #toastHost{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      z-index:100;
+    }
+    .toast{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:11px 16px;
+      border-radius:var(--radius);
+      background:var(--bg-elev-2);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      font-size:13px;
+      color:var(--text);
+      animation:slideIn .2s ease;
+      min-width:200px;
+    }
+    @keyframes slideIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+    .toast.success{ border-left:3px solid var(--good); }
+    .toast.error{ border-left:3px solid var(--bad); }
+    .toast.info{ border-left:3px solid var(--accent); }
+
+    footer.bench-footer{
+      padding:8px 22px;
+      border-top:1px solid var(--line);
+      background:var(--bg-elev);
+      font-size:11px;
+      color:var(--text-faint);
+      font-family:var(--mono);
+      display:flex;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:4px 16px;
+    }
+
+    .hidden{ display:none !important; }
+
+    /* ============================================================
+       MOBILE
+       ============================================================ */
+    @media (max-width: 720px){
+      .m-hide{ display:none !important; }
+
+      header.bench-header{
+        gap:10px;
+        padding:10px 12px;
+      }
+      .brand .mark{ font-size:16px; }
+      .brand .sub{ display:none; }
+      .header-badges{ display:none; }
+      .header-actions{ gap:6px; }
+      .header-actions .btn{ padding:0; width:36px; height:36px; justify-content:center; }
+      .header-actions .btn .btn-label{ display:none; }
+
+      .work-pane{ padding:10px 10px 24px; gap:12px; }
+      .card-head{ padding:10px 12px; }
+      .preview-canvas{ padding:14px; }
+
+      .presets{ width:100%; }
+      .presets .lbl{ display:none; }
+      .presets .btn{ flex:1 1 0; justify-content:center; padding:8px 6px; }
+
+      .merge-controls{ padding:12px; }
+      .merge-controls .field-mini{ flex:1 1 100%; }
+      .merge-controls select[multiple]{ min-width:0; width:100%; }
+      .merge-controls #mergeBtn{ flex:1; justify-content:center; }
+      .drag-hint{ display:none; }
+
+      /* Cell rows become two-line cards */
+      .cell-row-head{ display:none; }
+      .cells-scroll{ overflow:visible; }
+      .cell-row{
+        min-width:0;
+        grid-template-columns:34px 1fr 1fr;
+        grid-template-areas:
+          "idx m1  m2"
+          "idx sub tail";
+        padding:10px 12px;
+        gap:8px;
+      }
+      .cell-row > .cell-idx{ grid-area:idx; align-self:stretch; display:flex; flex-direction:column; justify-content:center; }
+      .cell-row > [data-field="main1"]{ grid-area:m1; }
+      .cell-row > [data-field="main2"]{ grid-area:m2; }
+      .cell-row > [data-field="sub"]{ grid-area:sub; }
+      .size-auto{ grid-area:tail; display:flex; align-items:center; gap:8px; }
+      .size-auto .size-input{ flex:1; min-width:0; }
+      .auto-cell .auto-lbl{ display:inline; font-size:12px; color:var(--text-dim); }
+      .merge-badge{ white-space:normal; }
+
+      input[type="text"], input[type="number"], select{ font-size:16px; } /* stops iOS zoom */
+
+      .side-pane{ padding:16px 14px calc(24px + env(safe-area-inset-bottom)); }
+
+      footer.bench-footer{ padding:8px 12px; }
+      #toastHost{ left:12px; right:12px; bottom:12px; }
+      .toast{ min-width:0; }
+    }
+
+    @media print{
+      body *{ visibility:hidden; }
+      .preview-canvas, .preview-canvas *{ visibility:visible; }
+      .preview-canvas{ border:none; background:none; position:absolute; top:0; left:0; padding:0; overflow:visible; }
+      #previewContainer svg{ max-width:none; box-shadow:none; }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+<div class="shell">
+
+  <header class="bench-header">
+    <div class="brand">
+      <span class="mark">BENCH/</span>
+      <span class="sub">Labels</span>
+    </div>
+
+    <div class="header-badges">
+      <span class="type-chip" id="badgeGrid">4×2 grid</span>
+      <span class="type-chip" id="badgeSheet">50×15 mm sheet</span>
+      <span class="type-chip" id="badgeCount">8 labels</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-accent" id="downloadSvgBtn" title="Download SVG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="btn-label">SVG</span>
+      </button>
+      <button class="btn" id="downloadPngBtn" title="Download PNG (3×)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span class="btn-label">PNG</span>
+      </button>
+      <button class="btn" id="printBtn" title="Print">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span class="btn-label">Print</span>
+      </button>
+      <a class="btn" href="../index.html#tools" title="Back to Portfolio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span class="btn-label">Back to Portfolio</span>
+      </a>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="work-pane">
+      <div class="meta-row">
+        <div><span class="status-dot live" id="statusDot"></span><span id="statusText">Preview ready</span></div>
+        <div><strong id="infoCount">8</strong> labels · cell <strong id="infoSize">12.5×7.5mm</strong><span class="m-hide"> · <strong id="infoFont">Franklin Gothic Demi</strong></span></div>
+      </div>
+
+      <!-- Preview -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Live preview · <span id="infoSheet">50×15mm</span></h2>
+          <button class="btn btn-sm" id="copySvgBtn" title="Copy SVG markup to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy SVG
+          </button>
+        </div>
+        <div class="preview-canvas">
+          <div id="previewContainer"></div>
+        </div>
+      </div>
+
+      <!-- Cells -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Cells</h2>
+          <div class="presets">
+            <span class="lbl">Preset:</span>
+            <button class="btn btn-sm" data-preset="capacitors" title="22nF … 470nF · 0805">Capacitors</button>
+            <button class="btn btn-sm" data-preset="resistors" title="10kΩ … 0Ω · 0805">Resistors</button>
+            <button class="btn btn-sm" data-preset="ics" title="STM32 … DS3231">ICs</button>
+            <button class="btn btn-sm" data-preset="mixed" title="Assorted parts">Mixed</button>
+          </div>
+        </div>
+
+        <div class="merge-controls">
+          <div class="field-mini">
+            <label for="mergeCellsSelect">Join cells (ctrl/cmd-click 2+)</label>
+            <select id="mergeCellsSelect" multiple></select>
+          </div>
+          <button class="btn" id="mergeBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Join selected
+          </button>
+          <span class="drag-hint">Drag a cell's number to reorder it (disabled while cells are joined)</span>
+        </div>
+        <div class="merge-groups-list" id="mergeGroupsList"></div>
+
+        <div class="cells-scroll">
+          <div class="cell-row-head">
+            <span>#</span><span>Main line 1</span><span>Main line 2</span><span>Sub-text</span><span>Size</span><span>Auto</span>
+          </div>
+          <div id="cellsList"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side-pane" id="settingsPanel">
+      <div class="side-header">
+        <h2>Label settings</h2>
+        <span class="pill" id="settingsPill">4×2</span>
+      </div>
+
+      <h3 class="group-title">Sheet size <span class="hint-inline">stays fixed as you change the grid</span></h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="sheetWidth">Width (mm)</label>
+          <input type="number" id="sheetWidth" step="0.5" min="5" max="500" value="50">
+        </div>
+        <div class="field">
+          <label for="sheetHeight">Height (mm)</label>
+          <input type="number" id="sheetHeight" step="0.5" min="5" max="500" value="15">
+        </div>
+      </div>
+
+      <h3 class="group-title">Grid</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="gridCols">Columns</label>
+          <input type="number" id="gridCols" step="1" min="1" max="12" value="4" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="gridRows">Rows</label>
+          <input type="number" id="gridRows" step="1" min="1" max="10" value="2" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3 class="group-title">Typography</h3>
+      <div class="field">
+        <label for="mainFont">Main font</label>
+        <select id="mainFont"></select>
+      </div>
+      <div class="field">
+        <label for="subFont">Sub-text font</label>
+        <select id="subFont"></select>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="mainFontSize">Main size (mm)</label>
+          <input type="number" id="mainFontSize" step="0.1" min="1.6" max="6.5" value="4" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="subFontSize">Sub size (mm)</label>
+          <input type="number" id="subFontSize" step="0.1" min="0.8" max="4" value="1.8" inputmode="decimal">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3 class="group-title">Colors</h3>
+      <div class="field-row">
+        <label class="color-field"><input type="color" id="mainColor" value="#1a1a1a"><span>Main text</span></label>
+        <label class="color-field"><input type="color" id="subColor" value="#1a1a1a"><span>Sub-text</span></label>
+        <label class="color-field"><input type="color" id="dividerColor" value="#1a1a1a"><span>Grid lines</span></label>
+        <label class="color-field"><input type="color" id="bgColor" value="#ffffff"><span>Background</span></label>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3 class="group-title">Display</h3>
+      <div class="toggle-row">
+        <label for="showGrid">Show grid lines</label>
+        <label class="switch"><input type="checkbox" id="showGrid" checked><span class="slider-pill"></span></label>
+      </div>
+      <div class="toggle-row">
+        <label for="showCutLines">Show cut lines (dashed)</label>
+        <label class="switch"><input type="checkbox" id="showCutLines"><span class="slider-pill"></span></label>
+      </div>
+      <div class="field">
+        <label for="cellRadius">Corner radius (mm)</label>
+        <input type="number" id="cellRadius" step="0.1" min="0" max="4" value="0" inputmode="decimal">
+      </div>
+
+      <div class="divider"></div>
+
+      <h3 class="group-title">Settings file</h3>
+      <div class="io-row">
+        <button class="btn" id="exportSettingsBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export JSON
+        </button>
+        <button class="btn" id="importSettingsBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import JSON
+        </button>
+        <input type="file" id="importSettingsFile" accept="application/json" style="display:none">
+      </div>
+    </aside>
+  </div>
+
+  <footer class="bench-footer">
+    <span id="footerLeft">50×15 mm sheet · 4×2 grid</span>
+    <span class="m-hide">No external dependencies · everything renders client-side</span>
+  </footer>
+</div>
+
+<div id="toastHost"></div>
+
+<svg id="scratch" style="position:absolute; visibility:hidden; width:0; height:0; top:-9999px; left:-9999px;"></svg>
+
+<script>
+(function(){
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+  const FONTS = ["Franklin Gothic Demi","Arial","Helvetica","Verdana","Times New Roman","Courier New"];
+
+  // ---------------- theme (shared with the Inventory Tracker) ----------------
+  const THEME_KEY = "bench_inventory_theme";
+  (function initTheme(){
+    let saved = null;
+    try { saved = localStorage.getItem(THEME_KEY); } catch(e){}
+    if (saved) document.body.setAttribute("data-theme", saved);
+  })();
+  function toggleTheme(){
+    const cur = document.body.getAttribute("data-theme") || "dark";
+    const next = cur === "dark" ? "light" : "dark";
+    document.body.setAttribute("data-theme", next);
+    try { localStorage.setItem(THEME_KEY, next); } catch(e){}
+  }
+  document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+
+  (function trackHeaderHeight(){
+    const header = document.querySelector("header.bench-header");
+    const apply = () => document.documentElement.style.setProperty("--header-h", header.offsetHeight + "px");
+    apply();
+    if (window.ResizeObserver) new ResizeObserver(apply).observe(header);
+    else window.addEventListener("resize", apply);
+  })();
+
+  const SUB_AREA_RATIO = 0.22;
+  const MAIN_MAX = 6.5, MAIN_MIN = 1.6;
+  const SUB_TOP_PAD = 0.3, SUB_RIGHT_PAD = 1.6;
+
+  // Cell size is derived from the whole-sheet dimensions divided by the grid,
+  // so changing rows/cols reshuffles the cells but never changes the overall
+  // printed size of the sheet.
+  function cellW(){ return settings.sheetW / settings.cols; }
+  function cellH(){ return settings.sheetH / settings.rows; }
+
+  const PRESETS = {
+    capacitors: { sub: "0805", items: ["22 nF","33 nF","47 nF","68 nF","100 nF","220 nF","330 nF","470 nF"] },
+    resistors:  { sub: "0805", items: ["10k\u03A9","4.7k\u03A9","100\u03A9","1M\u03A9","220\u03A9","1k\u03A9","47k\u03A9","0\u03A9"] },
+    ics:        { subs: ["LQFP48","SOT223","SSOP16","TQFP32","SOIC8","QFN32","SOIC28","SOIC8"],
+                   items: ["STM32F103","AMS1117","MAX3232","ATmega328","LM358","ESP8266","MCP23017","DS3231"] },
+    mixed:      { items: ["1uF","100nF","STM32F103","10k\u03A9","LED\nRed","22pF","AMS1117","USB-C"],
+                   subs: ["0805","0805","LQFP48","0805","5mm","0805","SOT223",""] }
+  };
+
+  function makeCell(main1, main2, sub){
+    return { main1: main1 || "", main2: main2 || "", sub: sub || "", fontSize: null, auto: true };
+  }
+
+  let cells = [];
+  let mergeGroups = []; // array of arrays of cell indices, sorted ascending; anchor = min index
+  let settings = {
+    mainFont: "Franklin Gothic Demi",
+    mainFontSize: 4,
+    subFont: "Franklin Gothic Demi",
+    subFontSize: 1.8,
+    mainColor: "#1a1a1a",
+    subColor: "#1a1a1a",
+    dividerColor: "#1a1a1a",
+    bgColor: "#ffffff",
+    showGrid: true,
+    showCutLines: false,
+    cellRadius: 0,
+    cols: 4,
+    rows: 2,
+    sheetW: 50,
+    sheetH: 15
+  };
+
+  const LABEL_HANDOFF_KEY = "bench_label_handoff";
+  let handoffCount = 0;
+
+  function loadHandoffFromInventory(){
+    let raw;
+    try { raw = localStorage.getItem(LABEL_HANDOFF_KEY); } catch(e){ return 0; }
+    if (!raw) return 0;
+    let payload;
+    try { payload = JSON.parse(raw); } catch(e){ return 0; }
+    try { localStorage.removeItem(LABEL_HANDOFF_KEY); } catch(e){}
+    if (!Array.isArray(payload) || !payload.length) return 0;
+
+    const n = payload.length;
+    const cols = Math.max(1, Math.min(12, settings.cols || 4));
+    const rows = Math.max(1, Math.min(10, Math.ceil(n / cols)));
+    settings.cols = cols;
+    settings.rows = rows;
+
+    cells = [];
+    for (let i = 0; i < cols * rows; i++){
+      const p = payload[i];
+      cells.push(p ? makeCell(p.main || "", "", p.sub || "") : makeCell("", "", ""));
+    }
+    clearAllMerges();
+    return n;
+  }
+
+  function showNote(msg, kind){
+    let host = document.getElementById("toastHost");
+    if (!host){
+      host = document.createElement("div");
+      host.id = "toastHost";
+      document.body.appendChild(host);
+    }
+    const n = document.createElement("div");
+    n.className = "toast " + (kind || "info");
+    n.textContent = msg;
+    host.appendChild(n);
+    setTimeout(() => {
+      n.style.transition = "opacity .3s ease";
+      n.style.opacity = "0";
+      setTimeout(() => n.remove(), 300);
+    }, 3200);
+  }
+
+  // seed with capacitor preset by default, unless parts were just sent over
+  // from the inventory tracker's "Send to Labels" button
+  handoffCount = loadHandoffFromInventory();
+  if (!handoffCount){
+    applyPreset("capacitors");
+  }
+
+  // ---------------- UI bootstrap ----------------
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function buildFontOptions(select){
+    select.innerHTML = "";
+    FONTS.forEach(f => {
+      const o = document.createElement("option");
+      o.value = f; o.textContent = f;
+      select.appendChild(o);
+    });
+  }
+  buildFontOptions(document.getElementById("mainFont"));
+  buildFontOptions(document.getElementById("subFont"));
+
+  function cellCount(){ return settings.cols * settings.rows; }
+
+  function resizeCellsArray(){
+    const n = cellCount();
+    while (cells.length < n) cells.push(makeCell("","",""));
+    if (cells.length > n) cells = cells.slice(0, n);
+  }
+
+  // ---------------- cell merging ----------------
+  function clearAllMerges(){ mergeGroups = []; }
+
+  function groupOf(idx){
+    return mergeGroups.find(g => g.includes(idx)) || null;
+  }
+
+  function isAnchor(idx){
+    const g = groupOf(idx);
+    return !g || Math.min(...g) === idx;
+  }
+
+  function isHiddenMember(idx){
+    const g = groupOf(idx);
+    return !!g && Math.min(...g) !== idx;
+  }
+
+  // bounding box (in grid units) for a set of indices, and whether that set
+  // exactly fills the rectangle it spans (i.e. it's a valid, contiguous block)
+  function rectInfo(indices){
+    const cols = settings.cols;
+    let rowMin = Infinity, rowMax = -Infinity, colMin = Infinity, colMax = -Infinity;
+    indices.forEach(i => {
+      const r = Math.floor(i / cols), c = i % cols;
+      rowMin = Math.min(rowMin, r); rowMax = Math.max(rowMax, r);
+      colMin = Math.min(colMin, c); colMax = Math.max(colMax, c);
+    });
+    const area = (rowMax - rowMin + 1) * (colMax - colMin + 1);
+    return { rowMin, rowMax, colMin, colMax, isRect: area === indices.length };
+  }
+
+  function groupBBox(group){
+    const info = rectInfo(group);
+    return {
+      col: info.colMin, row: info.rowMin,
+      colSpan: info.colMax - info.colMin + 1,
+      rowSpan: info.rowMax - info.rowMin + 1
+    };
+  }
+
+  function tryMergeCells(indices){
+    indices = Array.from(new Set(indices)).sort((a,b) => a-b);
+    if (indices.length < 2){
+      showNote("Pick at least two cells to join.", "error");
+      return false;
+    }
+    // none of these may already belong to a group
+    for (const i of indices){
+      if (groupOf(i)){
+        showNote(`Cell ${i+1} is already part of a join. Unmerge it first.`, "error");
+        return false;
+      }
+    }
+    const info = rectInfo(indices);
+    if (!info.isRect){
+      showNote("Selected cells must form a solid rectangular block (no gaps) to be joined.", "error");
+      return false;
+    }
+    mergeGroups.push(indices);
+    return true;
+  }
+
+  function unmergeGroup(anchorIdx){
+    mergeGroups = mergeGroups.filter(g => !g.includes(anchorIdx));
+  }
+
+  // ---------------- cell reordering (drag & drop) ----------------
+  function moveCellPosition(fromIdx, toIdx){
+    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= cells.length || toIdx >= cells.length) return;
+    const [item] = cells.splice(fromIdx, 1);
+    cells.splice(toIdx, 0, item);
+  }
+
+  function wireRowDragging(list){
+    let dragFrom = null;
+    list.querySelectorAll(".cell-row").forEach(row => {
+      const handle = row.querySelector(".cell-idx");
+
+      handle.addEventListener("dragstart", (e) => {
+        dragFrom = +row.dataset.idx;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(dragFrom));
+        row.classList.add("dragging");
+      });
+      handle.addEventListener("dragend", () => {
+        row.classList.remove("dragging");
+        list.querySelectorAll(".cell-row.drag-over").forEach(r => r.classList.remove("drag-over"));
+        dragFrom = null;
+      });
+
+      row.addEventListener("dragover", (e) => {
+        if (dragFrom === null) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        row.classList.add("drag-over");
+      });
+      row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
+      row.addEventListener("drop", (e) => {
+        e.preventDefault();
+        row.classList.remove("drag-over");
+        const from = dragFrom !== null ? dragFrom : +e.dataTransfer.getData("text/plain");
+        const to = +row.dataset.idx;
+        if (Number.isNaN(from) || Number.isNaN(to) || from === to) return;
+        moveCellPosition(from, to);
+        renderCellRows();
+        renderMergeGroupsList();
+        populateMergeSelect();
+        scheduleRender();
+      });
+    });
+  }
+
+  function populateMergeSelect(){
+    const sel = document.getElementById("mergeCellsSelect");
+    sel.innerHTML = "";
+    cells.forEach((c, i) => {
+      const o = document.createElement("option");
+      o.value = i;
+      o.textContent = `Cell ${i + 1}` + (groupOf(i) ? " (joined)" : "");
+      sel.appendChild(o);
+    });
+  }
+
+  function renderMergeGroupsList(){
+    const host = document.getElementById("mergeGroupsList");
+    host.innerHTML = "";
+    if (mergeGroups.length === 0) return;
+    mergeGroups.forEach(g => {
+      const anchor = Math.min(...g);
+      const chip = document.createElement("span");
+      chip.className = "merge-chip";
+      const label = g.length === 2
+        ? `Cells ${g[0]+1} + ${g[1]+1}`
+        : `Cells ${g.map(i => i+1).join(", ")}`;
+      chip.innerHTML = `<span>${label}</span>`;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = "Unmerge";
+      btn.textContent = "×";
+      btn.addEventListener("click", () => {
+        unmergeGroup(anchor);
+        renderCellRows();
+        renderMergeGroupsList();
+        populateMergeSelect();
+        scheduleRender();
+      });
+      chip.appendChild(btn);
+      host.appendChild(chip);
+    });
+  }
+
+  function renderCellRows(){
+    const list = document.getElementById("cellsList");
+    list.innerHTML = "";
+    const dragEnabled = mergeGroups.length === 0;
+    cells.forEach((cell, i) => {
+      const row = document.createElement("div");
+      const group = groupOf(i);
+      const hidden = isHiddenMember(i);
+      const anchorOfGroup = group && !hidden;
+      row.className = "cell-row" + (anchorOfGroup ? " merged-anchor" : "") + (hidden ? " merged-member" : "");
+      row.dataset.idx = i;
+      const badge = anchorOfGroup
+        ? `<span class="merge-badge">joins ${group.map(g => g+1).join(",")}</span>`
+        : "";
+      row.innerHTML = `
+        <div class="cell-idx"${dragEnabled ? ' draggable="true" title="Drag to reorder"' : ' title="Unjoin cells to reorder"'}>${i+1}${badge}</div>
+        <input type="text" class="main-text" data-idx="${i}" data-field="main1" placeholder="Main, e.g. 22 nF">
+        <input type="text" class="main-text" data-idx="${i}" data-field="main2" placeholder="line 2 (optional)">
+        <input type="text" class="sub-text" data-idx="${i}" data-field="sub" placeholder="Sub, e.g. 0805">
+        <div class="size-auto">
+          <input type="number" step="0.1" min="${MAIN_MIN}" max="${MAIN_MAX}" class="size-input" data-idx="${i}" data-field="fontSize" inputmode="decimal" placeholder="size" title="Main font size (mm)">
+          <label class="auto-cell" title="Auto-fit font size"><input type="checkbox" class="auto-chk" data-idx="${i}"><span class="auto-lbl">Auto</span></label>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+    syncCellInputs();
+    list.querySelectorAll("input[data-field]").forEach(inp => {
+      inp.addEventListener("input", onCellInputChange);
+    });
+    list.querySelectorAll("input.auto-chk").forEach(inp => {
+      inp.addEventListener("change", onAutoToggle);
+    });
+    if (dragEnabled) wireRowDragging(list);
+  }
+
+  function syncCellInputs(){
+    document.querySelectorAll("#cellsList input[data-field]").forEach(inp => {
+      const idx = +inp.dataset.idx, field = inp.dataset.field;
+      if (field === "fontSize") inp.value = (cells[idx].fontSize ?? "");
+      else inp.value = cells[idx][field] ?? "";
+    });
+    document.querySelectorAll("#cellsList input.auto-chk").forEach(inp => {
+      const idx = +inp.dataset.idx;
+      inp.checked = cells[idx].auto;
+      const sizeInput = document.querySelector(`#cellsList input.size-input[data-idx="${idx}"]`);
+      if (sizeInput) sizeInput.disabled = cells[idx].auto;
+    });
+  }
+
+  function onCellInputChange(e){
+    const idx = +e.target.dataset.idx, field = e.target.dataset.field;
+    if (field === "fontSize"){
+      const v = e.target.value.trim();
+      cells[idx].fontSize = v === "" ? null : clamp(parseFloat(v), MAIN_MIN, MAIN_MAX);
+    } else {
+      cells[idx][field] = e.target.value;
+    }
+    scheduleRender();
+  }
+
+  function onAutoToggle(e){
+    const idx = +e.target.dataset.idx;
+    cells[idx].auto = e.target.checked;
+    const sizeInput = document.querySelector(`#cellsList input.size-input[data-idx="${idx}"]`);
+    if (sizeInput) sizeInput.disabled = cells[idx].auto;
+    if (!cells[idx].auto && (cells[idx].fontSize === null || cells[idx].fontSize === undefined)){
+      cells[idx].fontSize = settings.mainFontSize;
+    }
+    scheduleRender();
+  }
+
+  renderCellRows();
+  renderMergeGroupsList();
+  populateMergeSelect();
+
+  // settings inputs
+  const settingInputs = {
+    mainFont: document.getElementById("mainFont"),
+    mainFontSize: document.getElementById("mainFontSize"),
+    subFont: document.getElementById("subFont"),
+    subFontSize: document.getElementById("subFontSize"),
+    mainColor: document.getElementById("mainColor"),
+    subColor: document.getElementById("subColor"),
+    dividerColor: document.getElementById("dividerColor"),
+    bgColor: document.getElementById("bgColor"),
+    showGrid: document.getElementById("showGrid"),
+    showCutLines: document.getElementById("showCutLines"),
+    cellRadius: document.getElementById("cellRadius"),
+    sheetW: document.getElementById("sheetWidth"),
+    sheetH: document.getElementById("sheetHeight"),
+    cols: document.getElementById("gridCols"),
+    rows: document.getElementById("gridRows")
+  };
+
+  function syncSettingInputs(){
+    settingInputs.mainFont.value = settings.mainFont;
+    settingInputs.mainFontSize.value = settings.mainFontSize;
+    settingInputs.subFont.value = settings.subFont;
+    settingInputs.subFontSize.value = settings.subFontSize;
+    settingInputs.mainColor.value = settings.mainColor;
+    settingInputs.subColor.value = settings.subColor;
+    settingInputs.dividerColor.value = settings.dividerColor;
+    settingInputs.bgColor.value = settings.bgColor;
+    settingInputs.showGrid.checked = settings.showGrid;
+    settingInputs.showCutLines.checked = settings.showCutLines;
+    settingInputs.cellRadius.value = settings.cellRadius;
+    settingInputs.sheetW.value = settings.sheetW;
+    settingInputs.sheetH.value = settings.sheetH;
+    settingInputs.cols.value = settings.cols;
+    settingInputs.rows.value = settings.rows;
+  }
+  syncSettingInputs();
+
+  Object.entries(settingInputs).forEach(([key, input]) => {
+    input.addEventListener("input", () => {
+      if (input.type === "checkbox") settings[key] = input.checked;
+      else if (input.type === "number") settings[key] = parseFloat(input.value) || 0;
+      else settings[key] = input.value;
+
+      if (key === "sheetW" || key === "sheetH"){
+        settings.sheetW = Math.max(5, Math.min(500, settings.sheetW || 5));
+        settings.sheetH = Math.max(5, Math.min(500, settings.sheetH || 5));
+      }
+
+      if (key === "cols" || key === "rows"){
+        settings.cols = Math.max(1, Math.min(12, Math.round(settings.cols || 1)));
+        settings.rows = Math.max(1, Math.min(10, Math.round(settings.rows || 1)));
+        resizeCellsArray();
+        clearAllMerges();
+        renderCellRows();
+        renderMergeGroupsList();
+        populateMergeSelect();
+      }
+      updateInfoBar();
+      scheduleRender();
+    });
+  });
+
+  document.getElementById("mergeBtn").addEventListener("click", () => {
+    const sel = document.getElementById("mergeCellsSelect");
+    const indices = Array.from(sel.selectedOptions).map(o => +o.value);
+    if (tryMergeCells(indices)){
+      renderCellRows();
+      renderMergeGroupsList();
+      populateMergeSelect();
+      scheduleRender();
+    }
+  });
+
+  // presets
+  document.querySelectorAll("[data-preset]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      applyPreset(btn.dataset.preset);
+      clearAllMerges();
+      renderCellRows();
+      renderMergeGroupsList();
+      populateMergeSelect();
+      scheduleRender();
+    });
+  });
+
+  function applyPreset(name){
+    const p = PRESETS[name];
+    if (!p) return;
+    resizeCellsArray();
+    const n = cellCount();
+    for (let i = 0; i < n; i++){
+      if (i < p.items.length){
+        const parts = p.items[i].split("\n");
+        const sub = p.subs ? (p.subs[i] || "") : (p.sub || "");
+        cells[i] = makeCell(parts[0] || "", parts[1] || "", sub);
+      } else {
+        cells[i] = makeCell("", "", "");
+      }
+    }
+  }
+
+  // ---------------- measuring / auto-size ----------------
+  const scratch = document.getElementById("scratch");
+
+  function measureLineWidth(line, fontSize, fontFamily){
+    const t = el("text", { "font-size": fontSize, "font-family": fontFamily });
+    t.textContent = line || " ";
+    scratch.appendChild(t);
+    let w = 0;
+    try { w = t.getBBox().width; } catch(e){ w = 0; }
+    scratch.removeChild(t);
+    return w;
+  }
+
+  function fitFontSize(lines, maxWidth, maxHeight, fontFamily){
+    let size = MAIN_MAX;
+    while (size >= MAIN_MIN){
+      const lineHeight = size * 1.15;
+      const totalH = lineHeight * lines.length;
+      let widest = 0;
+      for (const line of lines){
+        widest = Math.max(widest, measureLineWidth(line, size, fontFamily));
+      }
+      if (widest <= maxWidth && totalH <= maxHeight) return size;
+      size -= 0.1;
+    }
+    return MAIN_MIN;
+  }
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  // ---------------- SVG building ----------------
+
+  // Geometry (in mm) for the block that grid index i belongs to. If i is
+  // the anchor of a merge group, this is the bounding box of the whole
+  // group; otherwise it's just that one cell.
+  function cellGeometry(i){
+    const cw = cellW(), ch = cellH();
+    const g = groupOf(i);
+    if (g && Math.min(...g) === i){
+      const bb = groupBBox(g);
+      return { x: bb.col * cw, y: bb.row * ch, w: bb.colSpan * cw, h: bb.rowSpan * ch };
+    }
+    const cols = settings.cols;
+    const col = i % cols, row = Math.floor(i / cols);
+    return { x: col * cw, y: row * ch, w: cw, h: ch };
+  }
+
+  function buildLabelSheetSVG(){
+    const cols = settings.cols, rows = settings.rows;
+    const cw = cellW(), ch = cellH();
+    const sheetW = settings.sheetW, sheetH = settings.sheetH;
+
+    const svg = el("svg", {
+      xmlns: NS,
+      viewBox: `0 0 ${sheetW} ${sheetH}`,
+      width: `${sheetW}mm`,
+      height: `${sheetH}mm`
+    });
+
+    const bg = el("rect", {
+      x:0, y:0, width: sheetW, height: sheetH,
+      fill: settings.bgColor, stroke: settings.dividerColor, "stroke-width": 0.08
+    });
+    svg.appendChild(bg);
+
+    // Grid lines: skip the segments that fall inside a joined (merged) block.
+    if (settings.showGrid){
+      for (let c = 1; c < cols; c++){
+        for (let r = 0; r < rows; r++){
+          const leftIdx = r*cols + (c-1), rightIdx = r*cols + c;
+          const gl = groupOf(leftIdx), gr = groupOf(rightIdx);
+          if (gl && gr && gl === gr) continue;
+          svg.appendChild(el("line", {
+            x1: c*cw, y1: r*ch, x2: c*cw, y2: (r+1)*ch,
+            stroke: settings.dividerColor, "stroke-width": 0.06
+          }));
+        }
+      }
+      for (let r = 1; r < rows; r++){
+        for (let c = 0; c < cols; c++){
+          const topIdx = (r-1)*cols + c, botIdx = r*cols + c;
+          const gt = groupOf(topIdx), gb = groupOf(botIdx);
+          if (gt && gb && gt === gb) continue;
+          svg.appendChild(el("line", {
+            x1: c*cw, y1: r*ch, x2: (c+1)*cw, y2: r*ch,
+            stroke: settings.dividerColor, "stroke-width": 0.06
+          }));
+        }
+      }
+    }
+
+    cells.forEach((cell, i) => {
+      if (isHiddenMember(i)) return; // drawn as part of its anchor cell below
+
+      const { x: cx, y: cy, w: cw, h: ch } = cellGeometry(i);
+      const radius = clamp(settings.cellRadius || 0, 0, Math.min(cw, ch) / 2);
+
+      if (settings.showCutLines){
+        svg.appendChild(el("rect", {
+          x: cx + 0.15, y: cy + 0.15, width: cw - 0.3, height: ch - 0.3,
+          rx: Math.max(0, radius - 0.15), ry: Math.max(0, radius - 0.15),
+          fill: "none", stroke: settings.dividerColor, "stroke-width": 0.05,
+          "stroke-dasharray": "0.6 0.4"
+        }));
+      }
+
+      const hasSub = cell.sub && cell.sub.trim().length > 0;
+      const subW = hasSub ? cw * SUB_AREA_RATIO : 0;
+
+      if (hasSub){
+        // Right-aligned within the sub-text column, top-aligned so the
+        // last character touches the top edge of the label.
+        const scx = cx + subW - SUB_RIGHT_PAD;
+        const scy = cy + SUB_TOP_PAD;
+        const t = el("text", {
+          x: scx, y: scy,
+          "text-anchor": "end", "dominant-baseline": "middle",
+          transform: `rotate(-90 ${scx} ${scy})`,
+          "font-size": settings.subFontSize, "font-family": settings.subFont,
+          fill: settings.subColor
+        });
+        t.textContent = cell.sub;
+        svg.appendChild(t);
+      }
+
+      const areaX = cx + subW, areaW = cw - subW, areaY = cy, areaH = ch;
+      const lines = [cell.main1, cell.main2].filter(l => l && l.trim().length > 0);
+      if (!lines.length){
+        // still keep the stored size in sync (nothing to measure)
+        return;
+      }
+
+      let fontSize;
+      if (cell.auto){
+        fontSize = fitFontSize(lines, areaW * 0.88, areaH * 0.82, settings.mainFont);
+        cell.fontSize = Math.round(fontSize * 10) / 10;
+      } else {
+        fontSize = clamp(cell.fontSize ?? settings.mainFontSize, MAIN_MIN, MAIN_MAX);
+      }
+
+      const lineHeight = fontSize * 1.15;
+      const totalH = lineHeight * lines.length;
+      const startY = areaY + areaH/2 - totalH/2 + lineHeight/2;
+      const midX = areaX + areaW/2;
+
+      const t = el("text", {
+        x: midX, y: startY,
+        "text-anchor": "middle", "dominant-baseline": "middle",
+        "font-size": fontSize, "font-family": settings.mainFont,
+        fill: settings.mainColor
+      });
+      lines.forEach((line, li) => {
+        const ts = el("tspan", { x: midX, y: startY + li*lineHeight });
+        ts.textContent = line;
+        t.appendChild(ts);
+      });
+      svg.appendChild(t);
+    });
+
+    return svg;
+  }
+
+  // ---------------- render / info ----------------
+  let renderTimer = null;
+  function setStatus(state, label){
+    const dot = document.getElementById("statusDot");
+    dot.className = "status-dot " + state;
+    document.getElementById("statusText").textContent = label;
+  }
+  function scheduleRender(){
+    setStatus("busy", "Rendering…");
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 60);
+  }
+
+  function render(){
+    const svg = buildLabelSheetSVG();
+    const container = document.getElementById("previewContainer");
+    container.innerHTML = "";
+    container.appendChild(svg);
+    syncSizeDisplays();
+    setStatus("live", "Preview ready");
+  }
+
+  function syncSizeDisplays(){
+    document.querySelectorAll("#cellsList input.size-input").forEach(inp => {
+      const idx = +inp.dataset.idx;
+      if (document.activeElement === inp) return; // don't fight the user while typing
+      inp.value = (cells[idx].fontSize ?? "");
+    });
+  }
+
+  function updateInfoBar(){
+    const sheetW = settings.sheetW, sheetH = settings.sheetH;
+    document.getElementById("infoSize").textContent = `${round1(cellW())}×${round1(cellH())}mm`;
+    document.getElementById("infoSheet").textContent = `${round1(sheetW)}×${round1(sheetH)}mm`;
+    document.getElementById("infoFont").textContent = settings.mainFont;
+    document.getElementById("infoCount").textContent = cellCount();
+    document.getElementById("badgeGrid").textContent = `${settings.cols}×${settings.rows} grid`;
+    document.getElementById("badgeSheet").textContent = `${round1(sheetW)}×${round1(sheetH)} mm sheet`;
+    document.getElementById("badgeCount").textContent = `${cellCount()} labels`;
+    document.getElementById("settingsPill").textContent = `${settings.cols}×${settings.rows}`;
+    document.getElementById("footerLeft").textContent = `${round1(sheetW)}×${round1(sheetH)} mm sheet · ${settings.cols}×${settings.rows} grid · ${round1(cellW())}×${round1(cellH())} mm cells`;
+  }
+
+  function round1(v){ return Math.round(v*10)/10; }
+
+  render();
+  updateInfoBar();
+
+  if (handoffCount){
+    syncSettingInputs();
+    showNote(`Loaded ${handoffCount} label${handoffCount === 1 ? "" : "s"} from inventory`, "success");
+  }
+
+  // ---------------- export: SVG ----------------
+  function serializeCurrentSVG(){
+    const svg = buildLabelSheetSVG();
+    const str = new XMLSerializer().serializeToString(svg);
+    return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' + str;
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  document.getElementById("downloadSvgBtn").addEventListener("click", () => {
+    const str = serializeCurrentSVG();
+    downloadBlob(new Blob([str], {type:"image/svg+xml"}), "labels.svg");
+  });
+
+  document.getElementById("copySvgBtn").addEventListener("click", async () => {
+    const str = serializeCurrentSVG();
+    try {
+      await navigator.clipboard.writeText(str);
+      showNote("SVG copied to clipboard", "success");
+    } catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = str; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      showNote("SVG copied to clipboard", "success");
+    }
+  });
+
+  // ---------------- export: PNG (3x) ----------------
+  document.getElementById("downloadPngBtn").addEventListener("click", () => {
+    const scale = 3;
+    const pxPerMm = 10; // base resolution before 3x export scale
+    const sheetW = settings.sheetW, sheetH = settings.sheetH;
+    const w = Math.round(sheetW * pxPerMm * scale);
+    const h = Math.round(sheetH * pxPerMm * scale);
+
+    const str = serializeCurrentSVG();
+    const svgBlob = new Blob([str], {type:"image/svg+xml;charset=utf-8"});
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = settings.bgColor;
+      ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => downloadBlob(blob, "labels.png"), "image/png");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      showNote("PNG export failed to render. Try Download SVG instead.", "error");
+    };
+    img.src = url;
+  });
+
+  // ---------------- print ----------------
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  // ---------------- settings JSON export/import ----------------
+  document.getElementById("exportSettingsBtn").addEventListener("click", () => {
+    const data = { settings, cells, mergeGroups };
+    downloadBlob(new Blob([JSON.stringify(data, null, 2)], {type:"application/json"}), "label-settings.json");
+  });
+
+  document.getElementById("importSettingsBtn").addEventListener("click", () => {
+    document.getElementById("importSettingsFile").click();
+  });
+
+  document.getElementById("importSettingsFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (data.settings) Object.assign(settings, data.settings);
+        settings.cols = Math.max(1, Math.min(12, Math.round(settings.cols || 4)));
+        settings.rows = Math.max(1, Math.min(10, Math.round(settings.rows || 2)));
+        if (Array.isArray(data.cells) && data.cells.length){
+          cells = data.cells.map(c => ({
+            main1: c.main1 ?? c.main ?? "",
+            main2: c.main2 ?? "",
+            sub: c.sub || "",
+            fontSize: c.fontSize ?? null,
+            auto: c.auto !== undefined ? !!c.auto : true
+          }));
+        }
+        resizeCellsArray();
+        clearAllMerges();
+        if (Array.isArray(data.mergeGroups)){
+          data.mergeGroups.forEach(g => {
+            if (Array.isArray(g)) tryMergeCells(g);
+          });
+        }
+        syncSettingInputs();
+        renderCellRows();
+        renderMergeGroupsList();
+        populateMergeSelect();
+        updateInfoBar();
+        scheduleRender();
+      } catch(err){
+        showNote("Could not read that settings file. Make sure it's a JSON file exported from this tool.", "error");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+})();
+</script>
+
+</body>
+</html>
