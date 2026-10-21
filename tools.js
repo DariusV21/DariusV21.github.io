@@ -29,6 +29,12 @@ const tools = [
         icon: "pulley"
     },
     {
+        title: "Ant Forge",
+        desc: "Build, test and fight antweight robots in 3D. Tune the drive, weapon and electronics, then battle in the arena.",
+        file: "Ant_Forge.html",
+        icon: "robot"
+    },
+    {
         title: "Gerber Panelizer",
         desc: "Load a Gerber ZIP and panelize it. Output uses JLCPCB, PCBWay or KiCad naming.",
         file: "Gerber_Panelizer.html",
@@ -42,5 +48,6 @@ const TOOL_ICONS = {
     label: '<path d="M20.6 13.4 11 3.8A2 2 0 0 0 9.6 3.2L4 3a1 1 0 0 0-1 1l.2 5.6a2 2 0 0 0 .6 1.4l9.6 9.6a2 2 0 0 0 2.8 0l4.4-4.4a2 2 0 0 0 0-2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
     gear: '<circle cx="12" cy="12" r="8.2" stroke-width="3" stroke-dasharray="2.3 2.85" stroke-linecap="butt"/><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.2"/>',
     pulley: '<circle cx="6.5" cy="13" r="3.5"/><circle cx="17" cy="11" r="5"/><circle cx="6.5" cy="13" r="1"/><circle cx="17" cy="11" r="1.4"/><line x1="5.9" y1="9.55" x2="16.1" y2="6.1"/><line x1="7.1" y1="16.45" x2="17.9" y2="15.9"/>',
+    robot: '<path d="M2.5 14h13l5.5-4.5V8H9l-6.5 3.5z"/><circle cx="7" cy="17.5" r="2.5"/><circle cx="15.5" cy="17.5" r="2.5"/><circle cx="15.5" cy="4" r="2"/><path d="M15.5 6v2"/>',
     panel: '<rect x="2.5" y="2.5" width="19" height="19" rx="1.5"/><rect x="5.5" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="13" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="5.5" y="13" width="5.5" height="5.5" rx=".6"/><rect x="13" y="13" width="5.5" height="5.5" rx=".6"/>'
 };
