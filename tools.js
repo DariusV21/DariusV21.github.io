@@ -39,6 +39,12 @@ const tools = [
         desc: "Load a Gerber ZIP and panelize it. Output uses JLCPCB, PCBWay or KiCad naming.",
         file: "Gerber_Panelizer.html",
         icon: "panel"
+    },
+    {
+        title: "RPM Tap Counter",
+        desc: "Tap a big button on every motor revolution to get average, rolling and last-interval RPM.",
+        file: "RPM_Counter.html",
+        icon: "rpm"
     }
 ];
 
@@ -49,5 +55,6 @@ const TOOL_ICONS = {
     gear: '<circle cx="12" cy="12" r="8.2" stroke-width="3" stroke-dasharray="2.3 2.85" stroke-linecap="butt"/><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.2"/>',
     pulley: '<circle cx="6.5" cy="13" r="3.5"/><circle cx="17" cy="11" r="5"/><circle cx="6.5" cy="13" r="1"/><circle cx="17" cy="11" r="1.4"/><line x1="5.9" y1="9.55" x2="16.1" y2="6.1"/><line x1="7.1" y1="16.45" x2="17.9" y2="15.9"/>',
     robot: '<path d="M2.5 14h13l5.5-4.5V8H9l-6.5 3.5z"/><circle cx="7" cy="17.5" r="2.5"/><circle cx="15.5" cy="17.5" r="2.5"/><circle cx="15.5" cy="4" r="2"/><path d="M15.5 6v2"/>',
+    rpm: '<path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><line x1="12" y1="14" x2="16.5" y2="8.5"/><circle cx="12" cy="14" r="1.4"/>',
     panel: '<rect x="2.5" y="2.5" width="19" height="19" rx="1.5"/><rect x="5.5" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="13" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="5.5" y="13" width="5.5" height="5.5" rx=".6"/><rect x="13" y="13" width="5.5" height="5.5" rx=".6"/>'
 };
