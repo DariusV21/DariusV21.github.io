@@ -1,70 +1,110 @@
-/* ============================================================
-   Instagram feed
-   Reads feed.json (written later by the home-server fetcher):
-   {
-     "updated": "2026-10-20T12:00:00Z",
-     "latest":   [ { "permalink": "...", "image": "feed/123.jpg", "caption": "...", "date": "2026-10-20" } ],
-     "featured": [ ...same shape... ]
-   }
-   Until that file exists, placeholder tiles are shown.
-   ============================================================ */
-const IG_PROFILE = 'https://www.instagram.com/dv_electronics/';
-const FEED_COUNT = 3;
-
-const IG_GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>';
-
 function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function shortCaption(text, max = 90) {
-    const first = String(text || '').split('\n')[0].trim();
-    return first.length > max ? first.slice(0, max - 1).trimEnd() + '…' : first;
-}
+/* ============================================================
+   Work gallery (data in gallery.js)
+   One scroll-snap carousel per category: swipe, arrows, dots,
+   keyboard arrows, gentle autoplay that pauses on hover/focus
+   and when off-screen. No autoplay with reduced motion.
+   ============================================================ */
+const AUTOPLAY_MS = 4500;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CHEVRON = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
-function postTile(post) {
-    const caption = shortCaption(post.caption);
+function workCard(cat, ci) {
+    const slides = cat.photos.map((src, i) => `
+        <li class="slide">
+            <img src="${escapeHtml(src)}" alt="${escapeHtml(cat.title)} – photo ${i + 1} of ${cat.photos.length}"
+                 ${i === 0 ? '' : 'loading="lazy"'} decoding="async" draggable="false">
+        </li>`).join('');
+    const dots = cat.photos.map((_, i) =>
+        `<button class="dot" type="button" aria-label="Show photo ${i + 1}" data-i="${i}"></button>`).join('');
     return `
-        <a class="post" href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener">
-            <img src="${escapeHtml(post.image)}" alt="${escapeHtml(caption || 'Instagram post')}" loading="lazy" decoding="async">
-            <span class="post-overlay">
-                ${caption ? `<span class="post-caption">${escapeHtml(caption)}</span>` : ''}
-                <span class="post-link">${IG_GLYPH} View on Instagram</span>
-            </span>
-        </a>`;
+        <article class="work-card">
+            <div class="carousel" data-c="${ci}" role="region" aria-roledescription="carousel" aria-label="${escapeHtml(cat.title)}" tabindex="0">
+                <ul class="carousel-track">${slides}</ul>
+                <button class="carousel-btn prev" type="button" aria-label="Previous photo">${CHEVRON('m15 18-6-6 6-6')}</button>
+                <button class="carousel-btn next" type="button" aria-label="Next photo">${CHEVRON('m9 18 6-6-6-6')}</button>
+                <div class="carousel-dots">${dots}</div>
+            </div>
+            <div class="work-body">
+                <span class="work-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${GALLERY_ICONS[cat.icon] || ''}</svg></span>
+                <div>
+                    <h3>${escapeHtml(cat.title)}</h3>
+                    <p>${escapeHtml(cat.desc)}</p>
+                </div>
+            </div>
+        </article>`;
 }
 
-function placeholderTile(i) {
-    return `
-        <a class="post post-placeholder" href="${IG_PROFILE}" target="_blank" rel="noopener" style="--i:${i}">
-            <span class="ph-grid" aria-hidden="true"></span>
-            <span class="ph-body">
-                ${IG_GLYPH}
-                <span class="ph-title">Coming soon</span>
-                <span class="ph-sub">Follow @dv_electronics</span>
-            </span>
-        </a>`;
-}
+function initCarousel(root, offset = 0) {
+    const track = root.querySelector('.carousel-track');
+    const dots = [...root.querySelectorAll('.dot')];
+    const count = dots.length;
+    let index = 0, timer = null, paused = false, visible = false;
 
-function renderFeed(el, posts) {
-    const list = (posts || []).slice(0, FEED_COUNT);
-    let html = list.map(postTile).join('');
-    for (let i = list.length; i < FEED_COUNT; i++) html += placeholderTile(i);
-    el.innerHTML = html;
-}
+    const goTo = (i, smooth = true) => {
+        index = (i + count) % count;
+        track.scrollTo({ left: index * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
+    };
 
-async function loadFeed() {
-    const latestEl = document.getElementById('feedLatest');
-    const featuredEl = document.getElementById('feedFeatured');
-    let feed = {};
-    try {
-        const res = await fetch('feed.json', { cache: 'no-cache' });
-        if (res.ok) feed = await res.json();
-    } catch (e) {
-        /* no feed yet - placeholders are shown */
+    // Keep the dots in sync with whatever moved the track (swipe, button, autoplay)
+    let raf = 0;
+    track.addEventListener('scroll', () => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => {
+            index = Math.round(track.scrollLeft / track.clientWidth);
+            dots.forEach((d, i) => d.setAttribute('aria-current', i === index ? 'true' : 'false'));
+        });
+    }, { passive: true });
+    dots.forEach((d, i) => d.setAttribute('aria-current', i === 0 ? 'true' : 'false'));
+
+    const stop = () => { clearTimeout(timer); timer = null; };
+    const start = () => {
+        stop();
+        if (reduceMotion || paused || !visible || count < 2) return;
+        timer = setTimeout(function tick() {
+            goTo(index + 1);
+            timer = setTimeout(tick, AUTOPLAY_MS);
+        }, AUTOPLAY_MS + offset);
+        offset = 0;  // the stagger only applies to the very first slide change
+    };
+    const userMove = i => { goTo(i); start(); };  // restart the clock after a manual move
+
+    root.querySelector('.prev').addEventListener('click', () => userMove(index - 1));
+    root.querySelector('.next').addEventListener('click', () => userMove(index + 1));
+    dots.forEach(d => d.addEventListener('click', () => userMove(+d.dataset.i)));
+    root.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft')  { e.preventDefault(); userMove(index - 1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); userMove(index + 1); }
+    });
+
+    root.addEventListener('mouseenter', () => { paused = true; stop(); });
+    root.addEventListener('mouseleave', () => { paused = false; start(); });
+    root.addEventListener('focusin',  () => { paused = true; stop(); });
+    root.addEventListener('focusout', () => { paused = false; start(); });
+    track.addEventListener('touchstart', () => { stop(); }, { passive: true });
+    track.addEventListener('touchend',   () => { start(); }, { passive: true });
+
+    window.addEventListener('resize', () => goTo(index, false));
+
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(([entry]) => {
+            visible = entry.isIntersecting;
+            visible ? start() : stop();
+        }, { threshold: 0.4 }).observe(root);
+    } else {
+        visible = true; start();
     }
-    renderFeed(latestEl, feed.latest);
-    renderFeed(featuredEl, feed.featured);
+}
+
+function renderGallery() {
+    const grid = document.getElementById('workGrid');
+    if (!grid || typeof gallery === 'undefined') return;
+    grid.innerHTML = gallery.map(workCard).join('');
+    // Stagger autoplay so the four carousels don't flip in unison
+    grid.querySelectorAll('.carousel').forEach((c, i) => initCarousel(c, i * 1100));
 }
 
 /* ============================================================
@@ -107,5 +147,5 @@ if ('IntersectionObserver' in window) {
 }
 
 renderTools();
-loadFeed();
+renderGallery();
 document.getElementById('year').textContent = new Date().getFullYear();
