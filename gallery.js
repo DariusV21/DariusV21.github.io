@@ -10,13 +10,13 @@ const gallery = [
         title: "PCB prototype design",
         desc: "Schematics and board layouts, ready for fabrication and assembly.",
         icon: "pcb",
-        photos: ["docs/work/PCB_Rpi_Breakout.jpg", "docs/work/PCB_ESP32_Breakout.jpg", "docs/work/PCB_Button_PNL.jpg", "docs/work/PCB_ESP32_NTC.jpg"]
+        photos: ["docs/work/PCB_VilkasRX.jpg", "docs/work/PCB_Rpi_Breakout.jpg", "docs/work/PCB_ESP32_Breakout.jpg", "docs/work/PCB_Button_PNL.jpg", "docs/work/PCB_ESP32_NTC.jpg"]
     },
     {
         title: "CAD for 3D-printed prototypes",
         desc: "Functional parts and enclosures, designed to print right the first time.",
         icon: "cad",
-        photos: ["docs/work/Enclosure_BotRemotes.jpg", "docs/work/Enclosure_PSU.jpg", "docs/work/Enclosure_WiFi_LCD.jpg", "docs/work/Enclosure_Organizer.jpg", "docs/work/Enclosure_Remote.jpg"]
+        photos: ["docs/work/Enclosure_BotRemotes.jpg", "docs/work/Enclosure_PSU.jpg", "docs/work/Enclosure_WiFi_LCD.jpg", "docs/work/Enclosure_Organizer.jpg", "docs/work/Enclosure_Remote.jpg", "docs/work/Enclosure_Bot_RevC.jpg"]
     },
     {
         title: "Automotive consulting",
