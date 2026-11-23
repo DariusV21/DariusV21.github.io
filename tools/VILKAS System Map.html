@@ -1,0 +1,725 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>VILKAS System Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: an instrument-manual spread. Two tabs (TX menus, RX hardware).
+   The TX tab is a menu tree hanging off one spine; the RX tab is a left-to-right
+   signal path: sources -> board -> outputs. All content comes from the VILKAS data block. */
+:root {
+  --bg: #ECEFF1;
+  --surface: #F8F9FA;
+  --surface-2: #E2E7EA;
+  --line: #CBD3D8;
+  --line-strong: #7E8F9A;
+  --fg: #121B22;
+  --dim: #4F5F6B;
+  --robot: #A8480C;
+  --robot-bg: #F6E3D6;
+  --remote: #0B6E62;
+  --remote-bg: #D5EEE9;
+  --link: #1F5FBF;
+  --link-bg: #DCE7F8;
+  --planned: #6A4FB3;
+  --planned-bg: #E6DFF5;
+  --warn: #B3261E;
+  --display: 'Chakra Petch', 'Arial Narrow', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1317; --surface: #141C22; --surface-2: #1C262E; --line: #26333C; --line-strong: #5B6E7B;
+    --fg: #E6ECEF; --dim: #97A8B3;
+    --robot: #F0925A; --robot-bg: #3A2316; --remote: #4FC9B6; --remote-bg: #12342F;
+    --link: #7FB0F5; --link-bg: #172A47; --planned: #B7A2F0; --planned-bg: #2A2147; --warn: #FF8A80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1317; --surface: #141C22; --surface-2: #1C262E; --line: #26333C; --line-strong: #5B6E7B;
+  --fg: #E6ECEF; --dim: #97A8B3;
+  --robot: #F0925A; --robot-bg: #3A2316; --remote: #4FC9B6; --remote-bg: #12342F;
+  --link: #7FB0F5; --link-bg: #172A47; --planned: #B7A2F0; --planned-bg: #2A2147; --warn: #FF8A80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); margin: 0; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+a { color: var(--link); }
+h1, h2, h3, h4 { font-family: var(--display); margin: 0; text-wrap: balance; }
+p { margin: 0; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; gap: 20px 32px; justify-content: space-between; align-items: flex-end; padding-bottom: 22px; border-bottom: 2px solid var(--fg); }
+.brand h1 { font-size: clamp(34px, 6vw, 56px); font-weight: 700; letter-spacing: .14em; line-height: 1; }
+.brand p { color: var(--dim); margin-top: 8px; max-width: 54ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fact { font: 500 12px/1 var(--mono); border: 1px solid var(--line-strong); padding: 7px 9px; border-radius: 3px; white-space: nowrap; }
+.fact b { font-weight: 500; color: var(--dim); margin-right: 6px; }
+
+.tabs { display: flex; gap: 0; margin: 22px 0 28px; border: 2px solid var(--fg); width: fit-content; max-width: 100%; }
+.tab { font: 600 14px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; padding: 13px 20px; background: transparent; color: var(--fg); border: 0; cursor: pointer; }
+.tab + .tab { border-left: 2px solid var(--fg); }
+.tab[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+.tab:focus-visible, a:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+
+.sec { margin-top: 44px; }
+.sec:first-child { margin-top: 0; }
+.sec-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-bottom: 16px; }
+.sec-head h2 { font-size: 24px; font-weight: 600; letter-spacing: .02em; }
+.sec-head p { color: var(--dim); max-width: 70ch; }
+
+/* chips and tags */
+.val { display: inline-block; font: 400 12px/1.2 var(--mono); background: var(--surface-2); border: 1px solid var(--line); padding: 3px 6px; border-radius: 3px; }
+.vals { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tag { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; white-space: nowrap; }
+.tag.rev-d, .tag.planned { background: var(--planned-bg); color: var(--planned); }
+.tag.phone { background: var(--link-bg); color: var(--link); }
+.tag.robot { background: var(--robot-bg); color: var(--robot); }
+.tag.remote { background: var(--remote-bg); color: var(--remote); }
+.tag.link { background: var(--link-bg); color: var(--link); }
+.tag.cond { border: 1px dashed var(--line-strong); color: var(--dim); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 16px; }
+.card h3 { font-size: 17px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; margin-bottom: 12px; }
+
+/* TX: glance */
+.glance { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; }
+.oled { background: #0A0F12; color: #DDF3FF; font: 500 14px/1.45 var(--mono); border: 6px solid #2A3640; border-radius: 6px; padding: 12px 14px; aspect-ratio: 9 / 5; display: flex; flex-direction: column; justify-content: space-between; max-width: 340px; }
+.oled .r { display: flex; justify-content: space-between; gap: 8px; }
+.oled .big { font-size: 26px; line-height: 1; font-weight: 500; }
+.oled .rule { border-top: 1px solid #36505F; }
+.oled-notes { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; }
+.oled-notes li { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; }
+.oled-notes code { font: 500 12px/1.6 var(--mono); color: var(--dim); }
+.controls { display: grid; gap: 0; }
+.ctl { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.ctl:first-child { border-top: 0; padding-top: 0; }
+.ctl b { font: 500 13px/1.5 var(--mono); }
+.ctl span { color: var(--dim); font-size: 14px; }
+
+/* TX: tree */
+.rootnode { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--fg); color: var(--bg); padding: 12px 16px; border-radius: 4px; margin-left: 0; }
+.rootnode b { font: 700 18px/1 var(--display); letter-spacing: .12em; }
+.rootnode span { font: 400 13px/1.3 var(--mono); opacity: .85; }
+.navhint { color: var(--dim); font-size: 13.5px; margin: 10px 0 0 0; max-width: 90ch; }
+.tree { margin: 0 0 0 18px; padding: 22px 0 0; border-left: 2px solid var(--line-strong); }
+.branch { position: relative; padding-left: 30px; margin-bottom: 26px; }
+.branch::before { content: ""; position: absolute; left: 0; top: 30px; width: 30px; height: 2px; background: var(--line-strong); }
+.branch:last-child { margin-bottom: 0; }
+.branch:last-child::after { content: ""; position: absolute; left: -32px; top: 31px; bottom: -4px; width: 4px; background: var(--bg); }
+.bhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.bhead h3 { font-size: 28px; font-weight: 700; letter-spacing: .08em; }
+.bhead .count { font: 400 12px var(--mono); color: var(--dim); }
+.bnote { color: var(--dim); font-size: 13.5px; margin-bottom: 12px; max-width: 85ch; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 11px 12px; min-width: 0; }
+.item.has-sub { grid-column: 1 / -1; }
+.item-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.item-name { font: 500 14px/1.3 var(--mono); }
+.desc { color: var(--dim); font-size: 13.5px; margin-top: 6px; }
+.sub { margin: 12px 0 2px 6px; padding-left: 16px; border-left: 2px dashed var(--line-strong); }
+.sub > .items .item { background: var(--bg); }
+.branch.t-robot .bhead h3 { color: var(--robot); }
+.branch.t-remote .bhead h3 { color: var(--remote); }
+.branch.t-link .bhead h3 { color: var(--link); }
+
+.msgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 8px 18px; }
+.msg { display: grid; grid-template-columns: minmax(104px, auto) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.msg b { font: 500 12.5px/1.5 var(--mono); }
+.msg.warn b { color: var(--warn); }
+.msg span { color: var(--dim); }
+
+/* RX: signal path */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
+.stat { padding: 14px 14px 12px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat b { display: block; font: 600 22px/1.1 var(--display); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.stat span { display: block; margin-top: 4px; font-size: 12.5px; color: var(--dim); }
+.sys { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1.3fr) 64px minmax(0, 1fr); align-items: stretch; }
+.col { display: grid; gap: 12px; align-content: start; }
+.node { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 13px 14px; min-width: 0; }
+.node h4 { font-size: 16px; font-weight: 600; letter-spacing: .03em; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.node ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 3px; font-size: 13.5px; color: var(--dim); }
+.node .pins { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.node.k-link { border-color: var(--link); }
+.node.k-phone { border-color: var(--link); }
+.node.k-power { border-color: var(--robot); }
+.node.k-out { border-color: var(--line-strong); }
+.node.k-planned { border-style: dashed; border-color: var(--planned); }
+.board { background: var(--surface); border: 2px solid var(--fg); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.board header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; }
+.board header h3 { font-size: 26px; font-weight: 700; letter-spacing: .12em; }
+.board header span { font: 400 12px var(--mono); color: var(--dim); }
+.blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.blk { border: 1px solid var(--line); background: var(--bg); border-radius: 3px; padding: 9px 10px; min-width: 0; }
+.blk b { display: block; font: 500 13px/1.3 var(--mono); }
+.blk span { display: block; margin-top: 3px; font-size: 13px; color: var(--dim); }
+.wire { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--line-strong); text-align: center; }
+.wire svg { width: 100%; height: 14px; }
+.wire small { font: 500 10px/1.3 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--dim); }
+
+/* RX: phone */
+.phone-grid { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.phone { width: 100%; max-width: 260px; border: 3px solid var(--fg); border-radius: 30px; background: var(--surface); padding: 16px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+.phone .ssid { font: 500 12px/1.3 var(--mono); text-align: center; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.phone .ssid small { display: block; color: var(--dim); font-size: 11px; }
+.phone .telem { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.phone .pad { display: grid; grid-template-columns: minmax(0, 1fr) 52px; gap: 12px; align-items: center; min-height: 200px; }
+.stick { aspect-ratio: 1; width: 100%; border: 2px solid var(--link); border-radius: 50%; display: grid; place-items: center; background: var(--link-bg); }
+.stick i { display: block; width: 38%; height: 38%; border-radius: 50%; background: var(--link); }
+.slider { height: 100%; min-height: 170px; border: 2px solid var(--robot); border-radius: 26px; background: var(--robot-bg); position: relative; }
+.slider i { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); width: 34px; height: 34px; border-radius: 50%; background: var(--robot); }
+.phone .cap { font: 400 11px/1.3 var(--mono); color: var(--dim); text-align: center; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: s; }
+.step { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+.step:first-child { border-top: 0; padding-top: 0; }
+.step .n { font: 700 22px/1 var(--display); color: var(--link); }
+.step h4 { font-size: 17px; font-weight: 600; letter-spacing: .02em; }
+.step p { color: var(--dim); margin-top: 4px; font-size: 14px; }
+.step code, .desc code { font: 500 12.5px var(--mono); background: var(--surface-2); padding: 1px 5px; border-radius: 3px; color: var(--fg); }
+.perks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 20px; }
+.note { margin-top: 14px; font-size: 13px; color: var(--dim); }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: minmax(120px, 34%) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.row:first-child { border-top: 0; }
+.row b { font: 500 12.5px/1.5 var(--mono); }
+.row span { color: var(--dim); }
+.led { display: grid; grid-template-columns: 22px minmax(0, 36%) minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.led:first-child { border-top: 0; }
+.led i { width: 12px; height: 12px; border-radius: 50%; background: #E0393E; display: block; }
+.led .p { font: 500 12px/1.4 var(--mono); }
+.led .m { color: var(--dim); }
+@keyframes b-slow { 0%, 49% { opacity: 1 } 50%, 100% { opacity: .15 } }
+@keyframes b-fast { 0%, 49% { opacity: 1 } 50%, 100% { opacity: .15 } }
+@keyframes b-dbl { 0%, 10% { opacity: 1 } 15%, 25% { opacity: .15 } 30%, 40% { opacity: 1 } 45%, 100% { opacity: .15 } }
+@keyframes b-fl { 0%, 20% { opacity: 1 } 25%, 45% { opacity: .2 } 50%, 70% { opacity: 1 } 75%, 100% { opacity: .2 } }
+.led i.slow { animation: b-slow 2s steps(1) infinite; }
+.led i.fast { animation: b-fast 1s steps(1) infinite; }
+.led i.double { animation: b-dbl 2s steps(1) infinite; }
+.led i.flicker { animation: b-fl .5s steps(1) infinite; }
+.led i.once { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .led i { animation: none !important; } }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); border-top: 0; }
+.scroll { overflow-x: auto; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 2px solid var(--fg); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; font-size: 13px; color: var(--dim); }
+
+@media (max-width: 900px) {
+  .glance { grid-template-columns: minmax(0, 1fr); }
+  .sys { grid-template-columns: minmax(0, 1fr); }
+  .wire { flex-direction: row; gap: 14px; padding: 6px 0; }
+  .wire > span { width: 44px !important; flex: none; transform: rotate(90deg); margin: 15px 0; }
+  .phone-grid { grid-template-columns: minmax(0, 1fr); }
+  .phone { margin: 0 auto; }
+}
+@media (max-width: 560px) {
+  .tab { padding: 12px 12px; font-size: 13px; }
+  .ctl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .oled-notes li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .branch { padding-left: 22px; }
+  .branch::before { width: 22px; }
+  .branch:last-child::after { left: -24px; }
+  .bhead h3 { font-size: 24px; }
+  .led { grid-template-columns: 22px minmax(0, 1fr); }
+  .led .m { grid-column: 2; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>VILKAS</h1>
+      <p id="tagline"></p>
+    </div>
+    <div class="facts" id="facts"></div>
+  </header>
+  <nav class="tabs" role="tablist" aria-label="System maps">
+    <button class="tab" role="tab" id="tab-tx" data-view="tx" aria-controls="view-tx">TX remote menus</button>
+    <button class="tab" role="tab" id="tab-rx" data-view="rx" aria-controls="view-rx">RX hardware and phone control</button>
+  </nav>
+  <main>
+    <section id="view-tx" role="tabpanel" aria-labelledby="tab-tx"></section>
+    <section id="view-rx" role="tabpanel" aria-labelledby="tab-rx" hidden></section>
+  </main>
+  <footer id="foot"></footer>
+</div>
+
+<!--
+  =====================================================================
+  EDIT HERE. Everything the page shows comes from this one object.
+  - Change a firmware number: meta.txFw / meta.rxFw
+  - Add a menu item: add { name, values:[...], desc } to a branch's items
+  - Nest a submenu: give an item a "children" array
+  - Tag an item: tag: 'rev-d' | 'planned' | 'phone'
+  - Move something between tabs or sections: cut and paste the object
+  =====================================================================
+-->
+<script>
+window.VILKAS = {
+  meta: {
+    tagline: 'Low-cost 2.4 GHz radio control for antweight combat robots. ESP32-C3 on both sides, ESP-NOW link, settings stored in the robot.',
+    txFw: '5.36', rxFw: '5.36', protocol: 'v4.3', updated: '2026-11-17',
+    repo: 'https://github.com/DariusV21/VILKAS',
+    guide: 'https://github.com/DariusV21/VILKAS/blob/main/docs/user-guide.md',
+    rxDoc: 'https://github.com/DariusV21/VILKAS/blob/main/docs/hardware/VILKAS-RX.md',
+    phoneDoc: 'https://github.com/DariusV21/VILKAS/blob/main/docs/phone-control.md',
+    shop: 'https://lithuanianbots.com/'
+  },
+
+  /* ---------------------------- TX tab ---------------------------- */
+  tx: {
+    home: {
+      lines: [
+        ['LB-7K3QD', '▂▄▆█'],
+        ['TX 82', 'RX 64'],
+        ['3:00', 'ARMED'],
+        ['', '8ms']
+      ],
+      notes: [
+        ['Name line', 'Robot name or status, plus signal bars (the weaker direction of the link).'],
+        ['Batteries', 'Remote and robot charge in %. A number blinks at 20 % or below.'],
+        ['Match timer', 'Hold the joystick button 1 s to start or reset. With Timer OFF the big number shows the weapon knob in %.'],
+        ['ARMED / SAFE', 'SAFE until the knob is back at 0 % (ESC) or centre (DC / servo). PHONE if the robot is in phone mode.'],
+        ['Latency', 'Round trip in ms. Shows FLIP when flipped and the channel number when offline.']
+      ]
+    },
+    controls: [
+      ['Joystick', 'Drive. Up / down is forward / back, left / right is turn. Mixing is done in the remote.'],
+      ['Weapon knob', 'ESC: power from 0 %, scaled between the W limits (default 0 to 30 %). DC and servo: centre is stop, ends are full forward / reverse.'],
+      ['FLIP', 'Reverses forward / back so an upside-down robot drives the same. Steering is unchanged.'],
+      ['Joystick button', 'Confirms actions. On the home screen, hold 1 s to start or reset the match timer. Hold 2 s to confirm a robot or AP-Mode.'],
+      ['OK (hold 0.5 s)', 'Opens the menu.'],
+      ['BIND', 'Back or cancel in menus. Hold it while switching the remote on to open the robot list.']
+    ],
+    menu: {
+      open: 'Hold OK 0.5 s',
+      hint: 'Joystick up / down moves. Left / right changes the value on the right of a line. OK or the joystick button opens a submenu, runs an action or opens a full-screen editor. BIND goes back. While the menu is open the remote sends zero drive and a weapon stop, so the weapon has to be re-armed afterwards.',
+      branches: [
+        {
+          name: 'ROBOT', theme: 'robot', store: 'Stored in the robot',
+          note: 'Any VILKAS-TX can drive any VILKAS-RX with the same feel, because these settings live in the RX. A value shows -- while it is read and N/A if the robot firmware does not have it.',
+          items: [
+            { name: 'Speed', values: ['% top speed'], desc: 'OK opens the response graph.' },
+            { name: 'Turn', values: ['10 to 100 %', 'default 100'], desc: 'Steering sensitivity. Lower it if the robot spins too fast.' },
+            { name: 'Expo', desc: 'Softer response near the centre, full power at the ends.' },
+            { name: 'Trim', desc: 'Corrects a robot that pulls to one side.' },
+            { name: 'Min Start', values: ['0 to 50 %', 'default 10'], desc: 'Power at the smallest stick movement.' },
+            { name: 'Stop', values: ['Coast', 'Brake'], desc: 'Behaviour with the stick centred. Failsafe always coasts.' },
+            { name: 'Failsafe', values: ['250 ms', '500 ms', '1000 ms'], desc: 'Time without signal before the drive stops. The weapon stops 350 ms later.' },
+            { name: 'Rev Ramp', values: ['OFF', '25', '50', '100 ms'], desc: 'Full-power direction changes ramp through zero. Default 25 ms. Protects the battery from brown-outs.' },
+            { name: 'Motor L / Motor R', values: ['FWD', 'REV'], desc: 'Motor direction, applied only while the motors are stopped. No rewiring needed.' },
+            { name: 'Name', values: ['8 characters'], desc: 'Name the robot. The name is kept on this remote.' },
+            { name: 'AP-Mode', tag: 'phone', desc: 'Puts the robot into Wi-Fi mode for phone driving and firmware update. Hold the joystick button 2 s with the robot stopped. Shows network, address and PIN.' },
+            { name: 'AP Pass', values: ['Open', 'PIN'], desc: 'Password for the robot Wi-Fi network.' },
+            {
+              name: 'Weapon >', desc: 'Everything about the weapon output.',
+              children: [
+                { name: 'Out:', values: ['ESC (W)', 'DC (Q)', 'SERVO (W)'], desc: 'What the knob drives. Only while stopped. DC needs a Rev D robot. SERVO needs a 2 s confirmation.' },
+                { name: 'Pot:', values: ['NORM', 'REV'], desc: 'Knob direction. Stored in the remote and set by Cal Knob.' },
+                { name: 'W Limits', values: ['default 0 to 30 %'], desc: 'Minimum and maximum power of channel W (ESC).' },
+                { name: 'W Ramp', values: ['OFF', '0.25', '0.5', '1', '2 s'], desc: 'ESC spin-up time. Use OFF if your ESC already ramps.' },
+                { name: 'W Rate', values: ['50', '100', '200', '400 Hz'], desc: 'ESC signal rate. SERVO stays at 50 Hz.' },
+                { name: 'ESC Cal', desc: 'ESC throttle calibration. Remove the weapon first, confirm twice, then re-plug the robot battery within 60 s.' },
+                {
+                  name: 'Q DC >', tag: 'rev-d', desc: 'Channel Q brushed DC weapon. Shown only for Rev D robots.',
+                  children: [
+                    { name: 'Q Limits', desc: 'Max power, then min power (the first 10 % step).' },
+                    { name: 'Dir:', values: ['NORM', 'REV'] },
+                    { name: 'Stop:', values: ['Coast', 'Brake'], desc: 'Coast for spinners, brake for lifters and arms.' },
+                    { name: 'Ramp:', values: ['OFF', '0.25', '0.5', '1', '2 s'] }
+                  ]
+                }
+              ]
+            },
+            {
+              name: 'Battery >', desc: 'Battery type and protection.',
+              children: [
+                { name: 'Type', values: ['LiPo 4.20 V', 'LiHV 4.35 V'] },
+                { name: 'Cells', values: ['2S', '3S', '4S'] },
+                { name: 'Volt Cal', desc: 'Calibrate the reading against a multimeter.' },
+                { name: 'Cut-off', values: ['OFF', '3.0 to 3.4 V per cell'], desc: 'Below it, drive and weapon are limited to 50 %.' },
+                { name: 'Low alert', values: ['ON', 'OFF'], desc: 'Robot low-battery alert.' }
+              ]
+            }
+          ]
+        },
+        {
+          name: 'REMOTE', theme: 'remote', store: 'Stored in the remote',
+          note: 'Calibration, comfort and sound. These stay with the remote when you switch robots.',
+          items: [
+            { name: 'Cal Stick', desc: 'Centre, roll the stick around its edges 3 times, push UP, push RIGHT.' },
+            { name: 'Cal Knob', desc: 'Min end, max end, centre, then the centre deadzone (0 to 25 %, for DC and servo).' },
+            { name: 'Deadzone', values: ['default ~2 %'], desc: 'Joystick centre deadzone.' },
+            { name: 'Bright', values: ['1', '2', '3'], desc: 'Screen brightness.' },
+            { name: 'Sound', values: ['OFF', 'LOW', 'MED', 'HIGH'] },
+            { name: 'Clicks', values: ['ON', 'OFF'], desc: 'Menu click sounds.' },
+            { name: 'Wep Tone', desc: 'Tone while the weapon runs, pitch rising with power.' },
+            { name: 'Timer', values: ['OFF', '1:00', '2:00', '3:00', '5:00'], desc: 'Match timer length. Default 3:00. Beeps at 1:00 and 0:30, ticks for the last 10 s.' },
+            { name: 'Idle', values: ['OFF', '2', '5', '10 min'], desc: 'Screen off and a reminder beep every 30 s.' },
+            { name: 'Bat Alert', values: ['ON', 'OFF'], desc: 'Remote low-battery alarm.' },
+            { name: 'TX Cal', desc: 'Remote battery voltage calibration.' }
+          ]
+        },
+        {
+          name: 'RADIO', theme: 'link', store: 'Link',
+          note: 'Pairing and the 2.4 GHz channel. A remote remembers up to 8 robots. A robot remembers one remote.',
+          items: [
+            { name: 'Robots', desc: 'Open the robot list. Saved robots first, new robots in bind mode follow with signal strength. Hold the joystick button 2 s to confirm.' },
+            { name: 'Channel', values: ['1', '5', '9', '13'], desc: 'Move the link to a non-overlapping channel. The robot follows automatically.' },
+            { name: 'Ch Scan', desc: 'Shows how busy channels 1 / 5 / 9 / 13 are. > marks the quietest. The robot stops for about 1 s per scan.' },
+            { name: 'Forget', desc: 'Remove the current robot from the remote. The robot stays bound until it is put into bind mode.' }
+          ]
+        },
+        {
+          name: 'SYSTEM', theme: 'link', store: 'Remote',
+          items: [
+            { name: 'Info', desc: 'TX and RX firmware, RX board revision, channel, signal in dBm (both sides), latency, link quality, unexpected resets R<n>.' },
+            { name: 'Diagnostic', desc: 'Live raw inputs. Rev C also shows the button-ladder voltage.' },
+            { name: 'Reset', desc: 'Factory reset of the remote settings. The robot list and robot-side settings are kept.' }
+          ]
+        },
+        {
+          name: 'Pair Bot', theme: 'link', cond: 'Shown instead of ROBOT and RADIO when no robot is selected',
+          items: [
+            { name: 'Robot list', desc: 'Hold BIND on the robot at power-up, then pick it from the list (e.g. LB-7K3QD) and hold the joystick button 2 s. The remote beeps when paired.' }
+          ]
+        }
+      ]
+    },
+    messages: [
+      ['NO ROBOT', 'No robot selected. Menu, then Pair Bot.'],
+      ['SEARCHING', 'Selected robot not answering yet. The remote scans the channels.'],
+      ['LINK LOST!', 'Robot silent for 0.5 s. The remote keeps searching and chimes when it is back.', 'warn'],
+      ['PHONE MODE', 'The robot is in Wi-Fi phone mode. ROBOT > AP-Mode brings it back.'],
+      ['BROWNOUT! / RX WDOG! / RX CRASH!', 'The robot reset unexpectedly and is back. Repeated BROWNOUT! means battery, wiring or current.', 'warn'],
+      ['LOW V LIM!', 'Battery below Cut-off. Drive and weapon limited to 50 %.', 'warn'],
+      ['HOPPING...', 'A channel change is in progress.'],
+      ['OLD RX FW!', 'Robot firmware is older than 4.0. Update the RX.'],
+      ['UPDATE TX!', 'The robot is newer than this remote. Update the remote.']
+    ],
+    sounds: [
+      ['Rising chime', 'Robot connected'],
+      ['Falling tone', 'Robot lost'],
+      ['Chirp', 'Weapon armed'],
+      ['Low triple tone', 'Robot reset unexpectedly']
+    ],
+    hardware: [
+      ['Rev B', 'In the field', 'TX 5.36'],
+      ['Rev C', 'Released', 'TX 5.36']
+    ]
+  },
+
+  /* ---------------------------- RX tab ---------------------------- */
+  rx: {
+    stats: [
+      ['20 × 30 × 3', 'mm board size'],
+      ['3 g', 'weight'],
+      ['2S to 4S', 'LiPo / LiHV input'],
+      ['3.7 A', 'peak per H-bridge (IC rating)'],
+      ['20 kHz', 'drive PWM, 10-bit'],
+      ['100 / s', 'control packets'],
+      ['~0.2 s', 'recovery after a reset']
+    ],
+    sources: [
+      { name: 'VILKAS-TX remote', kind: 'link', tag: 'link', lines: ['ESP-NOW, 2.4 GHz, no router', '100 control packets per second', 'Channels 1 / 5 / 9 / 13, automatic reconnect', 'Bound to one remote by MAC address', 'Telemetry flows back to the remote'] },
+      { name: 'Phone', kind: 'phone', tag: 'phone', lines: ['Browser over the robot own Wi-Fi, no app', 'Network VILKAS-<name>, http://4.3.2.1', 'Needs RX firmware 4.30 or newer'] },
+      { name: 'ELRS remote', kind: 'planned', tag: 'planned', lines: ['Persistent ELRS mode in the RX Advanced settings', 'The RX then works as a dedicated ELRS receiver'] },
+      { name: 'Battery', kind: 'power', lines: ['2S to 4S LiPo / LiHV', 'Logic buck SY8120, 3.3 V, 18 V abs. max input'] }
+    ],
+    board: {
+      name: 'VILKAS-RX', sub: 'Receiver, dual brushed motor driver and weapon output in one board',
+      blocks: [
+        ['ESP32-C3-MINI-1', 'RISC-V MCU with on-module Wi-Fi / BLE antenna'],
+        ['Battery sense', 'GPIO0, about 1:10 divider, factory-calibrated, fine-tuned with Volt Cal'],
+        ['BIND button', 'GPIO1. Pairing, Wi-Fi mode, ESC calibration entry'],
+        ['Status and power LED', 'Red status LED, yellow power LED'],
+        ['Native USB', 'GPIO18 / GPIO19. Flash through the programming board'],
+        ['Wi-Fi access point', 'Phone driving and firmware update from a browser']
+      ]
+    },
+    outputs: [
+      { name: 'Motor L', pins: ['GPIO5 FWD', 'GPIO4 REV'], lines: ['TI DRV8231 H-bridge', 'Brushed DC, reversible', 'Direction set from the TX menu'] },
+      { name: 'Motor R', pins: ['GPIO3 FWD', 'GPIO7 REV (Rev C)'], lines: ['TI DRV8231 H-bridge', 'Brushed DC, reversible', 'Direction set from the TX menu'] },
+      { name: 'Weapon W', pins: ['GPIO10'], lines: ['ESC: 50 / 100 / 200 / 400 Hz, 1000 to 2000 µs', 'SERVO: 50 Hz, centre 1500 µs', 'Available on every revision'] },
+      { name: 'Weapon Q', tag: 'rev-d', pins: ['GPIO2', 'GPIO8'], lines: ['Third DRV8231 for a brushed DC weapon', 'Coast or brake, runs together with W', 'Hardware not built yet, firmware ready'] }
+    ],
+    phone: {
+      ssid: 'VILKAS-LB-7K3QD',
+      steps: [
+        ['Enter Wi-Fi mode', 'Hold <code>BIND</code> for 5 s while powering up the robot. The LED lights, then release. Or, with a remote connected, use <code>ROBOT > AP-Mode</code> and hold the joystick button 2 s.'],
+        ['Join the robot network', 'Connect the phone to <code>VILKAS-&lt;name&gt;</code>. It is open by default and can use a PIN set in <code>ROBOT > AP Pass</code>. The LED double-blinks while it waits for a phone.'],
+        ['Drive from the browser', 'The captive portal opens the drive page at <code>http://4.3.2.1</code>. Virtual joystick, weapon control and telemetry. The LED is solid while a phone is driving.'],
+        ['Update the firmware', 'Same network, same browser. Open the update page and flash the <code>_ota_</code> file for your board revision. No cable or programmer.']
+      ],
+      perks: [
+        ['No remote needed', 'Any phone with a browser is a complete controller for testing or a first robot.'],
+        ['Same safety as the remote', 'The failsafe stops drive and weapon when the phone link drops.'],
+        ['Layout kept in the robot', 'The phone page layout and the Wi-Fi password are stored in the RX.'],
+        ['Always start in Wi-Fi mode', 'Optional setting for robots that are only ever driven from a phone.'],
+        ['Back to the remote', 'AP-Mode on the remote returns a robot from phone mode to normal.']
+      ],
+      note: 'Illustrative layout, not a screenshot. Phones in the US cannot see Wi-Fi channel 13, so choose another channel there.'
+    },
+    protection: [
+      ['Failsafe', 'Drive stops after 250 / 500 / 1000 ms without signal (default 500). The weapon stops 350 ms later. It cannot be switched off.'],
+      ['Weapon arming', 'After power-up, failsafe, reset, menu exit or an output change, the weapon stays off until the knob is back at 0 % (ESC) or centre (DC, servo).'],
+      ['Soft start', 'The weapon ramps up gradually but stops instantly when the knob is lowered.'],
+      ['Watchdog', 'A hung control loop is reset after 1 s. The robot is back on the radio in about 0.2 s with every output stopped.'],
+      ['Brown-out detection', 'The remote shows why a robot restarted: BROWNOUT, watchdog or crash.'],
+      ['Low-voltage limit', 'Below the Cut-off voltage, power is limited to 50 % instead of browning out.'],
+      ['Reverse ramp', 'Direction changes at full power ramp through zero to spare the battery.'],
+      ['Boot safe', 'All outputs start stopped at power-up.']
+    ],
+    telemetry: [
+      ['Battery', 'Voltage and charge level'],
+      ['Link', 'Signal strength on both sides in dBm, link quality, latency'],
+      ['Identity', 'RX firmware, board revision, manufacturer prefix (LB / DV) and robot name'],
+      ['Health', 'Reset reason and count of unexpected resets']
+    ],
+    leds: [
+      ['solid', 'Solid', 'Connected'],
+      ['flicker', 'Solid with a short flicker', 'Connected, weapon armed'],
+      ['slow', 'Slow blink, 1 Hz', 'Waiting to be paired'],
+      ['fast', 'Fast blink, 2 Hz', 'Paired but no signal (failsafe)'],
+      ['double', 'Slow double blink', 'Connected, low-voltage limit active'],
+      ['once', '5 fast blinks at power-up', 'Bind mode entered, old pairing cleared'],
+      ['once', '3 quick blinks at power-up', 'Last restart was unexpected: check battery and wiring'],
+      ['double', 'Double blink, repeating', 'Wi-Fi mode, waiting for a phone'],
+      ['solid', 'Solid in Wi-Fi mode', 'Driven from a phone'],
+      ['flicker', 'Fast flicker', 'Writing new firmware. Do not power off']
+    ],
+    revisions: [
+      ['Rev B', 'A few units in the field', 'First released revision', 'RX 5.36'],
+      ['Rev C', 'Current, shipping', 'GPIO6 / GPIO7 swapped (status LED and right motor reverse) to stop motor twitch at boot', 'RX 5.36'],
+      ['Rev D', 'Not built yet', 'Rev C plus a third DRV8231: channel Q, brushed DC weapon on GPIO2 / GPIO8. W and Q usable together', 'RX 5.36 ready']
+    ]
+  }
+};
+</script>
+
+<script>
+(function () {
+  var D = window.VILKAS;
+
+  function el(tag, props) {
+    var n = document.createElement(tag);
+    if (props) Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === 'class') n.className = v;
+      else if (k === 'html') n.innerHTML = v;
+      else n.setAttribute(k, v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var kids = [].concat(arguments[i]);
+      kids.forEach(function (k) {
+        if (k == null || k === false) return;
+        n.append(k.nodeType ? k : document.createTextNode(k));
+      });
+    }
+    return n;
+  }
+  var TAGS = { 'rev-d': 'Rev D', planned: 'Planned', phone: 'Phone mode', robot: 'Robot', remote: 'Remote', link: 'Link' };
+  function tag(t, label) { return el('span', { class: 'tag ' + t }, label || TAGS[t] || t); }
+  function countItems(items) {
+    return items.reduce(function (n, i) { return n + 1 + (i.children ? countItems(i.children) : 0); }, 0);
+  }
+  function sec(title, intro) {
+    return el('div', { class: 'sec-head' }, el('h2', null, title), intro ? el('p', null, intro) : null);
+  }
+  var ARROW_H = '<svg viewBox="0 0 64 14" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="7" x2="54" y2="7" stroke="currentColor" stroke-width="2"/><polygon points="52,1 64,7 52,13" fill="currentColor"/></svg>';
+
+  /* ---------- header ---------- */
+  document.getElementById('tagline').textContent = D.meta.tagline;
+  var facts = document.getElementById('facts');
+  [['TX', D.meta.txFw], ['RX', D.meta.rxFw], ['Protocol', D.meta.protocol], ['Updated', D.meta.updated]].forEach(function (f) {
+    facts.append(el('span', { class: 'fact' }, el('b', null, f[0]), f[1]));
+  });
+  var foot = document.getElementById('foot');
+  foot.append(
+    el('span', null, 'Based on the VILKAS user guide and hardware docs for TX ' + D.meta.txFw + ' / RX ' + D.meta.rxFw + '.'),
+    el('span', null, el('a', { href: D.meta.repo }, 'Documentation, protocol and firmware on GitHub'), ' · Distributed by ', el('a', { href: D.meta.shop }, 'Lithuanian Bots'))
+  );
+
+  /* ---------- menu items ---------- */
+  function renderItems(items) {
+    var wrap = el('div', { class: 'items' });
+    items.forEach(function (it) {
+      var cell = el('div', { class: 'item' + (it.children ? ' has-sub' : '') },
+        el('div', { class: 'item-head' }, el('span', { class: 'item-name' }, it.name), it.tag ? tag(it.tag) : null),
+        it.values ? el('div', { class: 'vals' }, it.values.map(function (v) { return el('span', { class: 'val' }, v); })) : null,
+        it.desc ? el('p', { class: 'desc' }, it.desc) : null);
+      if (it.children) cell.append(el('div', { class: 'sub' }, renderItems(it.children)));
+      wrap.append(cell);
+    });
+    return wrap;
+  }
+
+  /* ---------- TX view ---------- */
+  function buildTX() {
+    var t = D.tx, root = document.getElementById('view-tx');
+
+    // glance
+    var oled = el('div', { class: 'oled', 'aria-label': 'Home screen example' });
+    t.home.lines.forEach(function (l, i) {
+      var cls = i === 2 ? 'r big' : 'r';
+      oled.append(el('div', { class: cls }, el('span', null, l[0]), el('span', null, l[1])));
+      if (i === 1) oled.append(el('div', { class: 'rule' }));
+    });
+    var notes = el('ul', { class: 'oled-notes' });
+    t.home.notes.forEach(function (n) { notes.append(el('li', null, el('code', null, n[0]), el('span', null, n[1]))); });
+    var controls = el('div', { class: 'controls' });
+    t.controls.forEach(function (c) { controls.append(el('div', { class: 'ctl' }, el('b', null, c[0]), el('span', null, c[1]))); });
+    root.append(el('div', { class: 'sec' },
+      sec('Remote at a glance', '72 × 40 OLED, 2-axis joystick, weapon knob, FLIP, OK and BIND, a buzzer and a 1S battery. A remote remembers up to 8 robots.'),
+      el('div', { class: 'glance' },
+        el('div', { class: 'card' }, el('h3', null, 'Home screen'), oled, notes),
+        el('div', { class: 'card' }, el('h3', null, 'Controls'), controls))));
+
+    // tree
+    var tree = el('div', { class: 'tree' });
+    t.menu.branches.forEach(function (b) {
+      var head = el('div', { class: 'bhead' },
+        el('h3', null, b.name),
+        b.store ? tag(b.theme === 'robot' ? 'robot' : b.theme === 'remote' ? 'remote' : 'link', b.store) : null,
+        b.cond ? tag('cond', b.cond) : null,
+        el('span', { class: 'count' }, countItems(b.items) + (countItems(b.items) === 1 ? ' item' : ' items')));
+      tree.append(el('div', { class: 'branch t-' + b.theme },
+        head, b.note ? el('p', { class: 'bnote' }, b.note) : null, renderItems(b.items)));
+    });
+    root.append(el('div', { class: 'sec' },
+      sec('Menu tree', 'Every menu and option. Colour shows where a setting is stored: copper in the robot, teal in the remote.'),
+      el('div', { class: 'rootnode' }, el('b', null, 'MENU'), el('span', null, t.menu.open)),
+      el('p', { class: 'navhint' }, t.menu.hint),
+      tree));
+
+    // messages
+    var msgs = el('div', { class: 'msgs' });
+    t.messages.forEach(function (m) {
+      msgs.append(el('div', { class: 'msg' + (m[2] ? ' ' + m[2] : '') }, el('b', null, m[0]), el('span', null, m[1])));
+    });
+    var sounds = el('div', { class: 'msgs' });
+    t.sounds.forEach(function (m) { sounds.append(el('div', { class: 'msg' }, el('b', null, m[0]), el('span', null, m[1]))); });
+    root.append(el('div', { class: 'sec' },
+      sec('Status messages and sounds', 'What the name line and the buzzer tell you during a match.'),
+      el('div', { class: 'card' }, msgs), el('div', { style: 'height:12px' }), el('div', { class: 'card' }, sounds)));
+
+    // hardware
+    var tb = el('tbody');
+    t.hardware.forEach(function (r) { tb.append(el('tr', null, r.map(function (c, i) { return el(i === 0 ? 'th' : 'td', i === 0 ? { style: 'font-size:13px;color:var(--fg);letter-spacing:0' } : null, c); }))); });
+    root.append(el('div', { class: 'sec' }, sec('Remote hardware status'),
+      el('div', { class: 'card scroll' }, el('table', null, el('thead', null, el('tr', null, ['Revision', 'Status', 'Firmware'].map(function (h) { return el('th', null, h); }))), tb))));
+  }
+
+  /* ---------- RX view ---------- */
+  function node(n) {
+    var kind = n.kind ? 'k-' + n.kind : 'k-out';
+    return el('div', { class: 'node ' + kind },
+      el('h4', null, n.name, n.tag ? tag(n.tag) : null),
+      el('ul', null, n.lines.map(function (l) { return el('li', null, l); })),
+      n.pins ? el('div', { class: 'pins' }, n.pins.map(function (p) { return el('span', { class: 'val' }, p); })) : null);
+  }
+  function wire(label) {
+    var w = el('div', { class: 'wire' }, el('small', null, label));
+    w.append(el('span', { html: ARROW_H, style: 'display:block;width:100%' }));
+    return w;
+  }
+  function buildRX() {
+    var r = D.rx, root = document.getElementById('view-rx');
+
+    var stats = el('div', { class: 'stats' });
+    r.stats.forEach(function (s) { stats.append(el('div', { class: 'stat' }, el('b', null, s[0]), el('span', null, s[1]))); });
+
+    var board = el('div', { class: 'board' },
+      el('header', null, el('h3', null, r.board.name), el('span', null, 'Rev C shipping')),
+      el('p', { class: 'desc', style: 'margin-top:-6px' }, r.board.sub),
+      el('div', { class: 'blocks' }, r.board.blocks.map(function (b) { return el('div', { class: 'blk' }, el('b', null, b[0]), el('span', null, b[1])); })));
+
+    var sys = el('div', { class: 'sys' },
+      el('div', { class: 'col' }, r.sources.map(node)),
+      wire('radio · wifi · power'),
+      el('div', { class: 'col' }, board),
+      wire('PWM · signal'),
+      el('div', { class: 'col' }, r.outputs.map(node)));
+
+    root.append(
+      el('div', { class: 'sec' }, sec('VILKAS-RX at a glance'), stats),
+      el('div', { class: 'sec' }, sec('Signal path', 'Three ways to command the robot, one board, four outputs.'), sys));
+
+    // phone
+    var p = r.phone;
+    var phone = el('div', null,
+      el('div', { class: 'phone', 'aria-label': 'Phone drive page, illustrative' },
+        el('div', { class: 'ssid' }, p.ssid, el('small', null, 'http://4.3.2.1')),
+        el('div', { class: 'telem' }, el('span', { class: 'val' }, 'battery'), el('span', { class: 'val' }, 'link')),
+        el('div', { class: 'pad' }, el('div', { class: 'stick' }, el('i')), el('div', { class: 'slider' }, el('i'))),
+        el('div', { class: 'cap' }, 'drive stick · weapon slider')),
+      el('p', { class: 'note', style: 'max-width:260px' }, p.note));
+    var steps = el('ol', { class: 'steps' });
+    p.steps.forEach(function (s, i) {
+      steps.append(el('li', { class: 'step' }, el('span', { class: 'n' }, String(i + 1)), el('div', null, el('h4', null, s[0]), el('p', { html: s[1] }))));
+    });
+    var perks = el('div', { class: 'perks' });
+    p.perks.forEach(function (k) { perks.append(el('div', { class: 'item' }, el('div', { class: 'item-head' }, el('span', { class: 'item-name' }, k[0])), el('p', { class: 'desc' }, k[1]))); });
+    root.append(el('div', { class: 'sec' },
+      sec('Phone control', 'Any VILKAS-RX can be driven from a phone browser over the robot own Wi-Fi. No app, no remote.'),
+      el('div', { class: 'phone-grid' }, phone, el('div', null, steps, perks))));
+
+    // protection
+    var prot = el('div', { class: 'items' });
+    r.protection.forEach(function (k) { prot.append(el('div', { class: 'item' }, el('div', { class: 'item-head' }, el('span', { class: 'item-name' }, k[0])), el('p', { class: 'desc' }, k[1]))); });
+    root.append(el('div', { class: 'sec' }, sec('Built-in protection', 'Always on. The failsafe cannot be disabled.'), prot));
+
+    // telemetry + leds
+    var tel = el('div', { class: 'rows' });
+    r.telemetry.forEach(function (k) { tel.append(el('div', { class: 'row' }, el('b', null, k[0]), el('span', null, k[1]))); });
+    var leds = el('div', null);
+    r.leds.forEach(function (k) { leds.append(el('div', { class: 'led' }, el('i', { class: k[0] }), el('span', { class: 'p' }, k[1]), el('span', { class: 'm' }, k[2]))); });
+    root.append(el('div', { class: 'sec' }, sec('Telemetry and status LED', 'Telemetry is shown on the remote Info screen. The LED shows state without any remote.'),
+      el('div', { class: 'two' },
+        el('div', { class: 'card' }, el('h3', null, 'Telemetry to the remote'), tel),
+        el('div', { class: 'card' }, el('h3', null, 'RX status LED'), leds))));
+
+    // revisions
+    var tb = el('tbody');
+    r.revisions.forEach(function (row) { tb.append(el('tr', null, row.map(function (c, i) { return el(i === 0 ? 'th' : 'td', i === 0 ? { style: 'font-size:13px;color:var(--fg);letter-spacing:0' } : null, c); }))); });
+    root.append(el('div', { class: 'sec' }, sec('Board revisions', 'Flash the firmware image that matches your board revision. The Wi-Fi updater refuses a different one.'),
+      el('div', { class: 'card scroll' }, el('table', null, el('thead', null, el('tr', null, ['Revision', 'Status', 'Changes', 'Firmware'].map(function (h) { return el('th', null, h); }))), tb))));
+  }
+
+  buildTX();
+  buildRX();
+
+  /* ---------- tabs on the URL hash ---------- */
+  var views = ['tx', 'rx'];
+  function show() {
+    var h = (location.hash || '').replace('#', '');
+    var v = views.indexOf(h) >= 0 ? h : 'tx';
+    views.forEach(function (n) {
+      document.getElementById('view-' + n).hidden = n !== v;
+      document.getElementById('tab-' + n).setAttribute('aria-selected', n === v ? 'true' : 'false');
+      document.getElementById('tab-' + n).tabIndex = n === v ? 0 : -1;
+    });
+  }
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.addEventListener('click', function () { location.hash = b.getAttribute('data-view'); show(); });
+  });
+  window.addEventListener('hashchange', show);
+  show();
+})();
+</script>
+
+</body></html>

@@ -33,9 +33,9 @@ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
 .side header p{margin:.3rem 0 0;color:var(--muted);font-size:.88rem}
 .sec{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px}
 .sec h2{font:600 .78rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 2px}
-.row{display:grid;grid-template-columns:minmax(0,1fr) 128px 26px;align-items:center;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 20px 128px 26px;align-items:center;gap:8px}
 .row label{font-size:.9rem}
-.row.chk{grid-template-columns:auto minmax(0,1fr) 26px}
+.row.chk{grid-template-columns:auto minmax(0,1fr) 20px 26px}
 .reset{width:26px;height:26px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--accent);cursor:pointer;display:grid;place-items:center;padding:0}
 .reset[hidden]{display:grid!important;visibility:hidden}
 .reset:hover{border-color:var(--accent)}
@@ -102,6 +102,52 @@ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
 .drop .btns{max-width:420px;margin:14px auto 0}
 .coord{position:absolute;right:10px;bottom:8px;font:.75rem var(--f-mono);color:var(--muted);background:color-mix(in srgb,var(--panel) 80%,transparent);padding:2px 6px;border-radius:3px;pointer-events:none}
 .busy{position:absolute;left:10px;bottom:8px;font:.78rem var(--f-body);color:var(--muted)}
+/* info icon + help pop-up */
+.info{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted);background:transparent;color:var(--muted);font:700 11px/1 Georgia,"Times New Roman",serif;font-style:italic;display:grid;place-items:center;padding:0;cursor:help;justify-self:center}
+.info:hover,.info:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.tip{position:fixed;z-index:50;width:320px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,.32);padding:10px 12px 11px;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s}
+.tip.on{opacity:1;visibility:visible}
+.tip h3{font:600 .98rem/1.2 var(--f-display);margin:0 0 7px;letter-spacing:.01em}
+.tip svg{display:block;width:100%;height:auto;background:var(--view);border-radius:4px;margin:0 0 8px}
+.tip p{margin:0;font-size:.82rem;line-height:1.4;color:var(--muted)}
+.tip p b{color:var(--fg);font-weight:500}
+.tip svg *{vector-effect:non-scaling-stroke}
+.tip svg .bd{fill:#1d6e3e;stroke:#57b87e;stroke-width:1}
+.tip svg .bd2{fill:#2f8f57;stroke:#7fd6a2;stroke-width:1}
+.tip svg .bdn{fill:#1d6e3e;stroke:none}
+.tip svg .rl{fill:#165a32;stroke:#4a9e6b;stroke-width:1}
+.tip svg .ac{fill:var(--accent);stroke:none}
+.tip svg .ho{fill:var(--view);stroke:#9aa7b3;stroke-width:1.2}
+.tip svg .sb{fill:#c8b27a}
+.tip svg .cu{fill:#cfd3d6}
+.tip svg .au{fill:#d8a542}
+.tip svg .sk{fill:#f3f3ee}
+.tip svg .skl{stroke:#f3f3ee;stroke-width:1.5}
+.tip svg .skt{fill:#f3f3ee;font:600 16px var(--f-mono)}
+.tip svg .skt.sm{font-size:10px}
+.tip svg .skt.big{font-size:52px;font-weight:500}
+.tip svg .gh{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
+.tip svg .ghs{stroke:var(--muted);stroke-width:.8;stroke-dasharray:2 2}
+.tip svg .hl{fill:none;stroke:var(--accent);stroke-width:2}
+.tip svg .dm{stroke:#ff5d5d;stroke-width:1.4;fill:none}
+.tip svg .dmf{fill:#ff5d5d}
+.tip svg .vc{stroke:#ff5d5d;stroke-width:1.4;stroke-dasharray:5 3}
+.tip svg .dt{fill:#ff6a6a;font:600 11px var(--f-mono);paint-order:stroke;stroke:var(--view);stroke-width:3px;stroke-linejoin:round}
+.tip svg .lb{fill:var(--muted);font:11px var(--f-body)}
+.tip svg .lbi{fill:#e8efe9;font:11px var(--f-body)}
+.tip svg .mono{fill:var(--fg);font:10.5px var(--f-mono)}
+.tip svg .mono.sm{font-size:8.4px}
+.tip svg .file{fill:var(--panel);stroke:var(--line)}
+.tip svg .file.on{stroke:var(--accent);stroke-width:1.5}
+.tip svg .sw{stroke:rgba(127,127,127,.5)}
+.tip svg .off{opacity:.25}
+.tip svg .xl{stroke:var(--muted);stroke-width:1.4}
+.tip svg .xc{fill:none;stroke:var(--muted);stroke-width:1.2}
+.tip svg .xo.on .xl,.tip svg .xo.on .xc{stroke:#ff5d5d;stroke-width:1.8}
+.credit{border-top:1px solid var(--line);padding-top:12px;font-size:.8rem;color:var(--muted);display:grid;gap:2px}
+.credit b{font:600 .9rem var(--f-display);color:var(--fg);letter-spacing:.02em}
+.credit a{color:var(--accent);text-decoration:none}
+.credit a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -144,6 +190,10 @@ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
       <button class="btn sec2" type="button" id="btn-reset">Reset all to defaults</button>
       <p class="status" id="set-status" role="status"></p>
     </section>
+    <footer class="credit">
+      <span><b>Gerber Panelizer</b> v1.2</span>
+      <span>Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></span>
+    </footer>
   </aside>
 
   <main class="stage">
@@ -1162,9 +1212,292 @@ const SCHEMA = [
   ]}
 ];
 
+/* ---------------------------------------------------------------- Setting help (info icons + diagrams) */
+// Small SVG kit for the help pop-ups. Colours come from CSS classes (.tip svg …) so both themes work.
+const svWrap = (b, h = 130) => '<svg viewBox="0 0 260 ' + h + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><marker id="dga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 1L9 5L0 9z" class="dmf"/></marker></defs>' + b + '</svg>';
+const svR = (x, y, w, h, c, rx = 0) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + rx + '" class="' + c + '"/>';
+const svC = (x, y, r, c) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" class="' + c + '"/>';
+const svT = (x, y, s, c = 'lb', a = 'middle') => '<text x="' + x + '" y="' + y + '" text-anchor="' + a + '" class="' + c + '">' + esc(s) + '</text>';
+const svP = (d, c) => '<path d="' + d + '" class="' + c + '"/>';
+const svL = (x1, y1, x2, y2, c = 'gh') => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" class="' + c + '"/>';
+const svA = (x1, y1, x2, y2, one) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" class="dm"' + (one ? '' : ' marker-start="url(#dga)"') + ' marker-end="url(#dga)"/>';
+const svHl = (x, y, w, h) => svR(x - 4, y - 4, w + 8, h + 8, 'hl', 4);
+const mmv = v => fmt(v, 3) + ' mm';
+/* Board with a pin-1 dot and a silkscreen line, rotated deg CCW about its centre */
+const svBoard = (cx, cy, w, h, deg, c = 'bd') => '<g transform="translate(' + cx + ' ' + cy + ') rotate(' + (-deg) + ')">' + svR(-w / 2, -h / 2, w, h, c, 2) +
+  svC(-w / 2 + 6, -h / 2 + 6, 2.6, 'sk') + svL(-w / 2 + 12, h / 2 - 6, w / 2 - 6, h / 2 - 6, 'skl') + '</g>';
+/* Mini panel: rails by frame type + a grid of boards */
+function svPanel(o) {
+  const { x, y, w, h, frame = 'rails_tb', rw = 14, cols = 3, rows = 2, gap = 6 } = o;
+  const tb = frame === 'frame' || frame === 'rails_tb', lr = frame === 'frame' || frame === 'rails_lr';
+  let b = '';
+  if (tb) b += svR(x, y, w, rw, 'rl') + svR(x, y + h - rw, w, rw, 'rl');
+  if (lr) b += svR(x, y, rw, h, 'rl') + svR(x + w - rw, y, rw, h, 'rl');
+  const ix = x + (lr ? rw + gap : 0), iy = y + (tb ? rw + gap : 0), iw = w - (lr ? 2 * (rw + gap) : 0), ih = h - (tb ? 2 * (rw + gap) : 0);
+  const bw = (iw - (cols - 1) * gap) / cols, bh = (ih - (rows - 1) * gap) / rows;
+  for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) b += svR(ix + c * (bw + gap), iy + r * (bh + gap), bw, bh, 'bd', 2);
+  return { svg: b, tb, lr, ix, iy, iw, ih, bw, bh };
+}
+/* Two boards joined by one tab (260×130 scene). f = fillet radius px, bites = {off, pitch, r} in px */
+function svTab(o = {}) {
+  const f = o.f || 0, y0 = o.y0 || 44, y1 = o.y1 || 84, xa = 98, xb = 162;
+  let b = svR(-4, 6, xa + 4, 118, 'bd') + svR(xb, 6, 102, 118, 'bd');
+  if (f > 0) {
+    b += svP('M' + xa + ' ' + (y0 - f) + 'A' + f + ' ' + f + ' 0 0 0 ' + (xa + f) + ' ' + y0 + 'L' + (xb - f) + ' ' + y0 + 'A' + f + ' ' + f + ' 0 0 0 ' + xb + ' ' + (y0 - f) +
+      'L' + xb + ' ' + (y1 + f) + 'A' + f + ' ' + f + ' 0 0 0 ' + (xb - f) + ' ' + y1 + 'L' + (xa + f) + ' ' + y1 + 'A' + f + ' ' + f + ' 0 0 0 ' + xa + ' ' + (y1 + f) + 'Z', 'bdn');
+  } else b += svR(xa - 1, y0, xb - xa + 2, y1 - y0, 'bdn');
+  if (o.bites) {
+    const { off, pitch, r } = o.bites, n = Math.max(2, Math.floor((y1 - y0) / pitch) + 1), st = (y0 + y1) / 2 - (n - 1) * pitch / 2;
+    for (let k = 0; k < n; k++) b += svC(xa - off, st + k * pitch, r, 'ho') + svC(xb + off, st + k * pitch, r, 'ho');
+  }
+  return b;
+}
+const svFid = (x, y, k = 1) => svC(x, y, 5.5 * k, 'sb') + svC(x, y, 2.8 * k, 'cu');
+/* Fiducial / tooling-hole spots on a mini panel, same order as the panel code */
+function svRailPts(P, o, off, n, rw) {
+  const { x, y, w, h } = o, rc = rw / 2;
+  const all = P.tb ? [[x + off, y + rc], [x + w - off, y + rc], [x + off, y + h - rc], [x + w - off, y + h - rc]]
+    : [[x + rc, y + off], [x + w - rc, y + off], [x + rc, y + h - off], [x + w - rc, y + h - off]];
+  return n === 2 ? [all[2], all[1]] : all.slice(0, n);
+}
+const railFrame = s => s.frame === 'none' ? 'rails_tb' : s.frame;
+const railsTB = s => s.frame !== 'rails_lr';
+const helpProj = s => (s.project || 'panel').replace(/[^\w.-]+/g, '_');
+
+const HELP = {
+  fabRules: { d: s => { const L = FAB_LIM[s.fabRules] || FAB_LIM.none; const P = svPanel({ x: 40, y: 10, w: 180, h: 84, cols: 3, rows: 2 });
+      return svWrap(P.svg + svL(40, 96, 40, 112) + svL(220, 96, 220, 112) + svA(40, 106, 220, 106) + svT(130, 126, s.fabRules === 'none' ? 'no size limit' : L.min + ' – ' + L.max + ' mm per side', 'dt'), 132); },
+    t: () => 'Limits the panel is checked against. <b>JLCPCB standard</b> assembly: 70–250 mm per side; <b>economic</b>: 10–250 mm. Also warns about rails under 5 mm. <b>None</b> turns the checks off.' },
+  layoutMode: { d: s => { let b = svPanel({ x: 12, y: 12, w: 108, h: 86, cols: 3, rows: 2 }).svg;
+      b += svR(140, 12, 108, 12, 'rl') + svR(140, 86, 108, 12, 'rl');
+      b += svR(144, 30, 30, 24, 'bd', 2) + svR(178, 30, 30, 24, 'bd', 2) + svR(144, 58, 30, 24, 'bd', 2) + svR(178, 58, 30, 24, 'bd', 2) + svR(212, 30, 30, 52, 'bd2', 2);
+      b += svHl(s.layoutMode === 'auto' ? 140 : 12, 12, 108, 86);
+      return svWrap(b + svT(66, 122, 'Grid') + svT(194, 122, 'Auto – smallest panel')); },
+    t: () => '<b>Grid</b>: you choose columns × rows. <b>Auto</b> tries rotations and arrangements to fit the requested copies into the smallest panel (tabs only).' },
+  qty: { d: s => { const n = Math.min(s.qty, 12), c = Math.ceil(Math.sqrt(n * 1.6)), r = Math.ceil(n / c);
+      let b = svR(30, 8, 200, 12, 'rl') + svR(30, 100, 200, 12, 'rl');
+      const bw = (188 - (c - 1) * 6) / c, bh = (68 - (r - 1) * 6) / r;
+      for (let i = 0; i < n; i++) b += svR(36 + (i % c) * (bw + 6), 26 + Math.floor(i / c) * (bh + 6), bw, bh, 'bd', 2);
+      return svWrap(b + svT(130, 127, '× ' + s.qty + ' copies', 'dt'), 132); },
+    t: s => 'How many copies of the board the auto placement puts on the panel (now <b>' + s.qty + '</b>).' },
+  autoRot: { d: s => { let b = '';
+      [0, 90, 180, 270].forEach((a, i) => { const ok = s.autoRot === 'free' || (s.autoRot === 'flip' && a % 180 === 0) || a === 0;
+        b += '<g' + (ok ? '' : ' class="off"') + '>' + svBoard(35 + i * 63, 56, 44, 30, a) + '</g>' + svT(35 + i * 63, 110, a + '°', ok ? 'lb' : 'lb off');
+        if (!ok) b += svL(13 + i * 63, 34, 57 + i * 63, 78, 'dm'); });
+      return svWrap(b, 124); },
+    t: () => 'Which turns auto placement may give a copy. Use <b>0° / 180°</b> or <b>No rotation</b> when parts must keep their orientation for the pick-and-place machine.' },
+  cols: { d: s => { const P = svPanel({ x: 20, y: 10, w: 220, h: 92, cols: Math.min(s.cols, 6), rows: Math.min(s.rows, 4) });
+      return svWrap(P.svg + svA(P.ix, 112, P.ix + P.iw, 112) + svT(130, 129, s.cols + ' column' + (s.cols > 1 ? 's' : '') + ' (X)', 'dt'), 134); },
+    t: s => 'Number of board copies side by side along X (now <b>' + s.cols + '</b>).' },
+  rows: { d: s => { const P = svPanel({ x: 14, y: 8, w: 184, h: 112, cols: Math.min(s.cols, 6), rows: Math.min(s.rows, 4) });
+      return svWrap(P.svg + svA(208, P.iy, 208, P.iy + P.ih) + svT(214, 68, s.rows + ' row' + (s.rows > 1 ? 's' : ''), 'dt', 'start')); },
+    t: s => 'Number of board copies stacked along Y (now <b>' + s.rows + '</b>).' },
+  rotPat: { d: s => { let b = ''; const a = +s.rotAngle || 90;
+      for (let c = 0; c < 4; c++) for (let r = 0; r < 2; r++) {
+        const p = s.rotPat, on = p === 'all' || (p === 'row' && r % 2 === 1) || (p === 'col' && c % 2 === 1) || (p === 'check' && (c + r) % 2 === 1);
+        b += svBoard(40 + c * 60, 34 + r * 52, 40, 34, on ? a : 0, on ? 'bd2' : 'bd'); }
+      return svWrap(b + svT(130, 126, 'lighter = rotated copy'), 132); },
+    t: () => 'Which copies get turned. Rotating every second copy can let odd shapes or overhanging connectors fit closer.' },
+  rotAngle: { d: s => { const a = +s.rotAngle || 90, cw = a === 270, R = a === 180 ? 54 : 50, rad = (cw ? -90 : a) * Math.PI / 180;
+      const ex = 130 + R * Math.cos(rad), ey = 64 - R * Math.sin(rad);
+      let b = svBoard(130, 64, 84, 44, 0, 'gh') + svBoard(130, 64, 84, 44, a, 'bd2');
+      b += '<path d="M' + (130 + R) + ' 64A' + R + ' ' + R + ' 0 0 ' + (cw ? 1 : 0) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1) + '" class="dm" marker-end="url(#dga)"/>';
+      return svWrap(b + svT(250, 20, a === 270 ? '90° CW' : a === 180 ? '180°' : '90° CCW', 'dt', 'end')); },
+    t: () => 'How far the selected copies are turned (dashed = original orientation).' },
+  nest: { d: s => { let b = svP('M12 98L35 34L58 98Z', 'bd') + svP('M64 98L87 34L110 98Z', 'bd');
+      b += svP('M140 98L163 34L186 98Z', 'bd') + svP('M171 34L217 34L194 98Z', 'bd2') + svP('M200 98L223 34L246 98Z', 'bd');
+      b += svHl(s.nest ? 136 : 8, 30, s.nest ? 114 : 106, 72);
+      return svWrap(b + svT(61, 122, 'Off') + svT(193, 122, 'On – interlocked')); },
+    t: () => 'Slides copies of non-rectangular boards into each other (triangles, L-shapes) to save panel area.' },
+  sep: { d: s => { let b = svR(14, 22, 46, 70, 'bd', 2) + svR(74, 22, 46, 70, 'bd', 2) + svR(59, 48, 16, 18, 'bdn');
+      for (let y = 50; y <= 64; y += 4.6) b += svC(62, y, 1.5, 'ho') + svC(72, y, 1.5, 'ho');
+      b += svR(144, 22, 52, 70, 'bd', 2) + svR(196, 22, 52, 70, 'bd', 2) + svL(196, 12, 196, 102, 'vc');
+      b += svHl(s.sep === 'vcut' ? 140 : 10, 18, s.sep === 'vcut' ? 112 : 114, 78);
+      return svWrap(b + svT(67, 122, 'Tabs + mouse bites') + svT(196, 122, 'V-cut (V-score)')); },
+    t: () => '<b>Tabs</b>: boards are milled out and held by small bridges with perforation holes – any shape. <b>V-cut</b>: straight grooves scored from both sides – rectangular boards only, no gap.' },
+  hspace: { d: s => svWrap(svR(14, 20, 92, 84, 'bd', 2) + svR(154, 20, 92, 84, 'bd', 2) + svA(106, 62, 154, 62) + svT(130, 54, mmv(s.hspace), 'dt')),
+    t: s => 'Milled gap between neighbouring boards along X (<b>' + mmv(s.hspace) + '</b>). Usually the router bit size, 2 mm at JLCPCB.' },
+  vspace: { d: s => svWrap(svR(60, 6, 140, 44, 'bd', 2) + svR(60, 82, 140, 44, 'bd', 2) + svA(130, 50, 130, 82) + svT(138, 70, mmv(s.vspace), 'dt', 'start'), 132),
+    t: s => 'Milled gap between neighbouring boards along Y (<b>' + mmv(s.vspace) + '</b>).' },
+  designArr: { d: s => { const v = s.designArr === 'v';
+      let b = svR(14, 30, 50, 60, 'bd', 2) + svT(39, 65, 'A', 'skt') + svR(70, 40, 40, 50, 'bd2', 2) + svT(90, 70, 'B', 'skt');
+      b += svR(160, 8, 60, 46, 'bd', 2) + svT(190, 36, 'A', 'skt') + svR(160, 60, 46, 40, 'bd2', 2) + svT(183, 85, 'B', 'skt');
+      b += v ? svHl(156, 4, 68, 100) : svHl(10, 26, 104, 68);
+      return svWrap(b + svT(62, 122, 'Side by side') + svT(190, 122, 'Stacked')); },
+    t: () => 'How the blocks of different designs are placed next to each other.' },
+  designAlign: { d: s => { let b = '';
+      if (s.designArr !== 'v') { const y = { start: 70, center: 42, end: 14 }[s.designAlign], ly = { start: 110, center: 62, end: 14 }[s.designAlign];
+        b += svR(30, 14, 80, 96, 'bd', 2) + svT(70, 67, 'A', 'skt') + svR(124, y, 80, 40, 'bd2', 2) + svT(164, y + 25, 'B', 'skt') + svL(20, ly, 240, ly, 'vc');
+      } else { const x = { start: 40, center: 90, end: 140 }[s.designAlign], lx = { start: 40, center: 130, end: 220 }[s.designAlign];
+        b += svR(40, 8, 180, 50, 'bd', 2) + svT(130, 38, 'A', 'skt') + svR(x, 66, 80, 50, 'bd2', 2) + svT(x + 40, 96, 'B', 'skt') + svL(lx, 2, lx, 124, 'vc'); }
+      return svWrap(b); },
+    t: s => 'Lines up smaller design blocks with bigger ones: ' + (s.designArr === 'v' ? 'left, centre or right when stacked.' : 'bottom, centre or top when side by side.') },
+  designGap: { d: s => svWrap(svR(14, 20, 92, 84, 'bd', 2) + svT(60, 67, 'A', 'skt') + svR(154, 30, 80, 64, 'bd2', 2) + svT(194, 67, 'B', 'skt') + svA(106, 62, 154, 62) + svT(130, 54, mmv(s.designGap), 'dt')),
+    t: s => 'Gap between the blocks of different designs (<b>' + mmv(s.designGap) + '</b>).' },
+  maxTab: { d: s => svWrap(svR(8, 4, 244, 14, 'rl') + svR(8, 112, 244, 14, 'rl') + svR(20, 24, 84, 82, 'bd', 2) + svR(126, 24, 100, 40, 'bd2', 2) +
+      svR(150, 63, 14, 50, 'ac') + svA(176, 64, 176, 112) + svT(182, 92, '≤ ' + mmv(s.maxTab), 'dt', 'start')),
+    t: s => 'A tab may cross empty panel area (e.g. from a short board to the rail) only up to this length (<b>' + mmv(s.maxTab) + '</b>). Longer bridges are left out because they would be flimsy.' },
+  frame: { d: s => svWrap(svPanel({ x: 20, y: 8, w: 220, h: 104, frame: s.frame, cols: 3, rows: 2 }).svg + svT(130, 127, { none: 'No frame', rails_tb: 'Rails top / bottom', rails_lr: 'Rails left / right', frame: 'Full frame' }[s.frame]), 132),
+    t: () => 'Extra break-away material around the boards. Rails hold fiducials, tooling holes and text and give the assembly conveyor something to grip.' },
+  frameWidth: { d: s => { const P = svPanel({ x: 64, y: 8, w: 180, h: 112, frame: s.frame === 'frame' ? 'frame' : 'rails_tb', rw: 18, cols: 3, rows: 2 });
+      return svWrap(P.svg + svHl(64, 8, 180, 18) + svL(44, 8, 64, 8, 'ghs') + svL(44, 26, 64, 26, 'ghs') + svA(50, 8, 50, 26) + svT(44, 21, mmv(s.frameWidth), 'dt', 'end')); },
+    t: s => 'Width of the top and bottom rails (<b>' + mmv(s.frameWidth) + '</b>). SMT assembly needs at least 5 mm.' },
+  frameWidthLR: { d: s => { const P = svPanel({ x: 16, y: 26, w: 228, h: 98, frame: s.frame === 'frame' ? 'frame' : 'rails_lr', rw: 18, cols: 3, rows: 2 });
+      return svWrap(P.svg + svHl(16, 26, 18, 98) + svA(16, 14, 34, 14) + svT(40, 18, mmv(s.frameWidthLR), 'dt', 'start')); },
+    t: s => 'Width of the left and right rails (<b>' + mmv(s.frameWidthLR) + '</b>).' },
+  frameGap: { d: s => svWrap(svR(10, 8, 240, 24, 'rl') + svR(30, 50, 200, 76, 'bd', 2) + svR(70, 31, 14, 20, 'bdn') + svA(150, 32, 150, 50) + svT(158, 45, mmv(s.frameGap), 'dt', 'start') + svT(130, 24, 'rail', 'lbi') + svT(130, 94, 'board', 'lbi')),
+    t: s => 'Milled gap between the outer boards and the frame / rails (<b>' + mmv(s.frameGap) + '</b>).' },
+  tabWidth: { d: s => svWrap(svTab({ f: s.fillet ? 8 : 0 }) + svA(130, 44, 130, 84) + svT(136, 68, mmv(s.tabWidth), 'dt', 'start')),
+    t: s => 'Width of each bridge holding the boards (<b>' + mmv(s.tabWidth) + '</b>). Wider = stiffer panel, harder to break.' },
+  tabsH: { d: s => svWrap(svTabCount(s, true)), t: s => 'Tabs on each <b>top and bottom</b> edge of a board (highlighted, now <b>' + s.tabsH + '</b>).' },
+  tabsV: { d: s => svWrap(svTabCount(s, false)), t: s => 'Tabs on each <b>left and right</b> edge of a board (highlighted, now <b>' + s.tabsV + '</b>).' },
+  fillet: { d: s => { const one = (ox, f) => '<g transform="translate(' + ox + ' 6) scale(.48)">' + svTab({ f }) + '</g>';
+      return svWrap(one(4, 0) + one(134, 14) + svHl(s.fillet ? 134 : 4, 6, 124, 62) + svT(66, 92, 'Sharp corners') + svT(196, 92, 'Mill fillets'), 102); },
+    t: () => 'A round router bit cannot cut a sharp inside corner. Fillets draw the tab corners the way they will really be milled, so the outline matches the fab result.' },
+  filletAuto: { d: () => svWrap(svTab({ f: 32 }) + svC(130, 12, 32, 'gh') + svC(130, 116, 32, 'gh') + svA(98, 12, 162, 12) + svT(130, 8, 'cutter Ø = gap', 'dt')),
+    t: () => 'Uses a fillet radius of half the board gap – the corner a router bit as wide as the gap leaves behind.' },
+  filletR: { d: s => svWrap(svTab({ f: 16 }) + svC(114, 28, 1.6, 'dmf') + svA(114, 28, 102.7, 39.3, true) + svT(120, 24, 'R ' + mmv(s.filletR), 'dt', 'start')),
+    t: s => 'Radius of the tab corner fillets (<b>' + mmv(s.filletR) + '</b>). Match it to half the router bit diameter.' },
+  mousebites: { d: s => svWrap(svTab({ f: s.fillet ? 8 : 0, bites: { off: -6, pitch: 8, r: 2.8 } }) + svT(130, 118, 'holes at both board edges', 'lbi')),
+    t: () => 'Rows of small non-plated holes across each tab so the boards snap off cleanly.' },
+  mbDia: { d: s => svWrap(svC(130, 60, 44, 'ho') + svA(130 - 31, 60 + 31, 130 + 31, 60 - 31) + svT(130, 125, 'Ø ' + mmv(s.mbDia), 'dt'), 132),
+    t: s => 'Drill diameter of every mouse bite hole (<b>' + mmv(s.mbDia) + '</b>). Exported as NPTH.' },
+  mbSpacing: { d: s => { const r = clamp(100 * s.mbDia / 2 / Math.max(s.mbSpacing, 0.01), 8, 49);
+      return svWrap(svC(80, 70, r, 'ho') + svC(180, 70, r, 'ho') + svC(80, 70, 2.4, 'dmf') + svC(180, 70, 2.4, 'dmf') + svA(80, 70, 180, 70) + svT(130, 14, mmv(s.mbSpacing), 'dt')); },
+    t: s => 'Distance from one hole centre to the next (<b>' + mmv(s.mbSpacing) + '</b>). Material left between holes: <b>' + mmv(Math.max(0, s.mbSpacing - s.mbDia)) + '</b>.' },
+  mbOffset: { d: s => { const k = 40, ex = 120, hx = ex - clamp(s.mbOffset, -1, 1) * k, r = clamp(s.mbDia / 2 * k, 3, 16);
+      let b = svR(-4, 6, ex + 4, 118, 'bd') + svR(ex - 1, 30, 145, 70, 'bdn');
+      for (let y = 38; y <= 92; y += clamp(s.mbSpacing * k, 2 * r + 2, 40)) b += svC(hx, y, r, 'ho');
+      b += svL(ex, 4, ex, 124, 'vc') + svT(56, 20, 'board', 'lbi') + svT(212, 70, 'tab', 'lbi') + svT(ex + 4, 18, 'board edge', 'dt', 'start');
+      if (Math.abs(hx - ex) > 1) b += svA(Math.min(hx, ex), 112, Math.max(hx, ex), 112);
+      return svWrap(b + svT(Math.min(hx, ex) - 4, 117, mmv(s.mbOffset), 'dt', 'end')); },
+    t: () => 'Shifts the hole row relative to the board edge. <b>Positive</b> moves it into the board (snapped edge ends up flush, no nubs), <b>negative</b> moves it out into the tab.' },
+  vcutLayer: { d: s => { let b = svP('M10 26H118L130 38L142 26H250V56H142L130 44L118 56H10Z', 'bd') + svT(130, 16, 'V-score from both sides', 'lb');
+      const fileI = (x, n, on) => svR(x, 70, 100, 34, on ? 'file on' : 'file', 3) + svT(x + 50, 91, n, 'mono');
+      b += fileI(20, 'Outline', s.vcutLayer === 'outline') + fileI(140, 'VCUT layer', s.vcutLayer === 'separate');
+      return svWrap(b + svT(130, 124, s.vcutLayer === 'outline' ? 'V-cut lines go into the outline file' : 'V-cut lines in their own file'), 132); },
+    t: () => 'Where the V-cut lines are written. Most fabs (JLCPCB) want them in the outline layer; some prefer a separate mechanical layer.' },
+  fiducials: { d: s => { const o = { x: 16, y: 8, w: 228, h: 110 }, P = svPanel(Object.assign({ frame: railFrame(s), rw: 18, cols: 3, rows: 2 }, o));
+      let b = P.svg; for (const [x, y] of svRailPts(P, o, 26, +s.fiducials, 18)) b += svFid(x, y);
+      return svWrap(b + svT(130, 129, s.fiducials === '0' ? 'no fiducials' : s.fiducials + ' fiducials on the rails'), 134); },
+    t: () => 'Optical alignment marks for the pick-and-place camera. 3 marks (asymmetric) also tell the machine if the panel is turned.' },
+  fidCopper: { d: s => { const rc = clamp(44 * s.fidCopper / Math.max(s.fidMask, 0.01), 8, 44);
+      return svWrap(svR(0, 0, 260, 136, 'rl') + svC(130, 58, 44, 'sb') + svC(130, 58, rc, 'cu') + svA(130 - rc, 58, 130 + rc, 58) + svT(130, 124, 'copper Ø ' + mmv(s.fidCopper), 'dt'), 136); },
+    t: s => 'Diameter of the bare copper dot (<b>' + mmv(s.fidCopper) + '</b>). 1 mm is typical.' },
+  fidMask: { d: s => { const rc = clamp(44 * s.fidCopper / Math.max(s.fidMask, 0.01), 8, 44);
+      return svWrap(svR(0, 0, 260, 136, 'rl') + svC(130, 52, 44, 'sb') + svC(130, 52, rc, 'cu') + svL(86, 52, 86, 112, 'ghs') + svL(174, 52, 174, 112, 'ghs') + svA(86, 106, 174, 106) + svT(130, 127, 'mask opening Ø ' + mmv(s.fidMask), 'dt'), 136); },
+    t: s => 'Diameter of the solder mask clearance around the copper dot (<b>' + mmv(s.fidMask) + '</b>), usually twice the copper.' },
+  fidOffset: { d: s => svWrap(svR(20, 24, 240, 40, 'rl') + svFid(150, 44, 1.6) + svL(20, 10, 20, 100, 'ghs') + svL(150, 54, 150, 100, 'ghs') + svA(20, 92, 150, 92) + svT(85, 86, mmv(s.fidOffset), 'dt') + svT(250, 18, 'rail', 'lb', 'end') + svT(24, 116, 'panel end', 'lb', 'start')),
+    t: s => 'Distance from the panel end along the rail to the fiducial centre (<b>' + mmv(s.fidOffset) + '</b>). Across the rail it sits in the middle.' },
+  fidBottom: { d: s => { const one = (ox, lab, on) => { const o = { x: ox, y: 10, w: 112, h: 80 }, P = svPanel(Object.assign({ frame: railFrame(s), rw: 14, cols: 2, rows: 2, gap: 5 }, o));
+        let b = P.svg; for (const [x, y] of svRailPts(P, o, 14, +s.fiducials || 3, 14)) b += on ? svFid(x, y, 0.8) : svC(x, y, 4, 'gh');
+        return b + svT(ox + 56, 108, lab); };
+      return svWrap(one(10, 'Top', true) + one(138, 'Bottom', s.fidBottom), 116); },
+    t: () => 'Adds the same fiducials to the bottom layers – needed when the bottom side is assembled too.' },
+  tooling: { d: s => { const o = { x: 16, y: 8, w: 228, h: 110 }, P = svPanel(Object.assign({ frame: railFrame(s), rw: 18, cols: 3, rows: 2 }, o));
+      let b = P.svg; for (const [x, y] of svRailPts(P, o, 12, +s.tooling, 18)) b += svC(x, y, 4.5, 'ho');
+      return svWrap(b + svT(130, 129, s.tooling === '0' ? 'no tooling holes' : s.tooling + ' tooling holes (NPTH)'), 134); },
+    t: () => 'Non-plated holes in the rails for locating pins on the assembly / test fixture.' },
+  toolDia: { d: s => svWrap(svR(0, 14, 260, 96, 'rl') + svC(130, 62, 40, 'ho') + svA(90, 62, 170, 62) + svT(130, 127, 'Ø ' + mmv(s.toolDia), 'dt'), 132),
+    t: s => 'Tooling hole drill size (<b>' + mmv(s.toolDia) + '</b>). JLCPCB uses 1.152 mm.' },
+  toolOffset: { d: s => svWrap(svR(20, 24, 240, 40, 'rl') + svC(150, 44, 8, 'ho') + svL(20, 10, 20, 100, 'ghs') + svL(150, 52, 150, 100, 'ghs') + svA(20, 92, 150, 92) + svT(85, 86, mmv(s.toolOffset), 'dt') + svT(24, 116, 'panel end', 'lb', 'start')),
+    t: s => 'Distance from the panel end along the rail to the hole centre (<b>' + mmv(s.toolOffset) + '</b>).' },
+  textOn: { d: s => svWrap(svR(10, 30, 240, 40, 'rl') + '<g' + (s.textOn ? '' : ' class="off"') + '>' + svT(130, 56, (s.text || 'TEXT').slice(0, 20), 'skt') + '</g>' + svR(30, 84, 200, 40, 'bd', 2)),
+    t: () => 'Writes the text below in silkscreen on a rail – handy for order numbers (JLCJLCJLCJLC marks where JLCPCB prints its order number).' },
+  text: { d: s => svWrap(svR(10, 30, 240, 40, 'rl') + svT(130, 56, (s.text || '').slice(0, 20), 'skt') + svR(30, 84, 200, 40, 'bd', 2)),
+    t: () => 'The silkscreen text on the frame.' },
+  textSize: { d: s => svWrap(svR(0, 10, 260, 110, 'rl') + svT(100, 94, 'ABC', 'skt big') + svL(30, 57, 196, 57, 'ghs') + svL(30, 94, 196, 94, 'ghs') + svA(188, 57, 188, 94) + svT(194, 80, mmv(s.textSize), 'dt', 'start')),
+    t: s => 'Character height (<b>' + mmv(s.textSize) + '</b>). Keep it ≥ 1 mm so the fab can print it legibly.' },
+  textRail: { d: s => { const P = svPanel({ x: 20, y: 8, w: 220, h: 104, frame: railFrame(s), rw: 16, cols: 3, rows: 2 }); let b = P.svg; const top = s.textRail === 'top';
+      if (railsTB(s)) b += svT(130, top ? 20 : 108, 'TEXT', 'skt sm');
+      else b += '<text x="0" y="0" transform="translate(' + (top ? 32 : 232) + ' 60) rotate(-90)" text-anchor="middle" class="skt sm">TEXT</text>';
+      return svWrap(b + svT(130, 127, top ? 'Top / left rail' : 'Bottom / right rail'), 132); },
+    t: () => 'Which rail carries the text.' },
+  maskColor: { d: s => { let b = '';
+      Object.keys(MASK_COL).forEach((k, i) => { const x = 10 + i * 35; b += '<rect x="' + x + '" y="30" width="30" height="30" rx="4" style="fill:' + MASK_COL[k][0] + '" class="sw"/>';
+        if (k === s.maskColor) b += svHl(x, 30, 30, 30); b += svT(x + 15, 82, k, k === s.maskColor ? 'dt' : 'lb'); });
+      return svWrap(b, 100); },
+    t: () => 'Solder mask colour in the preview. It does not change the Gerber files – pick it at the fab when ordering.' },
+  finish: { d: s => svWrap(svR(0, 0, 260, 110, 'rl') + svR(40, 26, 70, 40, 'cu', 6) + svR(150, 26, 70, 40, 'au', 6) + svHl(s.finish === 'enig' ? 150 : 40, 26, 70, 40) +
+      svT(75, 92, 'HASL (tin)', 'lbi') + svT(185, 92, 'ENIG (gold)', 'lbi'), 110),
+    t: () => 'Pad finish shown in the preview – also used for the plating inside PTH holes. Preview only.' },
+  thickness: { d: s => { const t = (parseFloat(s.thickness) || 1.6) * 26, y = 64 - t / 2;
+      return svWrap(svR(14, y, 170, t, 'sb') + svR(14, y - 3, 170, 3, 'cu') + svR(14, y + t, 170, 3, 'cu') + svR(14, y - 6, 170, 3, 'rl') + svR(14, y + t + 3, 170, 3, 'rl') +
+        svA(196, y - 6, 196, y + t + 6) + svT(202, 68, s.thickness + ' mm', 'dt', 'start')); },
+    t: () => 'Board thickness for the 3D view (and the depth of the hole walls). Choose the real value when ordering.' },
+  fab: { d: s => { const n = fileNames(s.fab, helpProj(s)); let b = '';
+      [n.cuTop, n.maskTop, n.silkTop, n.outline, n.pth, n.npth].forEach((f, i) => b += svT(14, 22 + i * 19, f, 'mono', 'start'));
+      return svWrap(b, 128); },
+    t: () => 'File naming of the exported ZIP, so the fab recognises every layer automatically.' },
+  project: { d: s => { const p = helpProj(s), n = fileNames(s.fab, p);
+      return svWrap(svR(14, 14, 232, 36, 'file on', 3) + svT(130, 37, p + '_' + s.fab + '.zip', 'mono') + svT(130, 76, n.cuTop, 'mono') + svT(130, 96, n.outline, 'mono'), 110); },
+    t: () => 'Used for the ZIP name and, for PCBWay / KiCad naming, the layer file names.' },
+  mergeDrill: { d: s => { const n = fileNames(s.fab, helpProj(s)); let b;
+      if (s.mergeDrill) b = svR(50, 30, 160, 40, 'file on', 3) + svT(130, 54, n.merged, 'mono') + svT(130, 96, 'one file: PTH + NPTH');
+      else b = svR(4, 30, 124, 40, 'file on', 3) + svT(66, 54, n.pth, 'mono sm') + svR(132, 30, 124, 40, 'file on', 3) + svT(194, 54, n.npth, 'mono sm') + svT(130, 96, 'plated and non-plated holes apart');
+      return svWrap(b, 108); },
+    t: () => 'Most fabs want plated (PTH) and non-plated (NPTH) holes in separate drill files. Merge only if your fab asks for a single file.' },
+  refPrefix: { d: s => { const p = s.refPrefix || 'PN'; let b = svT(50, 22, 'Board', 'lb') + svT(170, 22, 'Panel CPL / BOM', 'lb');
+      for (let i = 0; i < 3; i++) b += svT(50, 50 + i * 22, 'R1', 'mono') + svA(80, 46 + i * 22, 118, 46 + i * 22, true) + svT(170, 50 + i * 22, p + (i + 1) + '_R1', 'mono');
+      return svWrap(b, 120); },
+    t: () => 'Every copy needs unique designators in the panel pick-and-place file. The copy number is put in front of the original reference.' },
+  cplOrigin: { d: s => { const cross = (x, y, on, lab, ly) => '<g class="' + (on ? 'xo on' : 'xo') + '">' + svL(x - 8, y, x + 8, y, 'xl') + svL(x, y - 8, x, y + 8, 'xl') + svC(x, y, 3.5, 'xc') + '</g>' + svT(x + 10, ly, lab, on ? 'dt' : 'lb', 'start');
+      let b = svR(70, 22, 150, 76, 'bd', 2);
+      b += cross(70, 98, s.cplOrigin === 'bl', 'board bottom-left', 113) + cross(70, 22, s.cplOrigin === 'tl', 'board top-left', 13) + cross(24, 120, s.cplOrigin === 'abs', 'Gerber 0,0', 131);
+      return svWrap(b + (s.cplOrigin === 'auto' ? svT(252, 131, 'auto: best fit', 'dt', 'end') : ''), 136); },
+    t: () => 'Where the X/Y coordinates in your CPL file are measured from. <b>Auto</b> picks the origin that puts the most parts on the board.' }
+};
+/* Board with tabs on all four edges; the edges this setting controls are highlighted */
+function svTabCount(s, horiz) {
+  let b = svR(0, 6, 260, 14, 'rl') + svR(0, 110, 260, 14, 'rl') + svR(-40, 30, 100, 70, 'bd', 2) + svR(200, 30, 100, 70, 'bd', 2) + svR(70, 30, 120, 70, 'bd2', 2);
+  const nh = Math.min(s.tabsH, 6), nv = Math.min(s.tabsV, 4);
+  for (let i = 0; i < nh; i++) { const x = 70 + 120 * (i + 1) / (nh + 1) - 5; b += svR(x, 19, 10, 12, horiz ? 'ac' : 'bdn') + svR(x, 99, 10, 12, horiz ? 'ac' : 'bdn'); }
+  for (let i = 0; i < nv; i++) { const y = 30 + 70 * (i + 1) / (nv + 1) - 5; b += svR(59, y, 12, 10, horiz ? 'bdn' : 'ac') + svR(189, y, 12, 10, horiz ? 'bdn' : 'ac'); }
+  return b;
+}
+
+/* One floating pop-up shared by every info icon */
+let TIP = null;
+function showTip(btn, f) {
+  if (!TIP) { TIP = document.createElement('div'); TIP.className = 'tip'; TIP.id = 'tip'; TIP.setAttribute('role', 'tooltip'); document.body.appendChild(TIP); }
+  const H = HELP[f.k];
+  let svg = '';
+  try { svg = H && H.d ? H.d(S) : ''; } catch (e) { console.warn(e); }
+  TIP.innerHTML = '<h3>' + esc(f.l) + '</h3>' + svg + (H ? '<p>' + H.t(S) + '</p>' : '');
+  TIP.classList.add('on');
+  btn.setAttribute('aria-describedby', 'tip');
+  const r = btn.getBoundingClientRect(), tw = TIP.offsetWidth, th = TIP.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+  const side = $('side').getBoundingClientRect();
+  let x = Math.max(r.right + 14, side.right + 10), y = r.top + r.height / 2 - th / 2;
+  if (x + tw > vw - 8) { x = clamp(r.left + r.width / 2 - tw / 2, 8, Math.max(8, vw - tw - 8)); y = r.bottom + 10; if (y + th > vh - 8) y = r.top - th - 10; }
+  TIP.style.left = Math.round(x) + 'px';
+  TIP.style.top = Math.round(clamp(y, 8, Math.max(8, vh - th - 8))) + 'px';
+  TIP._btn = btn; TIP._f = f;
+}
+function hideTip(btn) {
+  if (!TIP || (btn && TIP._btn !== btn)) return;
+  TIP.classList.remove('on');
+  if (TIP._btn) TIP._btn.removeAttribute('aria-describedby');
+  TIP._btn = null;
+}
+function infoButton(f) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'info'; b.textContent = 'i';
+  b.setAttribute('aria-label', 'About: ' + f.l);
+  b.addEventListener('mouseenter', () => showTip(b, f));
+  b.addEventListener('mouseleave', () => hideTip(b));
+  b.addEventListener('focus', () => showTip(b, f));
+  b.addEventListener('blur', () => hideTip(b));
+  b.addEventListener('click', () => showTip(b, f)); // touch screens: tap shows, tapping elsewhere (blur) hides
+  return b;
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
+$('side').addEventListener('scroll', () => hideTip(), { passive: true });
+
 const RESET_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 6.5A5 5 0 1 1 3 9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M1.8 3.2 3.4 6.9 7 5.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function buildSettingsUI() {
   const host = $('settings');
+  hideTip();
   host.innerHTML = '';
   let uid = 0;
   for (const sec of SCHEMA) {
@@ -1193,6 +1526,8 @@ function buildSettingsUI() {
         row.innerHTML = lab + '<div class="inp"><input type="number" inputmode="decimal" id="' + id + '" min="' + f.min + '" max="' + f.max + '" step="' + step + '">' + (f.u ? '<span>' + f.u + '</span>' : '') + '</div>';
       }
       ctl = row.querySelector('#' + id);
+      const info = infoButton(f);
+      if (f.t === 'chk') row.appendChild(info); else row.insertBefore(info, row.querySelector('.inp'));
       const reset = document.createElement('button');
       reset.type = 'button';
       reset.className = 'reset';
@@ -2169,6 +2504,101 @@ function renderDrill(D, ctx, fr) {
   ctx.restore();
 }
 
+
+/* ---------------------------------------------------------------- Drilled holes (real holes in 2D / 3D) */
+/* Every drill hit as a stadium {x1,y1,x2,y2,r,pl}: a round hole has both ends equal, a slot does not. pl = plated. */
+function drillHoles(B, cp, out = []) {
+  for (const L of B.layers) {
+    if (!L.d) continue;
+    const pl = L.d.plated !== false;
+    const xy = cp ? (x, y) => cpXY(cp, x, y) : (x, y) => [x, y];
+    for (const h of L.d.holes) { const [x, y] = xy(h.x, h.y); out.push({ x1: x, y1: y, x2: x, y2: y, r: (L.d.tools[h.t] || 0.3) / 2, pl }); }
+    for (const sl of L.d.slots) { const [x1, y1] = xy(sl.x1, sl.y1), [x2, y2] = xy(sl.x2, sl.y2); out.push({ x1, y1, x2, y2, r: (L.d.tools[sl.t] || 0.5) / 2, pl }); }
+  }
+  return out;
+}
+function panelHoles(P) {
+  const out = [];
+  for (const cp of P.copies) drillHoles(cp.D.board, cp, out);
+  for (const h of P.add.npth) out.push({ x1: h.x, y1: h.y, x2: h.x, y2: h.y, r: h.d / 2, pl: false }); // mouse bites, tooling holes
+  return out;
+}
+function holePath(list, grow) {
+  const p = new Path2D();
+  for (const h of list) {
+    const r = h.r + grow, dx = h.x2 - h.x1, dy = h.y2 - h.y1;
+    if (Math.abs(dx) + Math.abs(dy) < 1e-6) { p.moveTo(h.x1 + r, h.y1); p.arc(h.x1, h.y1, r, 0, TAU); continue; }
+    const a = Math.atan2(dy, dx);
+    p.moveTo(h.x2 + r * Math.cos(a - Math.PI / 2), h.y2 + r * Math.sin(a - Math.PI / 2));
+    p.arc(h.x2, h.y2, r, a - Math.PI / 2, a + Math.PI / 2);
+    p.arc(h.x1, h.y1, r, a + Math.PI / 2, a + Math.PI * 1.5);
+    p.closePath();
+  }
+  return p;
+}
+/* Plated holes get a thin metal lip (the barrel seen from above), then every hole is cut out of the image,
+   so the 2D view and the 3D faces show what is behind the board instead of a dark dot. */
+function finishHoles(c, fr, holes, loops, C) {
+  if (!holes.length) return;
+  const g = c.getContext('2d'), k = fr.S;
+  g.save();
+  g.clip(loopsPath(loops, fr), 'evenodd');
+  g.setTransform(k, 0, 0, -k, -fr.minX * k, fr.maxY * k);
+  const pl = holes.filter(h => h.pl);
+  if (pl.length) { g.fillStyle = C.cu; g.fill(holePath(pl, Math.max(0.07, 1.3 / k))); }
+  g.globalCompositeOperation = 'destination-out';
+  g.fill(holePath(holes, 0));
+  g.restore();
+}
+/* Bore walls for the 3D view: one tube per hole from z0 to z1, plated and bare walls in separate buffers.
+   solid(x, y) tells whether board material is there – wall pieces that would hang in the air (a castellated
+   half hole, a mouse bite running into the milled gap, two overlapping holes) are left out. */
+function holeWalls(holes, z0, z1, solid, push) {
+  const buf = { true: { p: [], n: [] }, false: { p: [], n: [] } };
+  for (const h of holes) {
+    const dx = h.x2 - h.x1, dy = h.y2 - h.y1, len2 = dx * dx + dy * dy;
+    const n = clamp(Math.round(TAU * h.r / 0.12), 12, 40);
+    const pts = [];
+    if (len2 < 1e-12) for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([h.x1 + h.r * Math.cos(a), h.y1 + h.r * Math.sin(a)]); }
+    else {
+      const a0 = Math.atan2(dy, dx), m = Math.max(6, n >> 1);
+      for (let i = 0; i <= m; i++) { const a = a0 - Math.PI / 2 + i / m * Math.PI; pts.push([h.x2 + h.r * Math.cos(a), h.y2 + h.r * Math.sin(a)]); }
+      for (let i = 0; i <= m; i++) { const a = a0 + Math.PI / 2 + i / m * Math.PI; pts.push([h.x1 + h.r * Math.cos(a), h.y1 + h.r * Math.sin(a)]); }
+    }
+    // normal = towards the nearest point of the hole axis (smooth shading on arcs, flat on slot sides)
+    const nrm = (x, y) => {
+      const t = len2 < 1e-12 ? 0 : clamp(((x - h.x1) * dx + (y - h.y1) * dy) / len2, 0, 1);
+      const qx = h.x1 + t * dx - x, qy = h.y1 + t * dy - y, l = Math.hypot(qx, qy) || 1;
+      return [qx / l, qy / l];
+    };
+    const B = buf[h.pl];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, [nx, ny] = nrm(mx, my);
+      if (!solid(mx - nx * push, my - ny * push)) continue;
+      const [ax, ay] = nrm(a[0], a[1]), [bx, by] = nrm(b[0], b[1]);
+      // wound to face the hole axis
+      B.p.push(a[0], a[1], z0, b[0], b[1], z1, b[0], b[1], z0, a[0], a[1], z0, a[0], a[1], z1, b[0], b[1], z1);
+      B.n.push(ax, ay, 0, bx, by, 0, bx, by, 0, ax, ay, 0, ax, ay, 0, bx, by, 0);
+    }
+  }
+  return buf;
+}
+/* Board-material lookup from the finished top image (alpha 0 = outside the outline or inside a hole) */
+function solidMask(img, fr) {
+  const fw = fr.maxX - fr.minX, fh = fr.maxY - fr.minY, k = Math.min(fr.S, 20, 2048 / fw, 2048 / fh);
+  const c = makeCanvas(fw * k, fh * k), g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0, c.width, c.height);
+  const a = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+  return {
+    push: Math.max(0.06, 1.3 / k),
+    solid: (x, y) => {
+      const px = Math.floor((x - fr.minX) * k), py = Math.floor((fr.maxY - y) * k);
+      return px >= 0 && py >= 0 && px < W && py < H && a[(py * W + px) * 4 + 3] > 127;
+    }
+  };
+}
+
 const SIDE_KINDS = { top: { cu: 'cuTop', mask: 'maskTop', silk: 'silkTop' }, bottom: { cu: 'cuBot', mask: 'maskBot', silk: 'silkBot' } };
 
 function rasterizeBoard(B) {
@@ -2209,7 +2639,7 @@ function tinted(src, color, tmp) {
   return tmp;
 }
 /* Layer alpha masks → coloured image */
-function compose(fr, L, loops, s) {
+function compose(fr, L, loops, s, holes) {
   const out = makeCanvas((fr.maxX - fr.minX) * fr.S, (fr.maxY - fr.minY) * fr.S), ctx = out.getContext('2d');
   const C = colors(s);
   ctx.save();
@@ -2229,18 +2659,18 @@ function compose(fr, L, loops, s) {
   const silk = tinted(L.silk, C.silk, tmpA), sg = silk.getContext('2d');
   sg.globalCompositeOperation = 'destination-out'; sg.drawImage(L.mask, 0, 0); sg.drawImage(L.drill, 0, 0);
   ctx.drawImage(silk, 0, 0);
-  ctx.drawImage(tinted(L.drill, C.hole, tmpA), 0, 0);
   ctx.restore();
+  finishHoles(out, fr, holes, loops, C);
   return out;
 }
 /* Board images (top/bottom) – only redone when the board or the appearance changes */
 function boardImages(D) {
   const key = S.maskColor + '|' + S.finish;
   if (D.img && D.img.key === key && D.img.raster === D.raster) return D.img;
-  const R = D.raster, res = { key, raster: R };
+  const R = D.raster, res = { key, raster: R }, holes = drillHoles(D.board);
   for (const side of ['top', 'bottom']) {
     const k = SIDE_KINDS[side];
-    res[side] = compose(R.fr, { cu: R.layers[k.cu], mask: R.layers[k.mask], silk: R.layers[k.silk], drill: R.layers.drill }, D.board.loops, S);
+    res[side] = compose(R.fr, { cu: R.layers[k.cu], mask: R.layers[k.mask], silk: R.layers[k.silk], drill: R.layers.drill }, D.board.loops, S, holes);
   }
   D.img = res;
   return res;
@@ -2258,13 +2688,13 @@ function makeImages(what) {
   const P = PANEL;
   if (what === 'single') {
     const D = curDesign(), BI = boardImages(D);
-    return { fr: D.raster.fr, top: BI.top, bottom: BI.bottom, loops: D.board.loops, D };
+    return { fr: D.raster.fr, top: BI.top, bottom: BI.bottom, loops: D.board.loops, D, holes: drillHoles(D.board) };
   }
   const minX = -MARGIN, minY = -MARGIN, maxX = P.W + MARGIN, maxY = P.H + MARGIN;
   const Sp = Math.min(Math.max(...loadedDesigns().map(D => D.raster.fr.S)), 24, MAX_TEX / (maxX - minX), MAX_TEX / (maxY - minY));
   const fr = { minX, minY, maxX, maxY, S: Sp };
   const C = colors(S);
-  const res = { fr, loops: P.loops };
+  const res = { fr, loops: P.loops, holes: panelHoles(P) };
   const toPx = (x, y) => [(x - minX) * Sp, (maxY - y) * Sp];
   for (const side of ['top', 'bottom']) {
     const c = makeCanvas((maxX - minX) * Sp, (maxY - minY) * Sp), g = c.getContext('2d');
@@ -2299,8 +2729,9 @@ function makeImages(what) {
         g.moveTo(...toPx(it.line[0], it.line[1])); g.lineTo(...toPx(it.line[2], it.line[3])); g.stroke();
       }
     }
-    for (const it of P.add.npth) dot(it.x, it.y, it.d, C.hole);
     g.restore();
+    // the frame fill behind each board shows through its holes – cut them (and the mouse bites / tooling holes) out
+    finishHoles(c, fr, res.holes, P.loops, C);
     res[side] = c;
   }
   return res;
@@ -2363,7 +2794,25 @@ function update3D(fit) {
   });
   const grp = new THREE.Group();
   const body = new THREE.ExtrudeGeometry(shapes, { depth: th, bevelEnabled: false, curveSegments: 4 });
-  grp.add(new THREE.Mesh(body, new THREE.MeshStandardMaterial({ color: 0xb59f62, roughness: 0.85 })));
+  // group 0 = the solid caps (hidden – the textured faces with their cut-out holes take their place), group 1 = edges
+  grp.add(new THREE.Mesh(body, [new THREE.MeshBasicMaterial({ visible: false }), new THREE.MeshStandardMaterial({ color: 0xb59f62, roughness: 0.85 })]));
+  // drilled holes: see-through, with bare FR4 walls (NPTH) or plated barrels (PTH)
+  const holes = V.images.holes || [];
+  if (holes.length) {
+    const M = solidMask(top, fr), W = holeWalls(holes, -0.004, th + 0.004, M.solid, M.push);
+    const C = colors(S), mats = {
+      false: new THREE.MeshStandardMaterial({ color: 0x9c8752, roughness: 0.95, side: THREE.DoubleSide }),
+      true: new THREE.MeshStandardMaterial({ color: new THREE.Color(C.cu), roughness: 0.35, metalness: 0.35, side: THREE.DoubleSide })
+    };
+    for (const k of ['false', 'true']) {
+      if (!W[k].p.length) continue;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(W[k].p, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(W[k].n, 3));
+      grp.add(new THREE.Mesh(g, mats[k]));
+    }
+    for (const m of Object.values(mats)) if (!grp.children.some(o => o.material === m)) m.dispose();
+  }
   const fw = fr.maxX - fr.minX, fh = fr.maxY - fr.minY;
   const face = (img, z, back) => {
     const tex = new THREE.CanvasTexture(img);
@@ -2371,7 +2820,7 @@ function update3D(fit) {
     tex.repeat.set(1 / fw, 1 / fh);
     tex.offset.set(-fr.minX / fw, -fr.minY / fh);
     if ('encoding' in tex) tex.encoding = THREE.sRGBEncoding;
-    const m = new THREE.Mesh(new THREE.ShapeGeometry(shapes, 4), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0.05, side: back ? THREE.BackSide : THREE.FrontSide }));
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shapes, 4), new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 0.55, metalness: 0.05, side: back ? THREE.BackSide : THREE.FrontSide }));
     m.position.z = z;
     return m;
   };

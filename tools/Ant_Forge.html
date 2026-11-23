@@ -151,6 +151,10 @@ select.pill{padding-right:26px}
 .wbtn{position:absolute;right:20px;bottom:34px;width:96px;height:96px;border-radius:50%;border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 30%,transparent);color:#fff;font-weight:700;font-size:14px;touch-action:none}
 .wbtn.on{background:var(--accent);color:var(--accent-ink)}
 .blk{padding:14px 16px;border-bottom:1px solid var(--line)}
+.credit{padding:12px 16px 16px;font-size:12px;color:var(--mute)}
+.credit b{color:var(--text);font-weight:600}
+.credit a{color:var(--accent);text-decoration:none}
+.credit a:hover{text-decoration:underline}
 .blk h2{font-size:13px;font-weight:600;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .blk h2 small{font-weight:500;color:var(--mute);font-size:12px}
 .fl{display:block;font-size:12px;color:var(--mute);margin:10px 0 5px}
@@ -345,6 +349,7 @@ body.dragging,body.dragging *{cursor:grabbing!important}
         <div class="code"><input id="loadcode" placeholder="Paste a build code" aria-label="Paste a build code"><button class="btn" id="load">Load</button></div>
         <p class="note">The code carries the body shape, snap points, every part’s position and your colors.</p>
       </section>
+      <footer class="credit"><b>Ant Forge</b> v1.0 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></footer>
     </aside>
   </main>
 </div>

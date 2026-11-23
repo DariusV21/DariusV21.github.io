@@ -108,6 +108,25 @@ function renderGallery() {
 }
 
 /* ============================================================
+   Projects (data in projects.js)
+   ============================================================ */
+function renderProjects() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid || typeof featuredProjects === 'undefined') return;
+    grid.innerHTML = featuredProjects.map(p => `
+        <a class="project" href="${p.url}" target="_blank" rel="noopener">
+            <span class="project-logo" aria-hidden="true">${p.logo || ''}</span>
+            <span class="project-body">
+                <span class="project-title">${escapeHtml(p.title)}</span>
+                <span class="project-desc">${escapeHtml(p.desc)}</span>
+                ${p.link ? `<span class="project-link">${escapeHtml(p.link)}</span>` : ''}
+            </span>
+            <span class="tool-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+    `).join('');
+}
+
+/* ============================================================
    Tools (data in tools.js)
    ============================================================ */
 function renderTools() {
@@ -147,5 +166,6 @@ if ('IntersectionObserver' in window) {
 }
 
 renderTools();
+renderProjects();
 renderGallery();
 document.getElementById('year').textContent = new Date().getFullYear();

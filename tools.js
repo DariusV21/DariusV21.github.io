@@ -35,6 +35,12 @@ const tools = [
         icon: "robot"
     },
     {
+        title: "Sumo Lab",
+        desc: "Build, program and fight mini sumo robots. Wire up sensors, write rules for the strategy, then test it in the ring.",
+        file: "Sumo_Lab.html",
+        icon: "sumo"
+    },
+    {
         title: "Gerber Panelizer",
         desc: "Load a Gerber ZIP and panelize it. Output uses JLCPCB, PCBWay or KiCad naming.",
         file: "Gerber_Panelizer.html",
@@ -45,6 +51,12 @@ const tools = [
         desc: "Tap a big button on every motor revolution to get average, rolling and last-interval RPM.",
         file: "RPM_Counter.html",
         icon: "rpm"
+    },
+    {
+        title: "KiCad to Falstad Converter",
+        desc: "Paste a copied KiCad schematic selection and get text you can import into Falstad CircuitJS to simulate it.",
+        file: "KiCad_to_Falstad_converter.html",
+        icon: "circuit"
     }
 ];
 
@@ -55,6 +67,8 @@ const TOOL_ICONS = {
     gear: '<circle cx="12" cy="12" r="8.2" stroke-width="3" stroke-dasharray="2.3 2.85" stroke-linecap="butt"/><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.2"/>',
     pulley: '<circle cx="6.5" cy="13" r="3.5"/><circle cx="17" cy="11" r="5"/><circle cx="6.5" cy="13" r="1"/><circle cx="17" cy="11" r="1.4"/><line x1="5.9" y1="9.55" x2="16.1" y2="6.1"/><line x1="7.1" y1="16.45" x2="17.9" y2="15.9"/>',
     robot: '<path d="M2.5 14h13l5.5-4.5V8H9l-6.5 3.5z"/><circle cx="7" cy="17.5" r="2.5"/><circle cx="15.5" cy="17.5" r="2.5"/><circle cx="15.5" cy="4" r="2"/><path d="M15.5 6v2"/>',
+    sumo: '<circle cx="12" cy="12" r="9.5"/><rect x="5.5" y="10" width="5" height="4" rx=".8"/><rect x="13.5" y="10" width="5" height="4" rx=".8"/><path d="M12 7v2.2M12 14.8V17"/>',
     rpm: '<path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><line x1="12" y1="14" x2="16.5" y2="8.5"/><circle cx="12" cy="14" r="1.4"/>',
-    panel: '<rect x="2.5" y="2.5" width="19" height="19" rx="1.5"/><rect x="5.5" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="13" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="5.5" y="13" width="5.5" height="5.5" rx=".6"/><rect x="13" y="13" width="5.5" height="5.5" rx=".6"/>'
+    panel: '<rect x="2.5" y="2.5" width="19" height="19" rx="1.5"/><rect x="5.5" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="13" y="5.5" width="5.5" height="5.5" rx=".6"/><rect x="5.5" y="13" width="5.5" height="5.5" rx=".6"/><rect x="13" y="13" width="5.5" height="5.5" rx=".6"/>',
+    circuit: '<path d="M2 12h3.5l1.5-4 3 8 3-8 3 8 1.5-4H22"/><circle cx="2.8" cy="12" r=".8"/><circle cx="21.2" cy="12" r=".8"/>'
 };

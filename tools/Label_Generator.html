@@ -190,6 +190,10 @@
     .btn-ghost{ background:transparent; }
     .btn-sm{ padding:6px 12px; font-size:12px; }
 
+    /* PeriPage thermal printer button: dot shows whether the local bridge is running */
+    .pp-dot{ width:7px; height:7px; border-radius:50%; background:var(--text-faint); flex-shrink:0; }
+    .pp-dot.on{ background:var(--good); }
+
     /* ============================================================
        MAIN GRID
        ============================================================ */
@@ -593,6 +597,9 @@
       gap:4px 16px;
     }
 
+    footer.bench-footer a{ color:var(--accent); text-decoration:none; }
+    footer.bench-footer a:hover{ text-decoration:underline; }
+
     .hidden{ display:none !important; }
 
     /* ============================================================
@@ -691,6 +698,11 @@
       <button class="btn" id="printBtn" title="Print">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         <span class="btn-label">Print</span>
+      </button>
+      <button class="btn" id="peripageBtn" style="display:none" title="Print on the PeriPage thermal printer (Shift-click for copies)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="10" rx="2"/><path d="M7 13v8h10v-8"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+        <span class="btn-label">PeriPage</span>
+        <span class="pp-dot" id="peripageDot"></span>
       </button>
       <a class="btn" href="../index.html#tools" title="Back to Portfolio">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -856,6 +868,7 @@
   <footer class="bench-footer">
     <span id="footerLeft">50×15 mm sheet · 4×2 grid</span>
     <span class="m-hide">No external dependencies · everything renders client-side</span>
+    <span class="credit">Label Generator v1.0 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></span>
   </footer>
 </div>
 
@@ -1625,6 +1638,85 @@
 
   // ---------------- print ----------------
   document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  // ---------------- print: PeriPage thermal printer ----------------
+  // Talks to peripage_bridge.py running on this PC. One sheet = one label.
+  const PERIPAGE_URL = "http://127.0.0.1:8765";
+  const PERIPAGE_DOTS_PER_MM = 12; // matches the 304 DPI model; the bridge downsamples for 203 DPI
+  const ppBtn = document.getElementById("peripageBtn");
+  const ppDot = document.getElementById("peripageDot");
+
+  async function peripageCall(path, body){
+    const opts = body === undefined ? {} : {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    };
+    const res = await fetch(PERIPAGE_URL + path, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) throw new Error(data.error || ("Bridge error " + res.status));
+    return data;
+  }
+
+  async function peripageCheck(){
+    // The button only appears on a PC where the bridge is running,
+    // so portfolio visitors never see it.
+    try { await peripageCall("/ping"); ppDot.classList.add("on"); ppBtn.style.display = ""; return true; }
+    catch(e){ ppDot.classList.remove("on"); return false; }
+  }
+
+  function renderSheetDataURL(pxPerMm){
+    return new Promise((resolve, reject) => {
+      const w = Math.round(settings.sheetW * pxPerMm);
+      const h = Math.round(settings.sheetH * pxPerMm);
+      const url = URL.createObjectURL(new Blob([serializeCurrentSVG()], {type:"image/svg+xml;charset=utf-8"}));
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = settings.bgColor;
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Label failed to render")); };
+      img.src = url;
+    });
+  }
+
+  ppBtn.addEventListener("click", async (e) => {
+    let copies = 1;
+    if (e.shiftKey){
+      const v = prompt("How many copies?", "1");
+      if (v === null) return;
+      copies = Math.max(1, Math.min(100, parseInt(v, 10) || 1));
+    }
+    if (!(await peripageCheck())){
+      showNote("PeriPage bridge isn't running. Start peripage_bridge.py on this PC, then try again.", "error");
+      return;
+    }
+    ppBtn.disabled = true;
+    setStatus("busy", "Printing on PeriPage…");
+    try {
+      const image = await renderSheetDataURL(PERIPAGE_DOTS_PER_MM);
+      const r = await peripageCall("/print", {
+        image, copies,
+        label_w_mm: settings.sheetW,
+        label_mm: settings.sheetH
+      });
+      showNote(`Printed ${r.printed} label${r.printed === 1 ? "" : "s"} on PeriPage`, "success");
+    } catch(err){
+      showNote("PeriPage: " + err.message, "error");
+    } finally {
+      ppBtn.disabled = false;
+      setStatus("live", "Preview ready");
+    }
+  });
+
+  peripageCheck();
+  window.addEventListener("focus", peripageCheck);
 
   // ---------------- settings JSON export/import ----------------
   document.getElementById("exportSettingsBtn").addEventListener("click", () => {

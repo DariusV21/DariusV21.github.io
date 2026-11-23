@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sumo Lab — mini sumo strategy simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1ee;--bg2:#ffffff;--bg3:#f5f7f5;--line:#d3dbd6;--text:#17201b;--mute:#5b6a62;
+  --accent:#e2701f;--accent-ink:#ffffff;--ev:#f59a52;--ev-ink:#2b1404;--act:#62c3b3;--act-ink:#062b25;
+  --you:#ff8a3d;--bad:#c93b3f;--good:#1f8a5b;--floor:#6f7c75;--stage:#7d8a83;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1210;--bg2:#141a17;--bg3:#1a221e;--line:#27312c;--text:#e3eae5;--mute:#8d9b93;
+    --accent:#ff8a3d;--accent-ink:#1f0e03;--ev:#ff8a3d;--ev-ink:#1f0e03;--act:#3fb5a3;--act-ink:#03201b;
+    --bad:#ef5f63;--good:#4cc38a;--floor:#1a221e;--stage:#0b0f0d;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1210;--bg2:#141a17;--bg3:#1a221e;--line:#27312c;--text:#e3eae5;--mute:#8d9b93;
+  --accent:#ff8a3d;--accent-ink:#1f0e03;--ev:#ff8a3d;--ev-ink:#1f0e03;--act:#3fb5a3;--act-ink:#03201b;
+  --bad:#ef5f63;--good:#4cc38a;--floor:#1a221e;--stage:#0b0f0d;color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.5 var(--sans);-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;line-height:1.2}
+h2{font-size:1.15rem;font-weight:650;margin-bottom:.35rem}
+h3{font-size:.95rem;font-weight:600;margin:1.2rem 0 .5rem}
+p{margin:.2rem 0 .7rem}
+.muted{color:var(--mute)}
+.small{font-size:.85rem}
+
+.app{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(360px,1fr);height:100%}
+.stage{position:relative;background:var(--stage);min-height:0;overflow:hidden;border-right:1px solid var(--line)}
+#three{position:absolute;inset:0;touch-action:none}
+#three canvas{display:block;width:100%!important;height:100%!important}
+.panel{display:flex;flex-direction:column;min-height:0;background:var(--bg)}
+.top{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;border-bottom:1px solid var(--line)}
+.logo{width:34px;height:34px;flex:none}
+.top h1{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+.top p{margin:0;font-size:.8rem;color:var(--mute)}
+.tabs{display:flex;gap:.25rem;padding:.5rem .75rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:3}
+.tabs button{flex:1;border:1px solid transparent;background:none;padding:.5rem .4rem;border-radius:6px;font-weight:600;color:var(--mute);display:flex;align-items:center;justify-content:center;gap:.45rem}
+.tabs button .n{font-family:var(--mono);font-size:.75rem;width:1.35rem;height:1.35rem;border-radius:50%;display:inline-grid;place-items:center;border:1px solid var(--line)}
+.tabs button[aria-selected="true"]{color:var(--text);background:var(--bg2);border-color:var(--line)}
+.tabs button[aria-selected="true"] .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.panes{flex:1;overflow:auto;min-height:0}
+.credit{padding:.55rem 1rem calc(.55rem + env(safe-area-inset-bottom));border-top:1px solid var(--line);font-size:.78rem;color:var(--mute)}
+.credit b{color:var(--text);font-weight:600}
+.credit a{color:var(--accent);text-decoration:none}
+.credit a:hover{text-decoration:underline}
+.pane{padding:1rem 1rem 2rem}
+.pane[hidden]{display:none}
+
+.btn{border:1px solid var(--line);background:var(--bg2);border-radius:6px;padding:.5rem .8rem;font-weight:600;font-size:.9rem}
+.btn:hover{border-color:var(--mute)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:.3rem .55rem;font-size:.8rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.field{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.8rem}
+.field label{font-size:.82rem;color:var(--mute);font-weight:500}
+.field input[type=text],select.inp{border:1px solid var(--line);background:var(--bg2);border-radius:6px;padding:.45rem .6rem}
+
+/* garage */
+.swatches{display:flex;gap:.4rem}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--line)}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--text)}
+.hw-list{display:grid;gap:.5rem}
+.hw{display:grid;grid-template-columns:1fr auto;gap:.2rem .8rem;text-align:left;border:1px solid var(--line);background:var(--bg2);border-radius:6px;padding:.7rem .8rem}
+.hw[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.hw b{font-weight:650}
+.hw .d{grid-column:1/-1;color:var(--mute);font-size:.86rem}
+.mods{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
+.tag.up{color:var(--good);border-color:currentColor}
+.tag.down{color:var(--bad);border-color:currentColor}
+.bars{display:grid;grid-template-columns:auto auto auto auto;gap:.1rem .5rem;font-size:.72rem;color:var(--mute);align-items:center}
+.bar{display:flex;gap:2px}
+.bar i{width:9px;height:6px;border-radius:1px;background:var(--line)}
+.bar i.on{background:var(--accent)}
+
+/* code editor */
+.help{background:var(--bg3);border:1px solid var(--line);border-radius:6px;padding:.6rem .75rem;font-size:.85rem;color:var(--mute);margin-bottom:.8rem}
+.pal-wrap{display:grid;gap:.6rem;margin-bottom:1rem}
+.pal-group{display:flex;flex-wrap:wrap;gap:.35rem}
+.pal{touch-action:none;user-select:none;-webkit-user-select:none;border-radius:6px;padding:.32rem .55rem;font-size:.8rem;font-weight:600;cursor:grab;line-height:1.35}
+.pal.ev{background:var(--ev);color:var(--ev-ink);border-radius:12px 6px 6px 6px}
+.pal.act{background:var(--act);color:var(--act-ink)}
+.pal.locked{opacity:.4;cursor:not-allowed}
+.pal .pv{font-family:var(--mono);background:rgba(255,255,255,.55);border-radius:3px;padding:0 .25rem}
+.pal .lock{font-weight:500;font-size:.7rem;margin-left:.3rem}
+.ws{display:grid;gap:.6rem;min-height:4rem;padding-bottom:1rem}
+.handler{border-radius:8px;background:color-mix(in srgb,var(--ev) 14%,var(--bg2));border:1px solid color-mix(in srgb,var(--ev) 45%,var(--line));overflow:hidden}
+.handler.sel{box-shadow:0 0 0 2px var(--ev)}
+.handler.inactive{opacity:.55}
+.h-head{display:flex;align-items:center;gap:.4rem;background:var(--ev);color:var(--ev-ink);padding:.4rem .4rem .4rem .3rem;font-weight:600;font-size:.86rem;user-select:none;-webkit-user-select:none}
+.prio{font-family:var(--mono);font-size:.72rem;background:rgba(0,0,0,.14);border-radius:4px;padding:0 .3rem}
+.lbl{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:.25rem}
+.grip{touch-action:none;cursor:grab;padding:.15rem .25rem;opacity:.75;font-size:1rem;line-height:1}
+.x{border:none;background:rgba(0,0,0,.1);border-radius:4px;width:1.6rem;height:1.6rem;line-height:1;font-size:1rem;color:inherit}
+.h-body{padding:.45rem .45rem .5rem 1.1rem;display:grid;gap:.3rem;min-height:2.6rem;border-left:8px solid var(--ev)}
+.h-empty{font-size:.8rem;color:var(--mute);padding:.35rem 0}
+.warn{font-size:.78rem;color:var(--bad);padding:.3rem .6rem 0 1.4rem}
+.blk.act{display:flex;align-items:center;gap:.35rem;background:var(--act);color:var(--act-ink);border-radius:6px;padding:.3rem .35rem .3rem .2rem;font-size:.84rem;font-weight:600;position:relative;user-select:none;-webkit-user-select:none}
+.blk.act::before{content:"";position:absolute;left:14px;top:-4px;width:14px;height:5px;background:inherit;border-radius:2px 2px 0 0}
+.lbl input,.lbl select{background:rgba(255,255,255,.85);color:#13201a;border:none;border-radius:4px;font:600 .8rem var(--mono);padding:.12rem .2rem;width:4.1em}
+.lbl select{width:auto}
+.ph{height:6px;border-radius:3px;background:var(--accent);margin:.1rem 0}
+.ghost{position:fixed;z-index:100;pointer-events:none;opacity:.9;transform:rotate(-2deg);box-shadow:0 8px 20px rgba(0,0,0,.3);max-width:340px}
+.dragging{opacity:.3}
+.trash{border:1px dashed var(--line);border-radius:6px;padding:.6rem;text-align:center;color:var(--mute);font-size:.82rem;margin-top:.4rem}
+.trash.hot{border-color:var(--bad);color:var(--bad)}
+.presets{display:flex;flex-wrap:wrap;gap:.35rem}
+.chip{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--line);background:var(--bg2);border-radius:999px;padding:.2rem .3rem .2rem .7rem;font-size:.82rem}
+.chip button{border:none;background:none;padding:.1rem .3rem}
+.tag{font-family:var(--mono);font-size:.7rem;color:var(--mute);border:1px solid var(--line);border-radius:4px;padding:0 .3rem}
+
+/* fight */
+.opp-list{display:grid;gap:.5rem}
+.opp{display:grid;grid-template-columns:auto 1fr auto;gap:.15rem .7rem;align-items:center;text-align:left;border:1px solid var(--line);background:var(--bg2);border-radius:6px;padding:.65rem .75rem}
+.opp .dot{width:14px;height:14px;border-radius:3px;grid-row:span 2}
+.opp b{font-weight:650}
+.opp .d{grid-column:2/-1;color:var(--mute);font-size:.85rem}
+.opp .rec{font-family:var(--mono);font-size:.72rem;color:var(--mute)}
+.opp .rec.won{color:var(--good)}
+.exp{margin:0;padding-left:1.1rem;color:var(--mute);font-size:.88rem}
+.exp li{margin:.25rem 0}
+.strat{display:grid;gap:.35rem;margin:.6rem 0 1rem}
+.strat label{display:flex;gap:.55rem;align-items:center;border:1px solid var(--line);background:var(--bg2);border-radius:6px;padding:.5rem .65rem;font-size:.9rem}
+.strat input{accent-color:var(--accent)}
+.revcard{border:1px solid var(--line);border-left:4px solid var(--oc,#4aa3ff);background:var(--bg2);border-radius:6px;padding:.6rem .75rem;margin:.6rem 0}
+.log{font-family:var(--mono);font-size:.76rem;border:1px solid var(--line);background:var(--bg2);border-radius:6px;max-height:16rem;overflow:auto;padding:.3rem 0;margin-top:.6rem}
+.log div{display:grid;grid-template-columns:3.6em 1fr;gap:.5rem;padding:.12rem .6rem;cursor:default}
+.log div.click{cursor:pointer}
+.log div.past{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.log .w0{color:var(--accent)}
+.log .w1{color:#4aa3ff}
+.log .sys{color:var(--mute)}
+.stats{display:grid;grid-template-columns:1fr auto auto;gap:.15rem .9rem;font-size:.85rem;margin:.6rem 0}
+.stats span:nth-child(3n+2),.stats span:nth-child(3n){font-family:var(--mono);text-align:right}
+.stats .hd{color:var(--mute);font-size:.75rem}
+.rules{position:absolute;left:.6rem;top:2.5rem;display:grid;gap:.25rem;justify-items:start;font-size:.72rem;max-width:72%}
+.rules i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:.35rem}
+.lab{display:grid;gap:.3rem;margin-top:.5rem;font-size:.84rem}
+.lab div{display:grid;grid-template-columns:7rem 1fr 7rem;gap:.5rem;align-items:center}
+.lab .meter{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.lab .meter b{display:block;height:100%;background:var(--accent)}
+.lab div span:last-child{font-family:var(--mono);font-size:.74rem;color:var(--mute);text-align:right}
+pre.prog{font-family:var(--mono);font-size:.74rem;background:var(--bg3);border:1px solid var(--line);border-radius:6px;padding:.6rem;white-space:pre-wrap;margin:.4rem 0}
+
+/* HUD */
+.hud{position:absolute;inset:0;pointer-events:none}
+.hud-top{position:absolute;top:.6rem;left:.6rem;right:.6rem;display:flex;justify-content:space-between;gap:.5rem;font-family:var(--mono);font-size:.8rem}
+.pill{background:color-mix(in srgb,var(--bg2) 85%,transparent);border:1px solid var(--line);border-radius:6px;padding:.2rem .5rem;backdrop-filter:blur(4px)}
+.countdown{position:absolute;inset:0;display:grid;place-items:center;font:700 clamp(4rem,14vw,9rem)/1 var(--mono);color:var(--accent);text-shadow:0 4px 30px rgba(0,0,0,.4)}
+.banner{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:.6rem 1rem;font-weight:700;font-size:1.1rem;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.bar-bottom{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;background:color-mix(in srgb,var(--bg2) 90%,transparent);border:1px solid var(--line);border-radius:8px;padding:.4rem .5rem;backdrop-filter:blur(6px)}
+.bar-bottom[hidden]{display:none}
+.bar-bottom input[type=range]{flex:1;min-width:50px;accent-color:var(--accent)}
+.bar-bottom .t{font-family:var(--mono);font-size:.74rem;min-width:3.6em;text-align:right}
+.bar-bottom{gap:.3rem!important}
+.hint{position:absolute;left:50%;top:3rem;transform:translateX(-50%);font-size:.82rem;color:var(--mute);background:color-mix(in srgb,var(--bg2) 85%,transparent);border-radius:6px;padding:.2rem .6rem;white-space:nowrap}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:50;padding:1rem}
+.modal[hidden]{display:none}
+.modal .box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;width:min(760px,100%);max-height:90vh;display:flex;flex-direction:column}
+.modal header{display:flex;justify-content:space-between;align-items:center;padding:.7rem .9rem;border-bottom:1px solid var(--line)}
+.modal textarea{flex:1;min-height:50vh;border:none;background:var(--bg3);font:.76rem/1.5 var(--mono);padding:.8rem;resize:none}
+.toast{position:fixed;left:50%;bottom:calc(1rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:.45rem .9rem;border-radius:6px;font-size:.85rem;z-index:60;opacity:0;transition:opacity .2s}
+.toast.on{opacity:1}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{display:block}
+  .stage{position:sticky;top:env(safe-area-inset-top,0px);height:40vh;z-index:4;border-right:none;border-bottom:1px solid var(--line)}
+  body[data-tab="code"] .stage{height:24vh}
+  .panes{overflow:visible}
+  .tabs{top:calc(40vh + env(safe-area-inset-top,0px))}
+  body[data-tab="code"] .tabs{top:calc(24vh + env(safe-area-inset-top,0px))}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body data-tab="garage">
+<main class="app">
+  <section class="stage" id="stage" aria-label="Sumo ring">
+    <div id="three"></div>
+    <div class="hud">
+      <div class="hud-top" id="hudTop"></div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="rules" id="ruleHud" hidden></div>
+      <div class="countdown" id="countdown" hidden></div>
+      <div class="banner" id="banner" hidden></div>
+    </div>
+    <div class="bar-bottom" id="placeBar" hidden>
+      <button class="btn small" id="rotL" aria-label="Turn left 15 degrees">⟲ 15°</button>
+      <button class="btn small" id="rotR" aria-label="Turn right 15 degrees">⟳ 15°</button>
+      <button class="btn small" id="faceC">Face center</button>
+      <span style="flex:1"></span>
+      <button class="btn primary small" id="lockBtn">Lock position</button>
+    </div>
+    <div class="bar-bottom" id="replayBar" hidden>
+      <button class="btn small" id="rpPlay" aria-label="Play or pause">▶</button>
+      <input type="range" id="rpSlider" min="0" max="1000" value="0" aria-label="Replay position">
+      <span class="t" id="rpTime">0.00 s</span>
+      <select class="inp btn small" id="rpSpeed" aria-label="Replay speed">
+        <option value="0.1">0.1×</option><option value="0.25" selected>0.25×</option><option value="0.5">0.5×</option><option value="1">1×</option>
+      </select>
+      <button class="btn small" id="rpRays" aria-pressed="true" title="Sensor rays">Rays</button>
+      <button class="btn small" id="rpTrails" aria-pressed="true">Trails</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="top">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#111"/><circle cx="20" cy="20" r="18" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="15" y="9" width="10" height="8" rx="1" fill="#ff8a3d"/><rect x="15" y="23" width="10" height="8" rx="1" fill="#4aa3ff"/></svg>
+      <div><h1>Sumo Lab</h1><p>Build, program and fight mini sumo robots</p></div>
+    </header>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="garage" aria-selected="true"><span class="n">1</span>Build</button>
+      <button role="tab" data-tab="code" aria-selected="false"><span class="n">2</span>Program</button>
+      <button role="tab" data-tab="fight" aria-selected="false"><span class="n">3</span>Fight</button>
+    </nav>
+    <div class="panes">
+      <div class="pane" id="pane-garage" role="tabpanel">
+        <h2>Your robot</h2>
+        <p class="muted">Every robot shares the same 10 × 10 cm, 500 g wedge body. You pick one upgrade, and every upgrade costs the same: +2 in one area and −1 in another, because the weight limit never moves. Changing it loads a matching starter program.</p>
+        <div class="field"><label for="botName">Name</label><input type="text" id="botName" maxlength="18"></div>
+        <div class="field"><label>Top plate color</label><div class="swatches" id="swatches"></div></div>
+        <h3>Upgrade</h3>
+        <div class="hw-list" id="hwList"></div>
+      </div>
+
+      <div class="pane" id="pane-code" role="tabpanel" hidden>
+        <div class="row" style="margin-bottom:.7rem">
+          <input type="text" id="progName" class="inp" aria-label="Program name" style="flex:1;min-width:140px;border:1px solid var(--line);background:var(--bg2);border-radius:6px;padding:.45rem .6rem">
+          <button class="btn small" id="savePreset">Save preset</button>
+          <button class="btn small" id="resetProg">Reset to starter</button>
+          <button class="btn small" id="exportBtn">Export Arduino</button>
+        </div>
+        <div class="help">Rules run top to bottom. At every moment the highest rule whose trigger is true takes over and can interrupt any rule below it. A rule never interrupts itself or a rule above it. Time 0 s means hold that speed until another rule takes over.</div>
+        <h3 style="margin-top:0">Triggers</h3>
+        <div class="pal-group" id="palEv"></div>
+        <h3>Actions</h3>
+        <div class="pal-group" id="palAct"></div>
+        <p class="muted small" style="margin-top:.5rem">Drag blocks into the program, or tap a block to add it to the selected rule. Drag by ⠿ to reorder. Drop on the palette to delete.</p>
+        <h3>Program</h3>
+        <div class="ws" id="ws"></div>
+        <div class="trash" id="trash">Drop here to delete</div>
+        <h3>Presets</h3>
+        <div class="presets" id="presetList"></div>
+        <h3>Study an opponent</h3>
+        <div class="row">
+          <select class="inp" id="oppCopy" aria-label="Opponent program to copy"></select>
+          <button class="btn small" id="oppCopyBtn">Load its build and program</button>
+        </div>
+        <h3>Test lab</h3>
+        <p class="muted small">Runs 30 quick rounds against every opponent from random start spots, so you can see whether a change really helps or you just got lucky once.</p>
+        <button class="btn small" id="labBtn">Test current program against everyone</button>
+        <div class="lab" id="labOut"></div>
+      </div>
+
+      <div class="pane" id="pane-fight" role="tabpanel" hidden></div>
+    </div>
+    <footer class="credit"><b>Sumo Lab</b> v1.0 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></footer>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <header><b id="mTitle">Arduino sketch (pseudocode)</b><div class="row"><button class="btn small" id="mCopy">Copy</button><button class="btn small" id="mClose">Close</button></div></header>
+    <textarea id="mText" readonly spellcheck="false"></textarea>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/*SIM*/
+const D2R=Math.PI/180, PI=Math.PI;
+const R_RING=38.5, R_LINE=36, ROB_R=5.5, DT=1/120, TMAX=30, BASE_V=90, BASE_A=520, TRACK=9;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+// Every upgrade has the same budget: +2 in one area, −1 in another (the 500 g weight limit).
+const BASE_STATS={Speed:3,Push:3,Grip:3,Sensing:3,Wedge:3,Stealth:3};
+const HW={
+  standard:{name:'Stock build',short:'Stock',feat:null,mod:{},desc:'No upgrade. Two on/off IR sensors up front (55 cm), two edge line sensors, standard motors, tires and blade. The reference the upgrades are measured against.'},
+  tof:{name:'Distance sensors (ToF)',short:'ToF',feat:'tof',mod:{Sensing:2,Speed:-1},desc:'Front sensors report real distance up to 80 cm and unlock the “closer than” trigger. The extra boards eat into the 500 g budget, so a bit less top speed.'},
+  side:{name:'Side sensors',short:'Side eyes',feat:'side',mod:{Sensing:2,Speed:-1},desc:'Adds a left and a right IR sensor and unlocks side triggers. The extra weight costs a bit of top speed.'},
+  flags:{name:'Side flags',short:'Flags',feat:'flags',mod:{Stealth:2,Grip:-1},desc:'Two decoy flags fold out at the start, and opponent sensors can lock onto a flag. The mechanism sits high and takes weight off the wheels, so a bit less grip.'},
+  motors:{name:'Big motors',short:'Motors',feat:'motors',mod:{Speed:2,Grip:-1},desc:'Bigger motors for much more top speed. They are heavy and sit behind the axle, so a bit less grip.'},
+  grip:{name:'Silicone tires',short:'Tires',feat:'grip',mod:{Grip:2,Wedge:-1},desc:'Soft silicone tires: hard to shove and they hold when you push. Thick soft tires lift the chassis slightly, so the blade sits a little higher.'},
+  blade:{name:'Steel blade',short:'Blade',feat:'blade',mod:{Wedge:2,Speed:-1},desc:'A thinner, lower steel blade that wins head-on clashes by getting underneath. Steel is heavy, so a bit less top speed. Your sides are as weak as ever.'}
+};
+function statsOf(id){const s=Object.assign({},BASE_STATS);for(const k in HW[id].mod)s[k]+=HW[id].mod[k];return s}
+function hwOf(id){const h=HW[id],s=statsOf(id);return Object.assign({},h,{stats:s,speed:1+0.13*(s.Speed-3),accel:1+0.08*(s.Speed-3),force:0.9*(1+0.06*(s.Push-3)),grip:1+0.2*(s.Grip-3),turn:1,range:h.feat==='tof'?80:55,blade:s.Wedge>3,wedge:s.Wedge})}
+
+const EVENTS={
+  start:{tpl:'When round starts'},
+  line_any:{tpl:'When edge line seen'},
+  line_left:{tpl:'When edge line seen on left'},
+  line_right:{tpl:'When edge line seen on right'},
+  opp_front:{tpl:'When opponent dead ahead'},
+  opp_left:{tpl:'When opponent ahead-left'},
+  opp_right:{tpl:'When opponent ahead-right'},
+  opp_any:{tpl:'When opponent seen ahead'},
+  side_left:{tpl:'When opponent at left side',need:'side'},
+  side_right:{tpl:'When opponent at right side',need:'side'},
+  opp_close:{tpl:'When opponent closer than {d} cm',need:'tof',params:{d:{min:5,max:80,def:25,step:1}}},
+  stalled:{tpl:'When wheels stall (pushing hard)'},
+  timer:{tpl:'When match time ≥ {t} s',params:{t:{min:0,max:30,def:2,step:0.1}}},
+  always:{tpl:'Otherwise (always)'}
+};
+const ACTIONS={
+  forward:{tpl:'Forward {s}% for {t} s',params:{s:{min:0,max:100,def:100,step:5},t:{min:0,max:10,def:0,step:0.05}}},
+  backward:{tpl:'Reverse {s}% for {t} s',params:{s:{min:0,max:100,def:100,step:5},t:{min:0,max:10,def:0.25,step:0.05}}},
+  spin:{tpl:'Spin {dir} {s}% for {t} s',params:{dir:{opts:['left','right'],def:'right'},s:{min:0,max:100,def:50,step:5},t:{min:0,max:10,def:0,step:0.05}}},
+  turn:{tpl:'Turn {dir} {deg}°',params:{dir:{opts:['left','right'],def:'right'},deg:{min:5,max:720,def:90,step:5}}},
+  arc:{tpl:'Arc {dir} {s}%, inner wheel {k}% for {t} s',params:{dir:{opts:['left','right'],def:'right'},s:{min:0,max:100,def:70,step:5},k:{min:-100,max:100,def:40,step:5},t:{min:0,max:10,def:0,step:0.05}}},
+  motors:{tpl:'Set motors L {l}% R {r}%',params:{l:{min:-100,max:100,def:60,step:5},r:{min:-100,max:100,def:60,step:5}}},
+  wait:{tpl:'Wait {t} s (keep motors)',params:{t:{min:0,max:10,def:0.5,step:0.05}}},
+  stop:{tpl:'Stop motors'}
+};
+function defaults(def){const p={};if(def.params)for(const k in def.params)p[k]=def.params[k].def;return p}
+function H(ev,p,acts){return{id:uid(),ev,p:Object.assign(defaults(EVENTS[ev]),p||{}),actions:(acts||[]).map(([op,pp])=>({id:uid(),op,p:Object.assign(defaults(ACTIONS[op]),pp||{})}))}}
+
+const LINE_RULE=()=>H('line_any',{},[['backward',{s:100,t:0.25}],['turn',{dir:'right',deg:150}]]);
+const TRACK_RULES=(l=20,r=100)=>[H('opp_front',{},[['forward',{s:100,t:0}]]),H('opp_left',{},[['motors',{l:l,r:r}]]),H('opp_right',{},[['motors',{l:r,r:l}]])];
+function starterProgram(hw){
+  const name={standard:'Stock starter',tof:'ToF starter',side:'Side-eye starter',flags:'Flag flanker',motors:'Big motor rush',grip:'Tire grinder',blade:'Blade charge'}[hw]+'';
+  let h;
+  switch(hw){
+    case 'tof': h=[LINE_RULE(),H('start',{},[['forward',{s:40,t:0.2}]]),H('opp_left',{},[['motors',{l:25,r:100}]]),H('opp_right',{},[['motors',{l:100,r:25}]]),H('opp_close',{d:25},[['forward',{s:100,t:0}]]),H('opp_front',{},[['forward',{s:75,t:0}]]),H('always',{},[['spin',{dir:'right',s:40,t:0}]])];break;
+    case 'side': h=[LINE_RULE(),H('start',{},[['forward',{s:60,t:0.25}]]),...TRACK_RULES(),H('side_left',{},[['turn',{dir:'left',deg:80}]]),H('side_right',{},[['turn',{dir:'right',deg:80}]]),H('always',{},[['spin',{dir:'right',s:45,t:0}]])];break;
+    case 'flags': h=[LINE_RULE(),...TRACK_RULES(),H('start',{},[['turn',{dir:'right',deg:60}],['forward',{s:70,t:0.3}],['turn',{dir:'left',deg:100}]]),H('always',{},[['spin',{dir:'left',s:45,t:0}]])];break;
+    case 'motors': h=[LINE_RULE(),H('start',{},[['forward',{s:100,t:0.35}]]),...TRACK_RULES(30,100),H('always',{},[['spin',{dir:'right',s:40,t:0}]])];break;
+    case 'grip': h=[LINE_RULE(),H('start',{},[['forward',{s:60,t:0.25}]]),...TRACK_RULES(),H('stalled',{},[['backward',{s:40,t:0.08}],['forward',{s:100,t:0.4}]]),H('always',{},[['spin',{dir:'right',s:40,t:0}]])];break;
+    case 'blade': h=[LINE_RULE(),H('start',{},[['forward',{s:80,t:0.3}]]),...TRACK_RULES(),H('always',{},[['spin',{dir:'right',s:45,t:0}]])];break;
+    default: h=[LINE_RULE(),H('start',{},[['forward',{s:60,t:0.25}]]),...TRACK_RULES(),H('always',{},[['spin',{dir:'right',s:45,t:0}]])];
+  }
+  return {name,handlers:h};
+}
+
+const OPPS=[
+  {id:'dummy',level:'Practice',name:'Dummy block',hw:'standard',color:'#9aa19d',place:{x:0,y:14,th:-90},blurb:'Doesn’t move at all. Use it to check that your first program pushes something out.',prog:()=>[H('always',{},[['stop']])]},
+  {id:'sniper',level:'Easy',name:'Sniper',hw:'tof',color:'#e5484d',place:{x:0,y:24,th:-90},blurb:'Turns to face you and only strikes once you are within 22 cm. Does waiting pay off, or does the first mover win?',prog:()=>[LINE_RULE(),H('opp_close',{d:22},[['forward',{s:100,t:0}]]),H('opp_left',{},[['motors',{l:0,r:70}]]),H('opp_right',{},[['motors',{l:70,r:0}]]),H('opp_front',{},[['stop']]),H('timer',{t:5},[['forward',{s:55,t:0}]]),H('always',{},[['spin',{dir:'right',s:35,t:0}]])]},
+  {id:'ghost',level:'Medium',name:'Ghost',hw:'flags',color:'#e8ecea',place:{x:14,y:14,th:180},blurb:'Flags out, then circles to your flank. Do your sensors chase the flags instead of the body?',prog:()=>[LINE_RULE(),...TRACK_RULES(),H('start',{},[['arc',{dir:'left',s:80,k:45,t:0.9}]]),H('always',{},[['arc',{dir:'left',s:55,k:35,t:0}]])]},
+  {id:'bulldozer',level:'Medium',name:'Bulldozer',hw:'motors',color:'#e5b93d',place:{x:0,y:16,th:-90},blurb:'Big motors, charges straight down the middle. Is meeting it head-on wise, or should you step aside?',prog:()=>[LINE_RULE(),...TRACK_RULES(35,100),H('start',{},[['forward',{s:100,t:0.5}]]),H('always',{},[['spin',{dir:'left',s:50,t:0}]])]},
+  {id:'rookie',level:'Medium',name:'Rookie',hw:'standard',color:'#4aa3ff',place:{x:0,y:20,th:-90},blurb:'Runs the stock starter program. Beat it and you have beaten the basics.',prog:()=>starterProgram('standard').handlers},
+  {id:'razor',level:'Hard',name:'Razor',hw:'blade',color:'#c9d1d6',place:{x:0,y:18,th:-90},blurb:'Steel blade. It wins most head-on clashes, so try to reach its side instead.',prog:()=>[LINE_RULE(),H('start',{},[['forward',{s:100,t:0.3}]]),...TRACK_RULES(),H('always',{},[['spin',{dir:'right',s:50,t:0}]])]},
+  {id:'turtle',level:'Hard',name:'Turtle',hw:'grip',color:'#4cc38a',place:{x:0,y:12,th:-90},blurb:'Silicone tires, very hard to push. It waits for you, then counter-pushes.',prog:()=>[LINE_RULE(),...TRACK_RULES(40,100),H('stalled',{},[['backward',{s:50,t:0.12}],['forward',{s:100,t:0.4}]]),H('start',{},[['wait',{t:1.2}]]),H('always',{},[['spin',{dir:'right',s:25,t:0}]])]},
+  {id:'whirl',level:'Hard',name:'Whirl',hw:'side',color:'#9b7bff',place:{x:-12,y:16,th:-60},blurb:'Side sensors and a fast search spin. Flanking it is much harder.',prog:()=>[LINE_RULE(),...TRACK_RULES(),H('side_left',{},[['turn',{dir:'left',deg:85}]]),H('side_right',{},[['turn',{dir:'right',deg:85}]]),H('always',{},[['spin',{dir:'right',s:65,t:0}]])]}
+];
+
+// opponents don’t always start facing you: each has a few start styles
+OPPS.forEach(o=>{if(o.id==='dummy')return;const p=o.place;o.places=[p,p,{x:-14,y:p.y,th:-50},{x:14,y:p.y,th:-130},{x:p.x,y:18,th:p.x>0?180:0}]});
+function describe(def,p){return def.tpl.replace(/\{(\w+)\}/g,(m,k)=>p[k])}
+
+function makeRobot(o){
+  return {name:o.name,color:o.color,hwId:o.hw,hw:hwOf(o.hw),prog:o.prog,x:o.x,y:o.y,th:o.th,vl:0,vr:0,cmdL:0,cmdR:0,run:null,ranStart:false,lastHi:-1,rotAcc:0,stallT:0,lifted:false,out:false,flag:0,s:{fl:-1,fr:-1,sl:-1,sr:-1,ll:false,lr:false},stats:{lifts:0,lines:0,rules:0},mvL:1+(Math.random()-0.5)*0.06,mvR:1+(Math.random()-0.5)*0.06,dx:0,dy:0,v:0,kx:0,ky:0};
+}
+function rayCircle(ox,oy,dx,dy,cx,cy,r){const fx=ox-cx,fy=oy-cy,b=fx*dx+fy*dy,c=fx*fx+fy*fy-r*r,disc=b*b-c;if(disc<0)return Infinity;const s=Math.sqrt(disc);let t=-b-s;if(t<0)t=-b+s;return t>=0?t:Infinity}
+function raySeg(ox,oy,dx,dy,ax,ay,bx,by){const ex=bx-ax,ey=by-ay,den=dx*ey-dy*ex;if(Math.abs(den)<1e-9)return Infinity;const t=((ax-ox)*ey-(ay-oy)*ex)/den,u=((ax-ox)*dy-(ay-oy)*dx)/den;return(t>=0&&u>=0&&u<=1)?t:Infinity}
+function toWorld(r,lx,ly){const c=Math.cos(r.th),s=Math.sin(r.th);return[r.x+lx*c-ly*s,r.y+lx*s+ly*c]}
+function flagSegs(o){
+  if(o.hw.feat!=='flags'||o.flag<0.6)return[];
+  const e=4+10*o.flag;
+  return [[toWorld(o,-1,5),toWorld(o,-4,e)],[toWorld(o,-1,-5),toWorld(o,-4,-e)]];
+}
+function cast(r,o,lx,ly,ang,range){
+  const [ox,oy]=toWorld(r,lx,ly),dx=Math.cos(r.th+ang),dy=Math.sin(r.th+ang);
+  let t=o.out?Infinity:rayCircle(ox,oy,dx,dy,o.x,o.y,ROB_R);
+  for(const [a,b] of flagSegs(o))t=Math.min(t,raySeg(ox,oy,dx,dy,a[0],a[1],b[0],b[1]));
+  if(t>range||Math.random()<0.02)return -1;  // small dropout, like real IR
+  return Math.max(0,t+(Math.random()-0.5)*1.5);
+}
+function sense(r,o){
+  const s=r.s,rng=r.hw.range;
+  s.fl=cast(r,o,5,2.5,0.09,rng);s.fr=cast(r,o,5,-2.5,-0.09,rng);
+  if(r.hw.feat==='side'){s.sl=cast(r,o,0,5,PI/2,50);s.sr=cast(r,o,0,-5,-PI/2,50)}else{s.sl=-1;s.sr=-1}
+  const L=toWorld(r,4.5,4.5),R=toWorld(r,4.5,-4.5);
+  s.ll=Math.hypot(L[0],L[1])>R_LINE;s.lr=Math.hypot(R[0],R[1])>R_LINE;
+}
+function evOK(r,ev){const n=EVENTS[ev].need;return !n||r.hw.feat===n}
+function cond(r,h,t){
+  const s=r.s;
+  switch(h.ev){
+    case 'start':return !r.ranStart;
+    case 'line_any':return s.ll||s.lr;
+    case 'line_left':return s.ll;
+    case 'line_right':return s.lr;
+    case 'opp_front':return s.fl>=0&&s.fr>=0;
+    case 'opp_left':return s.fl>=0&&s.fr<0;
+    case 'opp_right':return s.fr>=0&&s.fl<0;
+    case 'opp_any':return s.fl>=0||s.fr>=0;
+    case 'side_left':return s.sl>=0;
+    case 'side_right':return s.sr>=0;
+    case 'opp_close':{const d=Math.min(s.fl<0?1e9:s.fl,s.fr<0?1e9:s.fr);return d<h.p.d}
+    case 'stalled':return r.stallT>0.25;
+    case 'timer':return t>=h.p.t;
+    case 'always':return true;
+  }
+  return false;
+}
+function setM(r,l,rr){r.cmdL=clamp(l,-1,1);r.cmdR=clamp(rr,-1,1)}
+function actStart(r,a){
+  const p=a.p,s=(p.s||0)/100;
+  switch(a.op){
+    case 'forward':setM(r,s,s);break;
+    case 'backward':setM(r,-s,-s);break;
+    case 'spin':p.dir==='left'?setM(r,-s,s):setM(r,s,-s);break;
+    case 'turn':p.dir==='left'?setM(r,-0.7,0.7):setM(r,0.7,-0.7);break;
+    case 'arc':{const i=s*p.k/100;p.dir==='left'?setM(r,i,s):setM(r,s,i);break}
+    case 'motors':setM(r,p.l/100,p.r/100);break;
+    case 'stop':setM(r,0,0);break;
+  }
+}
+function actDone(r,a,as,t){
+  const p=a.p,el=t-as.t0;
+  switch(a.op){
+    case 'forward':case 'backward':case 'spin':case 'arc':
+      if(p.t<=0)return true;
+      if(el>=p.t){setM(r,0,0);return true}return false;
+    case 'turn':if(Math.abs(r.rotAcc-as.rot0)>=p.deg*D2R||el>3){setM(r,0,0);return true}return false;
+    case 'wait':return el>=p.t;
+  }
+  return true;
+}
+function startH(r,i,S,who){
+  const h=r.prog[i];
+  r.run={hi:i,ai:0,as:null};
+  if(h.ev==='start')r.ranStart=true;
+  if(h.ev.startsWith('line'))r.stats.lines++;
+  if(i!==r.lastHi){r.stats.rules++;S.log.push({t:S.t,who,txt:'Rule '+(i+1)+': '+describe(EVENTS[h.ev],h.p).replace(/^When /,'')})}
+  r.lastHi=i;
+}
+function think(r,S,who){
+  const hs=r.prog,t=S.t;let top=-1;
+  for(let i=0;i<hs.length;i++){if(evOK(r,hs[i].ev)&&cond(r,hs[i],t)){top=i;break}}
+  if(top>=0&&(r.run===null||top<r.run.hi))startH(r,top,S,who);
+  let g=0;
+  while(r.run&&g++<30){
+    const h=hs[r.run.hi];
+    if(r.run.ai>=h.actions.length){r.run=null;break}
+    const a=h.actions[r.run.ai];
+    if(!r.run.as){r.run.as={t0:t,rot0:r.rotAcc};actStart(r,a)}
+    if(actDone(r,a,r.run.as,t)){r.run.ai++;r.run.as=null}else break;
+  }
+}
+function move(r){
+  const hw=r.hw,maxV=BASE_V*hw.speed,acc=BASE_A*hw.accel*DT,lift=r.lifted?0.3:1;
+  r.vl+=clamp(r.cmdL*maxV*r.mvL-r.vl,-acc,acc);r.vr+=clamp(r.cmdR*maxV*r.mvR-r.vr,-acc,acc);
+  const v=(r.vl+r.vr)/2*lift,w=(r.vr-r.vl)/TRACK*hw.turn*lift;
+  r.th+=w*DT;r.rotAcc+=w*DT;r.dx=v*Math.cos(r.th)*DT;r.dy=v*Math.sin(r.th)*DT;r.x+=r.dx+r.kx*DT;r.y+=r.dy+r.ky*DT;r.kx*=0.95;r.ky*=0.95;r.v=v;
+}
+function contact(A,B,S){
+  const dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy);
+  const wasA=A.lifted,wasB=B.lifted;A.lifted=B.lifted=false;
+  if(d>=2*ROB_R+0.15||d<1e-6){S.touch=false;return}
+  const nx=dx/d,ny=dy/d,cf=Math.cos(45*D2R);
+  if(!S.touch){S.touch=true;S.contacts++;if(S.contacts===1)S.log.push({t:S.t,who:-1,txt:'First contact'});
+    const vA=(A.dx*nx+A.dy*ny)/DT,vB=-(B.dx*nx+B.dy*ny)/DT,k=0.35*(vA-vB);
+    if(k>0){B.kx+=nx*k/B.hw.grip;B.ky+=ny*k/B.hw.grip}else{A.kx+=nx*k/A.hw.grip;A.ky+=ny*k/A.hw.grip}}
+  const dA=Math.cos(A.th)*nx+Math.sin(A.th)*ny,dB=-(Math.cos(B.th)*nx+Math.sin(B.th)*ny);
+  const fA=dA>cf,fB=dB>cf;let liftA=false,liftB=false;
+  // the squarer blade gets under the other one; a better wedge needs less of an angle advantage
+  const thA=0.35-0.09*(A.hw.wedge-B.hw.wedge),thB=0.35-0.09*(B.hw.wedge-A.hw.wedge);
+  if(fA&&dA-dB>thA)liftB=true;else if(fB&&dB-dA>thB)liftA=true;
+  const cA=(A.cmdL+A.cmdR)/2,cB=(B.cmdL+B.cmdR)/2;
+  // once a blade is under the other robot it stays locked there while it keeps pushing
+  if(wasB&&fA&&!(dB-dA>thB))liftB=true;if(wasA&&fB&&!(dA-dB>thA))liftA=true;
+  liftB=liftB&&cA>0.15;liftA=liftA&&cB>0.15;
+  const gA=A.hw.grip*(liftA?0.3:1),gB=B.hw.grip*(liftB?0.3:1);
+  const FA=Math.min(Math.max(0,cA*A.hw.force*dA),1.2*gA),FB=Math.min(Math.max(0,cB*B.hw.force*dB),1.2*gB);
+  // undo each robot's own motion along the contact normal, then move the pair by the force balance
+  const uA=A.dx*nx+A.dy*ny,uB=B.dx*nx+B.dy*ny;
+  A.x-=nx*uA;A.y-=ny*uA;B.x-=nx*uB;B.y-=ny*uB;
+  const net=FA-FB,win=net>=0?A:B,lose=net>=0?B:A,Fl=net>=0?FB:FA,gl=net>=0?gB:gA;
+  const fric=0.6*gl*(Fl>0.1?0.1:0.5);
+  let c=0;
+  if(Math.abs(net)>fric){const wsp=Math.max(0,net>=0?uA:-uB);c=Math.min(Math.max(wsp,0.15*DT*BASE_V),(Math.abs(net)-fric)*90*DT)*(net>=0?1:-1)}
+  A.x+=nx*c;A.y+=ny*c;B.x+=nx*c;B.y+=ny*c;
+  // blades lock on contact: nothing slides along the blade face.
+  // A lifted robot has no traction and is carried with the lifter; otherwise the pair shares one sideways motion.
+  const tAx=A.dx-nx*uA,tAy=A.dy-ny*uA,tBx=B.dx-nx*uB,tBy=B.dy-ny*uB;
+  if(liftB){B.x+=tAx-tBx;B.y+=tAy-tBy}
+  else if(liftA){A.x+=tBx-tAx;A.y+=tBy-tAy}
+  else if(fA||fB){const wA=gA*(0.3+Math.abs(cA)),wB=gB*(0.3+Math.abs(cB)),mx=(wA*tAx+wB*tBx)/(wA+wB),my=(wA*tAy+wB*tBy)/(wA+wB);A.x+=mx-tAx;A.y+=my-tAy;B.x+=mx-tBx;B.y+=my-tBy}
+  // keep them just touching
+  const d2=Math.hypot(B.x-A.x,B.y-A.y),p=2*ROB_R-d2;
+  if(p>0){A.x-=nx*p/2;A.y-=ny*p/2;B.x+=nx*p/2;B.y+=ny*p/2}
+  A.lifted=liftA;B.lifted=liftB;
+  if(liftB&&!wasB){A.stats.lifts++;S.log.push({t:S.t,who:0,txt:'Blade got under '+B.name})}
+  if(liftA&&!wasA){B.stats.lifts++;S.log.push({t:S.t,who:1,txt:'Blade got under '+A.name})}
+}
+function newSim(a,b){
+  const S={t:0,robots:[a,b],frames:[],log:[],over:false,winner:null,touch:false,contacts:0};
+  a.prog.forEach(h=>{if(!evOK(a,h.ev))h.off=true});
+  sense(a,b);sense(b,a);S.frames.push(frameOf(S));
+  return S;
+}
+function frameOf(S){return{t:S.t,r:S.robots.map(r=>[r.x,r.y,r.th,r.flag,r.lifted?1:0,r.s.fl,r.s.fr,r.s.sl,r.s.sr,r.s.ll?1:0,r.s.lr?1:0,r.out?1:0,r.run?r.run.hi:r.lastHi])}}
+function simStep(S){
+  const [A,B]=S.robots;
+  for(const r of S.robots)if(r.hw.feat==='flags')r.flag=Math.min(1,S.t/0.4);
+  sense(A,B);sense(B,A);
+  think(A,S,0);think(B,S,1);
+  const p0=S.robots.map(r=>[r.x,r.y]);
+  move(A);move(B);contact(A,B,S);
+  S.robots.forEach((r,i)=>{
+    const c=Math.abs((r.cmdL+r.cmdR)/2),sp=Math.hypot(r.x-p0[i][0],r.y-p0[i][1])/DT;
+    if(c>0.4&&sp<0.3*c*BASE_V*r.hw.speed)r.stallT+=DT;else r.stallT=Math.max(0,r.stallT-2*DT);
+    if(Math.hypot(r.x,r.y)>R_RING-0.5)r.out=true;
+  });
+  S.t+=DT;if(!S.lite)S.frames.push(frameOf(S));
+  if(A.out||B.out){S.over=true;S.winner=A.out&&B.out?-1:(A.out?1:0);
+    S.log.push({t:S.t,who:-1,txt:S.winner<0?'Both robots fell off':S.robots[1-S.winner].name+' fell off the ring'})}
+  else if(S.t>=TMAX){S.over=true;S.winner=-1;S.log.push({t:S.t,who:-1,txt:'Time up'})}
+}
+/*ENDSIM*/
+
+// ---------- storage ----------
+const LS={get(k,d){try{const v=localStorage.getItem('sumolab.'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('sumolab.'+k,JSON.stringify(v))}catch(e){}}};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COLORS=['#ff8a3d','#3fb5a3','#e5484d','#f2c744','#9b7bff','#4aa3ff'];
+const st={hw:LS.get('hw','standard'),color:LS.get('color','#ff8a3d'),name:LS.get('name','My bot'),prog:LS.get('prog',null),modified:LS.get('modified',false),presets:LS.get('presets',[]),record:LS.get('record',{}),selH:null,tab:'garage',strat:'current'};
+if(!HW[st.hw])st.hw='standard';
+if(!st.prog||!Array.isArray(st.prog.handlers)){st.prog=starterProgram(st.hw);st.modified=false}
+function persist(){LS.set('hw',st.hw);LS.set('color',st.color);LS.set('name',st.name);LS.set('prog',st.prog);LS.set('modified',st.modified);LS.set('presets',st.presets);LS.set('record',st.record)}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),1800)}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function autosaveIfModified(){
+  if(!st.modified)return;
+  const name=st.prog.name+' (autosave)';
+  st.presets=st.presets.filter(p=>!(p.name===name&&p.hw===st.hw));
+  st.presets.push({id:uid(),name,hw:st.hw,handlers:clone(st.prog.handlers)});
+  toast('Your edited program was saved as “'+name+'”');
+}
+
+// ---------- 3D ----------
+let renderer,scene,camera,halfMesh,floorMat,meshes=[null,null],rays=[[],[]],showRays=true;
+let trails=[],trailN=0,showTrails=true;
+const cam={az:0,el:0.75,dist:78,taz:0,tel:0.75,tdist:78};
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function init3D(){
+  const el=$('#three');
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  el.appendChild(renderer.domElement);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(38,1,1,1000);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x445044,0.62));
+  const dl=new THREE.DirectionalLight(0xffffff,0.68);dl.position.set(30,90,45);dl.castShadow=true;
+  dl.shadow.mapSize.set(1024,1024);Object.assign(dl.shadow.camera,{left:-60,right:60,top:60,bottom:-60,near:10,far:200});
+  scene.add(dl);
+  floorMat=new THREE.MeshStandardMaterial({color:cssVar('--floor')||'#1a221e',roughness:1});
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(160,64),floorMat);floor.rotation.x=-PI/2;floor.position.y=-2.5;floor.receiveShadow=true;scene.add(floor);
+  const dohyo=new THREE.Mesh(new THREE.CylinderGeometry(R_RING,R_RING,2.5,128),new THREE.MeshStandardMaterial({color:0x0c0c0c,roughness:0.85}));
+  dohyo.position.y=-1.25;dohyo.receiveShadow=true;scene.add(dohyo);
+  const line=new THREE.Mesh(new THREE.RingGeometry(R_LINE,R_RING,128),new THREE.MeshStandardMaterial({color:0xf2f2f2,roughness:0.6,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+  line.rotation.x=-PI/2;line.position.y=0.08;line.receiveShadow=true;scene.add(line);
+  const sm=new THREE.MeshStandardMaterial({color:0x7a4a2a,roughness:0.9});
+  for(const z of [-5.5,5.5]){const b=new THREE.Mesh(new THREE.BoxGeometry(10,0.05,1),sm);b.position.set(0,0.03,z);scene.add(b)}
+  halfMesh=new THREE.Mesh(new THREE.CircleGeometry(R_LINE-6,64,PI,PI),new THREE.MeshBasicMaterial({color:0xff8a3d,transparent:true,opacity:0.16,depthWrite:false}));
+  halfMesh.rotation.x=-PI/2;halfMesh.position.set(0,0.05,0);halfMesh.scale.y=1;halfMesh.visible=false;scene.add(halfMesh);
+  for(let i=0;i<2;i++){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*3700),3));g.setDrawRange(0,0);const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:i?0x4aa3ff:0xff8a3d,transparent:true,opacity:0.75}));l.frustumCulled=false;l.visible=false;scene.add(l);trails.push(l)}
+  for(let i=0;i<2;i++)for(let j=0;j<4;j++){
+    const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+    const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.3}));l.visible=false;scene.add(l);rays[i].push(l);
+  }
+  const ro=new ResizeObserver(resize);ro.observe(el);resize();
+  setupPointer(el);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>floorMat.color.set(cssVar('--floor')));
+}
+function resize(){const el=$('#three'),w=el.clientWidth||1,h=el.clientHeight||1;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+function buildRobot(color,hwId){
+  const hw=hwOf(hwId),g=new THREE.Group();
+  const dark=new THREE.MeshStandardMaterial({color:0x26292a,roughness:0.55,metalness:0.25});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(8.2,2.7,8.6),dark);body.position.set(-0.9,1.6,0);body.castShadow=true;g.add(body);
+  const topM=new THREE.MeshStandardMaterial({color,roughness:0.45});
+  const top=new THREE.Mesh(new THREE.BoxGeometry(7.8,0.45,8.8),topM);top.position.set(-1,3.15,0);top.castShadow=true;g.add(top);
+  const sh=new THREE.Shape();sh.moveTo(3.2,0.05);sh.lineTo(5.1,0.05);sh.lineTo(3.2,2.9);sh.lineTo(3.2,0.05);
+  const bg=new THREE.ExtrudeGeometry(sh,{depth:10,bevelEnabled:false});bg.translate(0,0,-5);
+  const blade=new THREE.Mesh(bg,new THREE.MeshStandardMaterial({color:hw.blade?0xe4e9ec:0x8e979c,metalness:0.9,roughness:hw.blade?0.18:0.38}));blade.castShadow=true;g.add(blade);
+  const wm=new THREE.MeshStandardMaterial({color:hw.feat==='grip'?0xd8c25a:0x111111,roughness:0.9});
+  for(const z of [-4.5,4.5]){const w=new THREE.Mesh(new THREE.CylinderGeometry(1.75,1.75,1.1,20),wm);w.rotation.x=PI/2;w.position.set(-1.6,1.75,z);g.add(w)}
+  if(hw.feat==='motors'){const mm=new THREE.MeshStandardMaterial({color:0xb87333,metalness:0.7,roughness:0.35});for(const z of [-2,2]){const m=new THREE.Mesh(new THREE.CylinderGeometry(1,1,3,16),mm);m.rotation.z=PI/2;m.position.set(-2,4,z);g.add(m)}}
+  const eyeM=new THREE.MeshStandardMaterial({color:hw.feat==='tof'?0x1d4ed8:0x111111,roughness:0.2,metalness:0.3});
+  for(const z of [-2.5,2.5]){const e=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,1.4),eyeM);e.position.set(2.6,3.4,z);g.add(e)}
+  if(hw.feat==='side')for(const z of [-4.6,4.6]){const e=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.9,0.6),eyeM);e.position.set(-1,3.4,z);g.add(e)}
+  const dots=[];
+  for(const z of [-4.3,4.3]){const d=new THREE.Mesh(new THREE.SphereGeometry(0.45,10,8),new THREE.MeshStandardMaterial({color:0x330000,emissive:0x000000}));d.position.set(4.2,1.1,z);g.add(d);dots.push(d)}
+  const flags=[];
+  if(hw.feat==='flags'){
+    const stickM=new THREE.MeshStandardMaterial({color:0x222222}),clothM=new THREE.MeshStandardMaterial({color,side:THREE.DoubleSide,roughness:0.8});
+    for(const s of [1,-1]){
+      const pv=new THREE.Group();pv.position.set(-1,3.3,-s*4.3);
+      const st_=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,10,6),stickM);st_.position.y=5;pv.add(st_);
+      const cl=new THREE.Mesh(new THREE.PlaneGeometry(3.6,3),clothM);cl.position.set(-1.9,8.4,0);pv.add(cl);
+      pv.userData.s=s;g.add(pv);flags.push(pv);
+    }
+  }
+  g.userData={dots,flags,topM};
+  return g;
+}
+function setMesh(i,color,hwId){if(meshes[i])scene.remove(meshes[i]);meshes[i]=buildRobot(color,hwId);scene.add(meshes[i])}
+function poseMesh(i,d,extra){
+  const m=meshes[i];if(!m)return;
+  const [x,y,th,flag,lifted,, , , ,ll,lr,out]=d;
+  m.visible=true;
+  let yy=lifted?0.7:0,tilt=lifted?-0.12:0;
+  if(out){yy=-2.5;tilt=0.35}
+  if(extra&&extra.drop)yy+=extra.drop;
+  m.position.set(x,yy,-y);m.rotation.set(0,th,tilt,'YXZ');m.rotation.y=th;m.rotation.z=tilt;
+  m.userData.dots[0].material.emissive.setHex(ll?0xff3030:0);m.userData.dots[1].material.emissive.setHex(lr?0xff3030:0);
+  for(const f of m.userData.flags)f.rotation.x=-f.userData.s*flag*78*D2R;
+}
+function poseRays(i,d,hwId,on){
+  const L=rays[i];
+  if(!on||!d){L.forEach(l=>l.visible=false);return}
+  const hw=hwOf(hwId);
+  const r={x:d[0],y:d[1],th:d[2]};
+  const defs=[[5,2.5,0.09,hw.range,d[5]],[5,-2.5,-0.09,hw.range,d[6]],[0,5,PI/2,50,d[7]],[0,-5,-PI/2,50,d[8]]];
+  defs.forEach((df,j)=>{
+    const l=L[j];
+    if(j>=2&&hw.feat!=='side'){l.visible=false;return}
+    const [ox,oy]=toWorld(r,df[0],df[1]),len=df[4]>=0?df[4]:df[3],a=r.th+df[2];
+    const pos=l.geometry.attributes.position;
+    pos.setXYZ(0,ox,2.9,-oy);pos.setXYZ(1,ox+Math.cos(a)*len,2.9,-(oy+Math.sin(a)*len));pos.needsUpdate=true;
+    l.material.color.setHex(df[4]>=0?0x4cff9a:(i===0?0xff8a3d:0x4aa3ff));l.material.opacity=df[4]>=0?0.95:0.28;
+    l.visible=!d[11];
+  });
+}
+// pointer: orbit + placement
+const ptrs=new Map();let pinch0=0,placing=false;
+const rc=new THREE.Raycaster(),gplane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+function groundAt(e){const r=renderer.domElement.getBoundingClientRect();const v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(v,camera);const p=new THREE.Vector3();return rc.ray.intersectPlane(gplane,p)?{x:p.x,y:-p.z}:null}
+function setupPointer(el){
+  el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(F.phase==='place'&&ptrs.size===1){placing=true;placeAt(e)}
+    if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y)}});
+  el.addEventListener('pointermove',e=>{
+    if(!ptrs.has(e.pointerId))return;const p=ptrs.get(e.pointerId);
+    if(ptrs.size===2){p.x=e.clientX;p.y=e.clientY;const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0){cam.tdist=clamp(cam.tdist*pinch0/d,60,220)}pinch0=d;return}
+    if(placing){placeAt(e);p.x=e.clientX;p.y=e.clientY;return}
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    cam.taz-=dx*0.008;cam.tel=clamp(cam.tel+dy*0.006,0.25,1.52);
+  });
+  const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=0;if(!ptrs.size)placing=false};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',e=>{e.preventDefault();cam.tdist=clamp(cam.tdist*(1+e.deltaY*0.001),60,220)},{passive:false});
+}
+function placeAt(e){const g=groundAt(e);if(!g)return;let x=g.x,y=Math.min(g.y,-7);const r=Math.hypot(x,y),m=R_LINE-6;if(r>m){x*=m/r;y*=m/r}F.pose.x=x;F.pose.y=y}
+function updateCam(){
+  const k=0.12;cam.az+=(cam.taz-cam.az)*k;cam.el+=(cam.tel-cam.el)*k;cam.dist+=(cam.tdist-cam.dist)*k;
+  camera.position.set(cam.dist*Math.cos(cam.el)*Math.sin(cam.az),cam.dist*Math.sin(cam.el),cam.dist*Math.cos(cam.el)*Math.cos(cam.az));
+  camera.lookAt(0,0,0);
+}
+
+// ---------- fight state ----------
+const F={phase:'pick',opp:null,score:[0,0],round:1,pose:{x:0,y:-20,th:90*D2R},oppPose:null,sim:null,cd:0,acc:0,reveal:0,replayT:0,replayPlay:false,replaySpeed:0.25,preview:null,matchOver:false,logN:0};
+function oppDef(id){return OPPS.find(o=>o.id===id)}
+function youRobot(prog){return makeRobot({name:st.name||'You',color:st.color,hw:st.hw,prog:clone(prog),x:F.pose.x,y:F.pose.y,th:F.pose.th})}
+function oppRobot(){const o=F.opp;return makeRobot({name:o.name,color:o.color,hw:o.hw,prog:o.prog(),x:F.oppPose.x,y:F.oppPose.y,th:F.oppPose.th})}
+function chosenProgram(){if(st.strat==='current')return st.prog.handlers;const p=st.presets.find(p=>p.id===st.strat&&p.hw===st.hw);return p?p.handlers:st.prog.handlers}
+function chosenName(){if(st.strat==='current')return st.prog.name;const p=st.presets.find(p=>p.id===st.strat);return p?p.name:st.prog.name}
+function computePreview(){const a=youRobot(chosenProgram()),b=oppRobot();sense(a,b);sense(b,a);F.preview=frameOf({t:0,robots:[a,b]})}
+
+function goPick(){F.phase='pick';F.opp=null;F.sim=null;F.matchOver=false;cam.tel=0.75;cam.tdist=78;setMesh(0,st.color,st.hw);if(meshes[1]){scene.remove(meshes[1]);meshes[1]=null}renderFight()}
+function startMatch(id){F.opp=oppDef(id);F.score=[0,0];F.round=1;F.matchOver=false;F.pose={x:0,y:-20,th:90*D2R};setMesh(0,st.color,st.hw);setMesh(1,F.opp.color,F.opp.hw);goPlace()}
+function goPlace(){F.phase='place';F.sim=null;cam.taz=0;cam.tel=1.5;cam.tdist=108;setMesh(0,st.color,st.hw);renderFight()}
+function lockPos(){
+  F.oppPose=oppPoseFor(F.opp);
+  F.phase='strategy';F.reveal=0;cam.tel=0.95;cam.tdist=122;
+  if(!st.presets.some(p=>p.id===st.strat&&p.hw===st.hw))st.strat='current';
+  computePreview();renderFight();
+}
+function startRound(){
+  const a=youRobot(chosenProgram()),b=oppRobot();
+  trailN=0;trails[0].material.color.set(st.color);trails[1].material.color.set(F.opp.color);
+  F.sim=newSim(a,b);F.sim.stratName=chosenName();F.phase='countdown';F.cd=3;F.acc=0;F.logN=0;renderFight();
+}
+function endRound(){
+  const S=F.sim;F.phase='result';
+  if(S.winner===0)F.score[0]++;else if(S.winner===1)F.score[1]++;
+  if(F.score[0]>=2||F.score[1]>=2||F.round>=5){F.matchOver=true;
+    const rec=st.record[F.opp.id]||{w:0,l:0};if(F.score[0]>F.score[1])rec.w++;else if(F.score[1]>F.score[0])rec.l++;st.record[F.opp.id]=rec;persist()}
+  renderFight();
+}
+function nextRound(){F.round++;goPlace()}
+function openReplay(){F.phase='replay';F.replayT=0;F.replayPlay=true;$('#rpPlay').textContent='❚❚';renderFight()}
+
+// ---------- render loop ----------
+let last=performance.now(),showSpin=0;
+function interpFrame(fr,t){
+  const i=clamp(Math.floor(t/DT),0,fr.length-1),j=Math.min(fr.length-1,i+1),a=fr[i],b=fr[j],u=clamp(t/DT-i,0,1);
+  return{t,r:a.r.map((ra,k)=>{const rb=b.r[k],o=ra.slice();o[0]=ra[0]+(rb[0]-ra[0])*u;o[1]=ra[1]+(rb[1]-ra[1])*u;let dth=rb[2]-ra[2];dth=Math.atan2(Math.sin(dth),Math.cos(dth));o[2]=ra[2]+dth*u;o[3]=ra[3]+(rb[3]-ra[3])*u;return o})};
+}
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  let frame=null;
+  const P=F.phase;
+  if(P==='countdown'){F.cd-=dt;const c=$('#countdown');c.hidden=false;c.textContent=Math.ceil(F.cd);if(F.cd<=0){c.hidden=true;F.phase='running';renderFight()}frame=F.sim.frames[0]}
+  else if(P==='running'){F.acc+=dt;let n=0;while(F.acc>=DT&&n<12&&!F.sim.over){simStep(F.sim);F.acc-=DT;n++}frame=F.sim.frames[F.sim.frames.length-1];updateLiveLog();if(F.sim.over)endRound()}
+  else if(P==='result'){frame=F.sim.frames[F.sim.frames.length-1]}
+  else if(P==='replay'){const end=F.sim.t;if(F.replayPlay){F.replayT+=dt*F.replaySpeed;if(F.replayT>=end){F.replayT=end;F.replayPlay=false;$('#rpPlay').textContent='▶'}}frame=interpFrame(F.sim.frames,F.replayT);syncReplayUI()}
+  else if(P==='strategy'){frame=F.preview;F.reveal=Math.min(1,F.reveal+dt*2.2)}
+
+  if(P==='pick'){
+    showSpin+=dt*0.5;
+    if(meshes[0])poseMesh(0,[0,0,showSpin,0.5+0.5*Math.sin(showSpin*2)>0.5?1:0,0,-1,-1,-1,-1,0,0,0]);
+    if(meshes[0])meshes[0].userData.flags.forEach(f=>f.rotation.x=-f.userData.s*(0.5+0.5*Math.sin(showSpin*1.5))*78*D2R);
+    poseRays(0,null);poseRays(1,null);
+  }else if(P==='place'){
+    poseMesh(0,[F.pose.x,F.pose.y,F.pose.th,0,0,-1,-1,-1,-1,0,0,0]);if(meshes[1])meshes[1].visible=false;
+    poseRays(0,[F.pose.x,F.pose.y,F.pose.th,0,0,-1,-1,-1,-1,0,0,0],st.hw,true);poseRays(1,null);
+  }else if(frame){
+    const yh=F.sim?F.sim.robots[0].hwId:st.hw;
+    poseMesh(0,frame.r[0]);poseMesh(1,frame.r[1],P==='strategy'?{drop:(1-easeOut(F.reveal))*30}:null);
+    const raysOn=showRays&&!(P==='strategy'&&F.reveal<1);
+    poseRays(0,frame.r[0],yh,raysOn);poseRays(1,frame.r[1],F.opp.hw,raysOn);
+  }
+  halfMesh.visible=P==='place';
+  updateTrails(P);
+  updateHUD(frame);
+  updateCam();renderer.render(scene,camera);
+}
+const easeOut=u=>1-Math.pow(1-u,3);
+function updateTrails(P){
+  const on=showTrails&&F.sim&&(P==='running'||P==='result'||P==='replay');
+  trails.forEach(t=>t.visible=!!on);if(!on)return;
+  const fr=F.sim.frames,n=Math.min(fr.length,3700);
+  if(trailN<n){for(;trailN<n;trailN++)for(let i=0;i<2;i++){const r=fr[trailN].r[i];trails[i].geometry.attributes.position.setXYZ(trailN,r[0],0.3,-r[1])}trails.forEach(t=>t.geometry.attributes.position.needsUpdate=true)}
+  const c=P==='replay'?Math.min(n,Math.floor(F.replayT/DT)+1):n;trails.forEach(t=>t.geometry.setDrawRange(0,c));
+}
+function updateHUD(frame){
+  const h=$('#hudTop'),rh=$('#ruleHud');
+  let rules='';
+  if(F.opp&&F.sim&&frame&&frame.r[0].length>12&&['running','result','replay'].includes(F.phase)){
+    rules=frame.r.map((r,i)=>{const hi=r[12],rb=F.sim.robots[i],pr=rb.prog[hi];return`<span class="pill"><i style="background:${esc(rb.color)}"></i>${hi>=0&&pr?'Rule '+(hi+1)+': '+esc(describe(EVENTS[pr.ev],pr.p).replace(/^When /,'')):'Waiting'}</span>`}).join('');
+  }
+  if(rh.dataset.k!==rules){rh.dataset.k=rules;rh.innerHTML=rules;rh.hidden=!rules}
+  if(F.phase==='pick'||!F.opp){h.innerHTML=`<span class="pill">${esc(st.name||'My bot')}: ${esc(HW[st.hw].short)}</span>`;return}
+  const t=frame?frame.t:0;
+  const key=F.phase+'|'+F.score+'|'+F.round+'|'+t.toFixed(1);if(h.dataset.k===key)return;h.dataset.k=key;
+  h.innerHTML=`<span class="pill">Round ${F.round}</span><span class="pill" style="color:var(--text)"><b style="color:${esc(st.color)}">${F.score[0]}</b> – <b style="color:${esc(F.opp.color)}">${F.score[1]}</b></span><span class="pill">${t.toFixed(1)} s</span>`;
+}
+
+// ---------- fight panel ----------
+function renderFight(){
+  const pane=$('#pane-fight'),P=F.phase;
+  $('#placeBar').hidden=P!=='place';$('#replayBar').hidden=P!=='replay';
+  $('#banner').hidden=!(P==='result');
+  const hint=$('#hint');hint.hidden=P!=='place';hint.textContent='Tap or drag inside the lit half';
+  if(P!=='countdown')$('#countdown').hidden=true;
+  if(P==='pick'){
+    pane.innerHTML=`<h2>Pick an opponent</h2>
+    <p class="muted">Matches are best of three. Each round you place your robot, then see where the opponent stands, then choose which strategy to run.</p>
+    <div class="opp-list">${OPPS.map(o=>{const r=st.record[o.id];return`<button class="opp" data-opp="${o.id}"><span class="dot" style="background:${o.color}"></span><b>${esc(o.name)} <span class="tag">${esc(HW[o.hw].short)}</span> <span class="tag">${o.level}</span></b><span class="rec ${r&&r.w?'won':''}">${r?`${r.w}W ${r.l}L`:'new'}</span><span class="d">${esc(o.blurb)}</span></button>`}).join('')}</div>
+    <h3>Experiments to try</h3>
+    <ul class="exp">
+      <li>Are distance sensors always better than on/off ones? Fight Sniper with the stock build, then with ToF.</li>
+      <li>Is rushing to the middle a good opening? Try a fast start against Bulldozer, then a sidestep.</li>
+      <li>Wait, then strike: add “Wait 1 s” to your start rule and compare against Turtle.</li>
+      <li>Do flags fool sensors? Watch the replay against Ghost with sensors on.</li>
+      <li>Can you beat Razor without the steel blade? Hint: it has no side sensors.</li>
+      <li>Edge rule or attack first? Move “opponent dead ahead” above the edge line rule and see whether you push harder or fall off more.</li>
+      <li>One win can be luck. Use the Test lab in the Program tab, or “Test 30 rounds from here”, before trusting a change.</li>
+      <li>Opponents don’t always face you at the start. When one starts sideways, is it better to charge or to turn and wait?</li>
+    </ul>`;
+    pane.querySelectorAll('[data-opp]').forEach(b=>b.onclick=()=>startMatch(b.dataset.opp));
+    return;
+  }
+  const o=F.opp;
+  if(P==='place'){
+    pane.innerHTML=`<h2>Round ${F.round}: place your robot</h2>
+    <p class="muted">Tap or drag inside your half of the ring, behind your start line, then turn the robot with the buttons. ${esc(o.name)} is placing at the same moment. You’ll see where after you lock in.</p>
+    <p class="small">Opponent: <b>${esc(o.name)}</b> <span class="tag">${esc(HW[o.hw].short)}</span></p>
+    <div class="row"><button class="btn primary" id="lock2">Lock position</button><button class="btn" id="quit">Leave match</button></div>`;
+    $('#lock2').onclick=lockPos;$('#quit').onclick=goPick;return;
+  }
+  if(P==='strategy'){
+    const list=[{id:'current',name:st.prog.name+' (current program)'}].concat(st.presets.filter(p=>p.hw===st.hw));
+    const pv=F.preview.r[0],sees=pv[5]>=0||pv[6]>=0||pv[7]>=0||pv[8]>=0;
+    pane.innerHTML=`<h2>Opponent revealed</h2>
+    <div class="revcard" style="--oc:${o.color}"><b>${esc(o.name)}</b> <span class="tag">${esc(HW[o.hw].name)}</span><p class="small muted" style="margin:.3rem 0 0">${esc(o.blurb)}</p></div>
+    <p class="small">${sees?'Your sensors already see it from where you stand.':'Your sensors can’t see it from your start position. Your search rule will have to find it.'}</p>
+    <h3>Choose a strategy</h3>
+    <div class="strat">${list.map(p=>`<label><input type="radio" name="strat" value="${p.id}" ${st.strat===p.id?'checked':''}> ${esc(p.name)}</label>`).join('')}</div>
+    ${list.length===1?'<p class="muted small">Save presets in the Program tab to have more strategies to pick from here.</p>':''}
+    <div class="row"><button class="btn primary" id="go">Start round</button><button class="btn" id="edit">Edit program</button><button class="btn" id="replace">Re-place</button><button class="btn" id="test">Test 30 rounds from here</button></div>
+    <p class="small muted" id="testOut" style="margin-top:.6rem"></p>`;
+    $('#test').onclick=()=>{const out=$('#testOut');out.textContent='Testing…';setTimeout(()=>{const r=batch(o,30,()=>({x:F.pose.x,y:F.pose.y,th:F.pose.th}),chosenProgram(),()=>({x:F.oppPose.x,y:F.oppPose.y,th:F.oppPose.th}));out.textContent=`From these exact positions: won ${r.w}, lost ${r.l}, drew ${r.d}. Average round ${r.t.toFixed(1)} s. Small differences in sensors and motors change every run.`},20)};
+    pane.querySelectorAll('input[name=strat]').forEach(r=>r.onchange=()=>{st.strat=r.value;computePreview()});
+    $('#go').onclick=startRound;$('#edit').onclick=()=>setTab('code');$('#replace').onclick=goPlace;return;
+  }
+  if(P==='countdown'||P==='running'){
+    pane.innerHTML=`<h2>Round ${F.round}</h2><p class="muted small">Running “${esc(F.sim.stratName)}” against ${esc(o.name)}. Real mini sumo has a 5 s start delay; here it’s 3 s.</p>
+    <div class="row"><button class="btn" id="abort">Stop round</button></div><div class="log" id="log"></div>`;
+    $('#abort').onclick=()=>{if(F.phase==='countdown')F.cd=0;F.sim.over=true;F.sim.winner=-1;F.sim.log.push({t:F.sim.t,who:-1,txt:'Round stopped'});endRound()};
+    F.logN=0;updateLiveLog();return;
+  }
+  if(P==='result'||P==='replay'){
+    const S=F.sim,w=S.winner,you=S.robots[0],op=S.robots[1];
+    const ban=$('#banner');ban.textContent=w===0?'You win the round':w===1?o.name+' wins the round':(S.t>=TMAX?'Draw: time up':'Draw');
+    ban.style.color=w===0?'var(--good)':w===1?'var(--bad)':'var(--text)';
+    if(P==='replay')$('#banner').hidden=true;
+    const matchTxt=F.matchOver?(F.score[0]>F.score[1]?`Match won ${F.score[0]}–${F.score[1]}.`:F.score[1]>F.score[0]?`Match lost ${F.score[0]}–${F.score[1]}.`:'Match drawn.'):`Score ${F.score[0]}–${F.score[1]}. First to two wins.`;
+    pane.innerHTML=`<h2>${esc(ban.textContent)}</h2><p class="muted">${matchTxt}</p>
+    <div class="stats"><span class="hd"></span><span class="hd">${esc(you.name)}</span><span class="hd">${esc(op.name)}</span>
+      <span>Blade got under the other</span><span>${you.stats.lifts}</span><span>${op.stats.lifts}</span>
+      <span>Edge line escapes</span><span>${you.stats.lines}</span><span>${op.stats.lines}</span>
+      <span>Rule switches</span><span>${you.stats.rules}</span><span>${op.stats.rules}</span>
+      <span>Round length</span><span>${S.t.toFixed(2)} s</span><span></span></div>
+    <div class="row">${P==='replay'?'<button class="btn" id="rpBack">Close replay</button>':'<button class="btn primary" id="rp">Watch replay</button>'}
+      ${F.matchOver?'<button class="btn" id="again">Rematch</button><button class="btn" id="newOpp">Pick opponent</button>':'<button class="btn '+(P==='replay'?'primary':'')+'" id="next">Next round</button>'}
+      <button class="btn" id="edit2">Edit program</button></div>
+    <p class="small muted" style="margin-top:.7rem">${P==='replay'?'Tap a line in the log to jump there.':'The log shows which rule each robot switched to and when.'}</p>
+    <div class="log" id="log"></div>`;
+    const rp=$('#rp');if(rp)rp.onclick=openReplay;const rb=$('#rpBack');if(rb)rb.onclick=closeReplay;
+    const nx=$('#next');if(nx)nx.onclick=nextRound;const ag=$('#again');if(ag)ag.onclick=()=>startMatch(o.id);const no=$('#newOpp');if(no)no.onclick=goPick;
+    $('#edit2').onclick=()=>setTab('code');
+    renderLog(S.log,P==='replay');
+  }
+}
+function closeReplay(){F.phase='result';F.replayPlay=false;renderFight()}
+function logRow(e,click){const who=e.who<0?'sys':'w'+e.who,name=e.who<0?'':esc(F.sim.robots[e.who].name)+': ';return`<div class="${click?'click':''}" data-t="${e.t}"><span>${e.t.toFixed(2)}</span><span class="${who}">${name}${esc(e.txt)}</span></div>`}
+function renderLog(log,click){const el=$('#log');if(!el)return;el.innerHTML=log.map(e=>logRow(e,click)).join('');if(click)el.querySelectorAll('[data-t]').forEach(d=>d.onclick=()=>{F.replayT=Math.max(0,+d.dataset.t-0.3);F.replayPlay=true;$('#rpPlay').textContent='❚❚'})}
+function updateLiveLog(){const el=$('#log');if(!el||!F.sim)return;const L=F.sim.log;if(L.length===F.logN)return;el.insertAdjacentHTML('beforeend',L.slice(F.logN).map(e=>logRow(e,false)).join(''));F.logN=L.length;el.scrollTop=el.scrollHeight}
+function syncReplayUI(){
+  const end=F.sim.t||1;$('#rpSlider').value=Math.round(F.replayT/end*1000);$('#rpTime').textContent=F.replayT.toFixed(2)+' s';
+  const el=$('#log');if(!el)return;const k=Math.floor(F.replayT*20);if(el.dataset.k==k)return;el.dataset.k=k;
+  el.querySelectorAll('[data-t]').forEach(d=>d.classList.toggle('past',+d.dataset.t<=F.replayT));
+}
+
+// ---------- garage ----------
+function renderGarage(){
+  $('#botName').value=st.name;
+  $('#swatches').innerHTML=COLORS.map(c=>`<button class="sw" style="background:${c}" data-c="${c}" aria-label="Color ${c}" aria-pressed="${c===st.color}"></button>`).join('');
+  $('#swatches').querySelectorAll('.sw').forEach(b=>b.onclick=()=>{st.color=b.dataset.c;persist();renderGarage();if(meshes[0])meshes[0].userData.topM.color.set(st.color);meshes[0]&&meshes[0].userData.flags.forEach(f=>f.children[1].material.color.set(st.color))});
+  $('#hwList').innerHTML=Object.keys(HW).map(k=>{const h=HW[k];return`<button class="hw" data-hw="${k}" aria-pressed="${k===st.hw}"><span><b>${esc(h.name)}</b><span class="mods">${Object.entries(h.mod).map(([n,v])=>`<span class="tag ${v>0?'up':'down'}">${n} ${v>0?'+':'−'}${Math.abs(v)}</span>`).join('')||'<span class="tag">reference</span>'}</span></span><span class="bars">${Object.entries(statsOf(k)).map(([n,v])=>`<span>${n}</span><span class="bar">${[1,2,3,4,5].map(i=>`<i class="${i<=v?'on':''}"></i>`).join('')}</span>`).join('')}</span><span class="d">${esc(h.desc)}</span></button>`}).join('');
+  $('#hwList').querySelectorAll('.hw').forEach(b=>b.onclick=()=>setHardware(b.dataset.hw));
+}
+function setHardware(id){
+  if(id===st.hw)return;
+  if(F.phase!=='pick'&&F.phase!=='place'&&F.phase!=='strategy'){toast('Finish the round before changing hardware');return}
+  autosaveIfModified();
+  st.hw=id;st.prog=starterProgram(id);st.modified=false;st.selH=null;st.strat='current';persist();
+  setMesh(0,st.color,st.hw);renderGarage();renderCode();
+  if(F.phase==='strategy'){computePreview();renderFight()}
+  toast('Loaded the '+HW[id].short+' starter program');
+}
+$('#botName').addEventListener('input',e=>{st.name=e.target.value.slice(0,18);persist()});
+
+// ---------- code editor ----------
+function staticTpl(def){return esc(def.tpl).replace(/\{(\w+)\}/g,(m,k)=>`<span class="pv">${esc(def.params[k].def)}</span>`)}
+function liveTpl(def,p){return esc(def.tpl).replace(/\{(\w+)\}/g,(m,k)=>{const d=def.params[k];if(d.opts)return`<select data-k="${k}">${d.opts.map(o=>`<option ${p[k]===o?'selected':''}>${o}</option>`).join('')}</select>`;return`<input type="number" inputmode="decimal" data-k="${k}" min="${d.min}" max="${d.max}" step="${d.step||1}" value="${p[k]}" aria-label="${k}">`})}
+function renderPalette(){
+  const feat=HW[st.hw].feat;
+  $('#palEv').innerHTML=Object.keys(EVENTS).map(k=>{const d=EVENTS[k],lock=d.need&&d.need!==feat;return`<div class="pal ev ${lock?'locked':''}" data-kind="ev" data-op="${k}" ${lock?`title="Needs ${esc(HW[d.need].name)}"`:''}>${staticTpl(d)}${lock?`<span class="lock">needs ${esc(HW[d.need].short)}</span>`:''}</div>`}).join('');
+  $('#palAct').innerHTML=Object.keys(ACTIONS).map(k=>`<div class="pal act" data-kind="act" data-op="${k}">${staticTpl(ACTIONS[k])}</div>`).join('');
+}
+function renderWS(){
+  const feat=HW[st.hw].feat,hs=st.prog.handlers;
+  if(st.selH&&!hs.some(h=>h.id===st.selH))st.selH=null;
+  $('#ws').innerHTML=hs.length?hs.map((h,i)=>{const d=EVENTS[h.ev],off=d.need&&d.need!==feat;
+    return`<div class="handler ${st.selH===h.id?'sel':''} ${off?'inactive':''}" data-hid="${h.id}">
+      <div class="h-head" data-hid="${h.id}"><span class="grip" title="Drag to reorder">⠿</span><span class="prio">${i+1}</span><div class="lbl">${liveTpl(d,h.p)}</div><button class="x" data-delh="${h.id}" aria-label="Delete rule">×</button></div>
+      ${off?`<div class="warn">Inactive: needs ${esc(HW[d.need].name)}</div>`:''}
+      <div class="h-body" data-hid="${h.id}">${h.actions.map(a=>`<div class="blk act" data-aid="${a.id}" data-hid="${h.id}"><span class="grip">⠿</span><div class="lbl">${liveTpl(ACTIONS[a.op],a.p)}</div><button class="x" data-dela="${a.id}" data-hid="${h.id}" aria-label="Delete action">×</button></div>`).join('')||'<div class="h-empty">Drop or tap an action to add it here</div>'}</div>
+    </div>`}).join(''):'<p class="muted">No rules yet. Drag a trigger here, or tap one above.</p>';
+}
+function renderPresets(){
+  $('#presetList').innerHTML=st.presets.length?st.presets.map(p=>`<span class="chip"><button data-load="${p.id}">${esc(p.name)} <span class="tag">${esc(HW[p.hw]?HW[p.hw].short:p.hw)}</span></button><button data-delp="${p.id}" aria-label="Delete preset">×</button></span>`).join(''):'<span class="muted small">No presets yet. Name your program and tap Save preset.</span>';
+  $('#presetList').querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>{const p=st.presets.find(x=>x.id===b.dataset.load);if(!p)return;
+    if(p.hw!==st.hw&&F.phase!=='pick'&&F.phase!=='place'&&F.phase!=='strategy'){toast('Finish the round first');return}
+    autosaveIfModified();const hwChanged=p.hw!==st.hw;st.hw=p.hw;st.prog={name:p.name,handlers:clone(p.handlers)};st.modified=false;persist();
+    if(hwChanged){setMesh(0,st.color,st.hw);renderGarage()}renderCode();if(F.phase==='strategy'){computePreview();renderFight()}toast('Loaded “'+p.name+'”'+(hwChanged?' and its hardware':''))});
+  $('#presetList').querySelectorAll('[data-delp]').forEach(b=>b.onclick=()=>{st.presets=st.presets.filter(x=>x.id!==b.dataset.delp);persist();renderPresets()});
+}
+function renderCode(){
+  $('#progName').value=st.prog.name;renderPalette();renderWS();renderPresets();
+  $('#oppCopy').innerHTML=OPPS.map(o=>`<option value="${o.id}">${esc(o.name)} (${esc(HW[o.hw].short)})</option>`).join('');
+}
+function changed(){st.modified=true;persist();if(F.phase==='strategy')computePreview()}
+function findH(id){return st.prog.handlers.find(h=>h.id===id)}
+function newAction(op){return{id:uid(),op,p:defaults(ACTIONS[op])}}
+function newHandler(op){return{id:uid(),ev:op,p:defaults(EVENTS[op]),actions:[]}}
+function insertHandlerSmart(h){const hs=st.prog.handlers;const i=hs.findIndex(x=>x.ev==='always');if(i>=0&&h.ev!=='always')hs.splice(i,0,h);else hs.push(h)}
+// inputs
+$('#ws').addEventListener('input',e=>{
+  const k=e.target.dataset.k;if(!k)return;
+  const blk=e.target.closest('[data-aid]');let obj,def;
+  if(blk){const h=findH(blk.dataset.hid);obj=h.actions.find(a=>a.id===blk.dataset.aid);def=ACTIONS[obj.op]}
+  else{obj=findH(e.target.closest('[data-hid]').dataset.hid);def=EVENTS[obj.ev]}
+  const pd=def.params[k];
+  if(pd.opts)obj.p[k]=e.target.value;else{const v=parseFloat(e.target.value);if(!isNaN(v))obj.p[k]=clamp(v,pd.min,pd.max)}
+  changed();
+});
+$('#ws').addEventListener('change',e=>{const k=e.target.dataset.k;if(!k||e.target.tagName!=='INPUT')return;const v=parseFloat(e.target.value),mn=+e.target.min,mx=+e.target.max;e.target.value=isNaN(v)?mn:clamp(v,mn,mx)});
+$('#ws').addEventListener('click',e=>{
+  const dh=e.target.closest('[data-delh]'),da=e.target.closest('[data-dela]');
+  if(dh){st.prog.handlers=st.prog.handlers.filter(h=>h.id!==dh.dataset.delh);changed();renderWS();return}
+  if(da){const h=findH(da.dataset.hid);h.actions=h.actions.filter(a=>a.id!==da.dataset.dela);changed();renderWS();return}
+});
+// drag and drop
+let drag=null;
+function onDown(e){
+  if(e.button>0)return;
+  if(e.target.closest('input,select,button'))return;
+  const pal=e.target.closest('.pal'),blk=e.target.closest('.blk'),head=e.target.closest('.h-head');
+  const viaGrip=!!e.target.closest('.grip')||e.pointerType==='mouse';
+  let info=null;
+  if(pal){if(pal.classList.contains('locked')){toast(pal.title||'Needs a different upgrade');return}info={kind:pal.dataset.kind,op:pal.dataset.op,el:pal}}
+  else if(blk&&viaGrip)info={kind:'act',from:{hid:blk.dataset.hid,aid:blk.dataset.aid},el:blk};
+  else if(head&&viaGrip)info={kind:'ev',from:{hid:head.dataset.hid},el:head.parentElement,tapH:head.dataset.hid};
+  else if(head)info={tapOnly:true,tapH:head.dataset.hid};
+  if(!info)return;
+  drag={info,x0:e.clientX,y0:e.clientY,active:false,target:null};
+  if(!info.tapOnly&&e.pointerType!=='mouse')e.preventDefault();
+  window.addEventListener('pointermove',onMove,{passive:false});window.addEventListener('pointerup',onUp);window.addEventListener('pointercancel',onCancel);
+}
+function onMove(e){
+  if(!drag)return;const I=drag.info;
+  if(!drag.active){if(I.tapOnly||Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6)return;drag.active=true;
+    const g=(I.kind==='ev'&&I.from?I.el.querySelector('.h-head'):I.el).cloneNode(true);g.classList.add('ghost');g.style.width=Math.min(340,I.el.offsetWidth)+'px';document.body.appendChild(g);drag.ghost=g;if(I.from)I.el.classList.add('dragging')}
+  e.preventDefault();
+  drag.ghost.style.left=(e.clientX-20)+'px';drag.ghost.style.top=(e.clientY-14)+'px';
+  computeDrop(e.clientX,e.clientY);
+}
+function clearPh(){document.querySelectorAll('.ph').forEach(p=>p.remove());$('#trash').classList.remove('hot')}
+function computeDrop(x,y){
+  clearPh();const t=document.elementFromPoint(x,y);drag.target=null;if(!t)return;
+  const I=drag.info,ph=document.createElement('div');ph.className='ph';
+  if(t.closest('#trash')||t.closest('.pal-group')){if(I.from){drag.target={del:true};$('#trash').classList.add('hot')}return}
+  if(I.kind==='act'){
+    let body=t.closest('.h-body');if(!body){const hd=t.closest('.handler');if(hd)body=hd.querySelector('.h-body')}
+    if(!body)return;
+    const kids=[...body.querySelectorAll(':scope > .blk')].filter(el=>!el.classList.contains('dragging'));
+    let idx=kids.findIndex(el=>{const r=el.getBoundingClientRect();return y<r.top+r.height/2});if(idx<0)idx=kids.length;
+    if(idx<kids.length)body.insertBefore(ph,kids[idx]);else body.appendChild(ph);
+    drag.target={hid:body.dataset.hid,idx};
+  }else{
+    const ws=t.closest('#ws');if(!ws)return;
+    const kids=[...ws.querySelectorAll(':scope > .handler')].filter(el=>!el.classList.contains('dragging'));
+    let idx=kids.findIndex(el=>{const r=el.getBoundingClientRect();return y<r.top+r.height/2});if(idx<0)idx=kids.length;
+    if(idx<kids.length)ws.insertBefore(ph,kids[idx]);else ws.appendChild(ph);
+    drag.target={idx};
+  }
+}
+function onCancel(){if(drag&&drag.ghost)drag.ghost.remove();clearPh();drag=null;cleanupDrag();renderWS()}
+function cleanupDrag(){window.removeEventListener('pointermove',onMove);window.removeEventListener('pointerup',onUp);window.removeEventListener('pointercancel',onCancel)}
+function onUp(){
+  const D=drag;drag=null;cleanupDrag();if(!D)return;const I=D.info;
+  if(D.ghost)D.ghost.remove();clearPh();
+  if(!D.active){ // tap
+    if(I.tapH){st.selH=I.tapH;renderWS();return}
+    if(I.kind==='ev'&&!I.from){const h=newHandler(I.op);insertHandlerSmart(h);st.selH=h.id;changed();renderWS();toast('Rule added');return}
+    if(I.kind==='act'&&!I.from){const h=findH(st.selH)||st.prog.handlers[st.prog.handlers.length-1];if(!h){toast('Add a trigger first');return}h.actions.push(newAction(I.op));st.selH=h.id;changed();renderWS();return}
+    renderWS();return;
+  }
+  const T=D.target;
+  if(!T){renderWS();return}
+  const hs=st.prog.handlers;
+  if(I.kind==='act'){
+    let a;
+    if(I.from){const h=findH(I.from.hid),i=h.actions.findIndex(x=>x.id===I.from.aid);a=h.actions.splice(i,1)[0]}else a=newAction(I.op);
+    if(!T.del){findH(T.hid).actions.splice(T.idx,0,a);st.selH=T.hid}
+  }else{
+    let h;
+    if(I.from){const i=hs.findIndex(x=>x.id===I.from.hid);h=hs.splice(i,1)[0]}else h=newHandler(I.op);
+    if(!T.del){hs.splice(T.idx,0,h);st.selH=h.id}
+  }
+  changed();renderWS();
+}
+document.getElementById('pane-code').addEventListener('pointerdown',onDown);
+$('#progName').addEventListener('input',e=>{st.prog.name=e.target.value.slice(0,40)||'Untitled';changed()});
+$('#savePreset').onclick=()=>{const name=st.prog.name||'Untitled';const ex=st.presets.find(p=>p.name===name&&p.hw===st.hw);
+  if(ex)ex.handlers=clone(st.prog.handlers);else st.presets.push({id:uid(),name,hw:st.hw,handlers:clone(st.prog.handlers)});
+  st.modified=false;persist();renderPresets();if(F.phase==='strategy')renderFight();toast(ex?'Preset updated':'Preset saved')};
+$('#resetProg').onclick=()=>{autosaveIfModified();st.prog=starterProgram(st.hw);st.modified=false;persist();renderCode();toast('Starter program loaded')};
+$('#oppCopyBtn').onclick=()=>{const o=oppDef($('#oppCopy').value);if(F.phase!=='pick'&&F.phase!=='place'&&F.phase!=='strategy'){toast('Finish the round first');return}
+  autosaveIfModified();const hwc=st.hw!==o.hw;st.hw=o.hw;st.prog={name:o.name+' copy',handlers:o.prog()};st.modified=true;persist();if(hwc){setMesh(0,st.color,st.hw);renderGarage()}renderCode();if(F.phase==='strategy'){computePreview();renderFight()}toast('Loaded '+o.name+'’s build and program')};
+
+// ---------- test lab ----------
+function oppPoseFor(o){const ps=o.places||[o.place],p=ps[Math.floor(Math.random()*ps.length)],j=()=>(Math.random()-0.5);return{x:clamp(p.x+j()*6,-24,24),y:clamp(p.y+j()*5,8,26),th:(p.th+j()*20)*D2R}}
+function randPose(){return{x:(Math.random()-0.5)*24,y:-12-Math.random()*12,th:(90+(Math.random()-0.5)*30)*D2R}}
+function batch(o,n,poseFn,prog,oppFn){
+  const r={w:0,l:0,d:0,t:0};
+  for(let i=0;i<n;i++){
+    const a=makeRobot(Object.assign({name:'You',color:'',hw:st.hw,prog:clone(prog)},poseFn())),b=makeRobot(Object.assign({name:o.name,color:'',hw:o.hw,prog:o.prog()},oppFn?oppFn():oppPoseFor(o)));
+    const S=newSim(a,b);S.lite=true;while(!S.over)simStep(S);
+    if(S.winner===0)r.w++;else if(S.winner===1)r.l++;else r.d++;r.t+=S.t;
+  }
+  r.t/=n;return r;
+}
+function labRow(o,r){const pct=Math.round(100*r.w/(r.w+r.l+r.d));return`<div><span>${esc(o.name)}</span><span class="meter"><b style="width:${pct}%"></b></span><span>${pct}% ${r.w}/${r.l}/${r.d}</span></div>`}
+$('#labBtn').onclick=()=>{
+  const out=$('#labOut'),btn=$('#labBtn'),prog=clone(st.prog.handlers);btn.disabled=true;out.innerHTML='';let i=0;
+  const step=()=>{if(i>=OPPS.length){btn.disabled=false;out.insertAdjacentHTML('beforeend','<p class="muted small">Win rate, then wins/losses/draws out of 30 rounds.</p>');return}
+    const o=OPPS[i++];out.insertAdjacentHTML('beforeend',labRow(o,batch(o,30,randPose,prog)));setTimeout(step,0)};
+  setTimeout(step,0);
+};
+
+// ---------- Arduino export ----------
+function cExpr(h){
+  const tof=st.hw==='tof';
+  switch(h.ev){
+    case 'start':return '!ranStart';case 'line_any':return 'lineL || lineR';case 'line_left':return 'lineL';case 'line_right':return 'lineR';
+    case 'opp_front':return 'seeFL && seeFR';case 'opp_left':return 'seeFL && !seeFR';case 'opp_right':return 'seeFR && !seeFL';case 'opp_any':return 'seeFL || seeFR';
+    case 'side_left':return 'seeSL';case 'side_right':return 'seeSR';case 'opp_close':return `min(distFL, distFR) < ${h.p.d}`;
+    case 'stalled':return 'stalled()';case 'timer':return `millis() - startTime >= ${Math.round(h.p.t*1000)}UL`;case 'always':return 'true';
+  }
+}
+function cAct(a,i){
+  const p=a.p,s=p.s,ms=Math.round((p.t||0)*1000),hold=(l,r)=>ms>0?`drive(${l}, ${r}); if (waitFor(${ms}, ${i})) return; drive(0, 0);`:`drive(${l}, ${r});  // hold`;
+  switch(a.op){
+    case 'forward':return hold(s,s);case 'backward':return hold(-s,-s);
+    case 'spin':return p.dir==='left'?hold(-s,s):hold(s,-s);
+    case 'arc':{const k=Math.round(s*p.k/100);return p.dir==='left'?hold(k,s):hold(s,k)}
+    case 'turn':return `if (turnBy(${p.dir==='left'?'':'-'}${p.deg}, ${i})) return;  // gyro or encoder based`;
+    case 'motors':return `drive(${p.l}, ${p.r});`;
+    case 'wait':return `if (waitFor(${Math.round(p.t*1000)}, ${i})) return;`;
+    case 'stop':return 'drive(0, 0);';
+  }
+}
+function exportArduino(){
+  const hw=hwOf(st.hw),hs=st.prog.handlers.filter(h=>evOK({hw},h.ev));
+  const L=[];
+  L.push(`// Sumo Lab export: "${st.prog.name}"`,`// Hardware: ${HW[st.hw].name}`,`// Pseudocode for the Arduino IDE. Pin numbers, motor driver and sensor`,`// reading code are placeholders: adapt them to your board.`,'');
+  L.push('const int PIN_START = 2;  // start module or button','const int PIN_LINE_L = A0, PIN_LINE_R = A1;','const int PIN_IR_FL = 3, PIN_IR_FR = 4;');
+  if(hw.feat==='side')L.push('const int PIN_IR_SL = 5, PIN_IR_SR = 6;');
+  if(hw.feat==='flags')L.push('const int PIN_FLAG_SERVO = 9;');
+  L.push('','bool lineL, lineR, seeFL, seeFR'+(hw.feat==='side'?', seeSL, seeSR':'')+';');
+  if(hw.feat==='tof')L.push('int distFL = 999, distFR = 999;  // cm, from two VL53L1X sensors');
+  L.push('bool ranStart = false;','unsigned long startTime;','','void drive(int leftPct, int rightPct) {','  // map -100..100 to your motor driver PWM and direction pins','}','');
+  L.push('void readSensors() {','  lineL = analogRead(PIN_LINE_L) < LINE_THRESHOLD;  // white edge reads low','  lineR = analogRead(PIN_LINE_R) < LINE_THRESHOLD;');
+  if(hw.feat==='tof')L.push('  distFL = readTofCm(0);  distFR = readTofCm(1);','  seeFL = distFL < 80;  seeFR = distFR < 80;');
+  else L.push('  seeFL = digitalRead(PIN_IR_FL) == LOW;  seeFR = digitalRead(PIN_IR_FR) == LOW;');
+  if(hw.feat==='side')L.push('  seeSL = digitalRead(PIN_IR_SL) == LOW;  seeSR = digitalRead(PIN_IR_SR) == LOW;');
+  L.push('}','','bool stalled() {','  // true when the motors are driven hard but the encoders barely move for 250 ms','  return false;','}','');
+  L.push('// Returns the index of the highest-priority rule whose trigger is true, or -1.','int highestTrigger() {');
+  hs.forEach((h,i)=>L.push(`  if (${cExpr(h)}) return ${i};  // ${describe(EVENTS[h.ev],h.p)}`));
+  L.push('  return -1;','}','','// Waits, but gives up early when a higher-priority rule triggers.','bool waitFor(unsigned long ms, int myRule) {','  unsigned long t0 = millis();','  while (millis() - t0 < ms) {','    readSensors();','    int h = highestTrigger();','    if (h != -1 && h < myRule) return true;  // interrupted','  }','  return false;','}','');
+  L.push('bool turnBy(int degrees, int myRule) {','  // spin at 70% until the gyro says we turned |degrees| (left is positive)','  drive(degrees > 0 ? -70 : 70, degrees > 0 ? 70 : -70);','  while (!turnedEnough(degrees)) {','    readSensors();','    int h = highestTrigger();','    if (h != -1 && h < myRule) return true;','  }','  drive(0, 0);','  return false;','}','');
+  hs.forEach((h,i)=>{L.push(`void rule${i}() {  // ${describe(EVENTS[h.ev],h.p)}`);if(h.ev==='start')L.push('  ranStart = true;');h.actions.forEach(a=>L.push('  '+cAct(a,i)));L.push('}','')});
+  L.push('void setup() {','  pinMode(PIN_START, INPUT);','  // init motor driver and sensors here');
+  if(hw.feat==='flags')L.push('  // attach the flag servo, flags stay folded until the start signal');
+  L.push('  while (digitalRead(PIN_START) == LOW) {}  // wait for start module','  delay(5000);  // 5 s rule (skip if your start module handles it)');
+  if(hw.feat==='flags')L.push('  deployFlags();');
+  L.push('  startTime = millis();','}','','void loop() {','  readSensors();','  switch (highestTrigger()) {');
+  hs.forEach((h,i)=>L.push(`    case ${i}: rule${i}(); break;`));
+  L.push('    default: break;  // no rule triggered: motors keep their last command','  }','}');
+  return L.join('\n');
+}
+$('#exportBtn').onclick=()=>{$('#mText').value=exportArduino();$('#modal').hidden=false;$('#mClose').focus()};
+$('#mClose').onclick=()=>$('#modal').hidden=true;
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').hidden=true});
+$('#mCopy').onclick=async()=>{const t=$('#mText');try{await navigator.clipboard.writeText(t.value);toast('Copied')}catch(e){t.select();try{document.execCommand('copy');toast('Copied')}catch(_){toast('Select the text and copy it manually')}}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').hidden=true});
+
+// ---------- tabs and bars ----------
+function setTab(t){st.tab=t;document.body.dataset.tab=t;document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
+  ['garage','code','fight'].forEach(k=>$('#pane-'+k).hidden=k!==t);if(t==='fight')renderFight();if(t==='code')renderCode();setTimeout(resize,30)}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+$('#rotL').onclick=()=>F.pose.th+=15*D2R;$('#rotR').onclick=()=>F.pose.th-=15*D2R;
+$('#faceC').onclick=()=>F.pose.th=Math.atan2(-F.pose.y,-F.pose.x);$('#lockBtn').onclick=lockPos;
+$('#rpPlay').onclick=()=>{if(F.replayT>=F.sim.t)F.replayT=0;F.replayPlay=!F.replayPlay;$('#rpPlay').textContent=F.replayPlay?'❚❚':'▶'};
+$('#rpSlider').addEventListener('input',e=>{F.replayT=e.target.value/1000*F.sim.t;F.replayPlay=false;$('#rpPlay').textContent='▶'});
+$('#rpSpeed').onchange=e=>F.replaySpeed=+e.target.value;
+$('#rpRays').onclick=e=>{showRays=!showRays;e.target.setAttribute('aria-pressed',showRays)};
+$('#rpTrails').onclick=e=>{showTrails=!showTrails;e.target.setAttribute('aria-pressed',showTrails)};
+
+
+// ---------- boot ----------
+init3D();setMesh(0,st.color,st.hw);renderGarage();renderCode();renderFight();
+requestAnimationFrame(t=>{last=t;loop(t)});
+</script>
+</body>

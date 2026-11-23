@@ -432,10 +432,46 @@ p { margin: 0; }
 .tool-arrow { margin-left: auto; color: var(--text-faint); font-size: 18px; transition: color .2s, transform .2s; }
 .tool:hover .tool-arrow { color: var(--accent); transform: translateX(3px); }
 
+/* ---------- Projects ---------- */
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 12px;
+}
+.project {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 18px 20px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    color: var(--text);
+    transition: border-color .2s, background .2s, transform .2s;
+}
+.project:hover { text-decoration: none; border-color: var(--accent); background: var(--bg-elev-2); transform: translateY(-2px); }
+.project-logo {
+    flex: 0 0 176px;
+    display: grid; place-items: center;
+    width: 176px; height: 76px;
+    padding: 10px 14px;
+    border-radius: var(--radius-lg);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--accent);
+}
+.project-logo > svg { width: 100%; height: 100%; }
+.project-logo > img { display: block; max-width: 100%; max-height: 100%; height: auto; }
+.project-body { display: grid; gap: 4px; min-width: 0; }
+.project-title { font-weight: 600; font-size: 16.5px; }
+.project-desc { font-size: 13.5px; line-height: 1.5; color: var(--text-dim); }
+.project-link { font: 500 12px/1.6 var(--mono); color: var(--text-faint); margin-top: 2px; overflow-wrap: anywhere; }
+.project:hover .tool-arrow { color: var(--accent); transform: translateX(3px); }
+
 /* ---------- Contact ---------- */
 .contact-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 .contact-card {
@@ -486,13 +522,17 @@ p { margin: 0; }
     .about-photo { max-width: 300px; }
     .work-grid { grid-template-columns: 1fr; }
     .tools-grid { grid-template-columns: 1fr; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .section { padding: 72px 24px; }
 }
 
 @media (max-width: 640px) {
     .nav { gap: 8px; padding: 0 16px; }
     .brand-name { display: none; }
-    .nav-links a { padding: 8px 9px; font-size: 13.5px; }
+    .nav-links { gap: 2px; }
+    .nav-links a { padding: 8px 7px; font-size: 13px; }
+    .contact-grid { grid-template-columns: 1fr; }
     .section, .hero { padding-left: 16px; padding-right: 16px; }
     .focus-grid { grid-template-columns: 1fr 1fr; }
     .focus-card { padding: 16px; }
@@ -502,10 +542,12 @@ p { margin: 0; }
     .tool-icon { flex-basis: 48px; width: 48px; height: 48px; }
     .tool-icon svg { width: 26px; height: 26px; }
     .tool-arrow { display: none; }
+    .project { flex-direction: column; align-items: flex-start; padding: 14px; gap: 14px; }
+    .project-logo { flex-basis: auto; width: 168px; height: 64px; }
     .site-footer { padding: 24px 16px 32px; }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 440px) {
     .nav-ig { display: none; }
 }
 

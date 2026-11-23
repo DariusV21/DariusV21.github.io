@@ -63,6 +63,10 @@ kbd{font:11px var(--f-mono);border:1px solid var(--line);border-bottom-width:2px
 #log div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--line)}
 #log div b{color:var(--fg);font-weight:500}
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.credit{padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--panel);font:12px var(--f-mono);color:var(--muted);text-align:center}
+.credit b{color:var(--fg);font-weight:600}
+.credit a{color:var(--accent);text-decoration:none}
+.credit a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -112,6 +116,8 @@ kbd{font:11px var(--f-mono);border:1px solid var(--line);border-bottom-width:2px
     <p class="hint">The first tap starts the clock. Average RPM = revolutions ÷ time between first and last tap. Use more taps for a more accurate result: human tap timing is about ±30 ms, so this works best below ~300 RPM.</p>
   </aside>
 </main>
+
+<footer class="credit"><b>RPM Tap Counter</b> v1.0 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></footer>
 
 <script>
 (() => {

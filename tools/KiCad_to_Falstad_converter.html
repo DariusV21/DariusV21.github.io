@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KiCad → Falstad converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1ed; --panel:#ffffff; --panel2:#f5f7f4; --line:#d3dad4; --text:#18201c; --muted:#56645c;
+  --accent:#c4560f; --accent-ink:#ffffff; --wire:#7d8a83; --part:#c4560f; --net:#1d7f55; --warn:#8a5d00; --err:#b3261e;
+  --gdot:#c9d1cb;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1210; --panel:#141a17; --panel2:#1a221e; --line:#27322c; --text:#dbe3de; --muted:#8e9b94;
+    --accent:#ff8a3d; --accent-ink:#1a0d03; --wire:#71807a; --part:#ff8a3d; --net:#62d39c; --warn:#f2c14e; --err:#ff7a70;
+    --gdot:#26302b; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1210; --panel:#141a17; --panel2:#1a221e; --line:#27322c; --text:#dbe3de; --muted:#8e9b94;
+  --accent:#ff8a3d; --accent-ink:#1a0d03; --wire:#71807a; --part:#ff8a3d; --net:#62d39c; --warn:#f2c14e; --err:#ff7a70;
+  --gdot:#26302b; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.mono,textarea,code,select{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header.top{max-width:1400px;margin:0 auto;padding:22px 24px 6px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px}
+h1{margin:0;font:700 22px/1.2 "JetBrains Mono",ui-monospace,monospace;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;margin:0}
+main{max-width:1400px;margin:0 auto;padding:14px 24px 40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.wide{grid-column:1/-1}
+@media (max-width:880px){main{grid-template-columns:minmax(0,1fr);padding:12px 12px 32px}header.top{padding:18px 12px 4px}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-width:0}
+.head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.head h2{margin:0 auto 0 0;font:500 13px/1.3 "JetBrains Mono",ui-monospace,monospace}
+textarea{display:block;width:100%;min-height:340px;resize:vertical;border:0;margin:0;background:var(--panel2);color:var(--text);font-size:12.5px;line-height:1.45;padding:12px;white-space:pre;overflow:auto;border-radius:0 0 6px 6px;outline:none}
+textarea:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+textarea::placeholder{color:var(--muted)}
+button,.btn{font:500 13px/1 Inter,system-ui,sans-serif;padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+button:hover,.btn:hover{border-color:var(--accent)}
+.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.primary:hover{filter:brightness(1.06)}
+.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.settings{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;padding:10px 12px;font-size:13.5px}
+.settings label{display:inline-flex;align-items:center;gap:8px}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.hint{color:var(--muted);font-size:13px;padding:8px 12px 10px;margin:0}
+.summary{padding:10px 12px;font-size:14px;margin:0;border-bottom:1px solid var(--line)}
+.msgs{list-style:none;margin:0;padding:6px 0;font-size:13.5px;max-height:220px;overflow:auto}
+.msgs li{padding:4px 12px 4px 30px;position:relative}
+.msgs li::before{content:"";position:absolute;left:13px;top:11px;width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.msgs li.warn::before{background:var(--warn)}
+.msgs li.err::before{background:var(--err)}
+.msgs li.err{color:var(--err)}
+.msgs:empty{display:none}
+.preview{overflow:auto;background:var(--panel2);border-radius:0 0 6px 6px;min-height:200px;display:flex;align-items:center;justify-content:center}
+.preview svg{display:block;width:100%;height:auto;max-height:560px}
+.preview .empty{color:var(--muted);font-size:14px;padding:40px 16px;text-align:center}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:currentColor}
+.lg-wire{color:var(--wire)} .lg-part{color:var(--part)} .lg-net{color:var(--net)}
+svg .w{stroke:var(--wire);stroke-width:2;stroke-linecap:round}
+svg .p{stroke:var(--part);stroke-width:4;stroke-linecap:round}
+svg .p2{stroke:var(--part);stroke-width:2;stroke-linecap:round}
+svg .n{stroke:var(--net);stroke-width:2}
+svg .post{fill:var(--text)}
+svg .gdot{fill:var(--gdot)}
+svg text{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:9px}
+svg .tp{fill:var(--part)} svg .tn{fill:var(--net)} svg .tm{fill:var(--muted)}
+details{font-size:14px}
+details summary{cursor:pointer;padding:10px 12px;font-weight:500}
+details .body{padding:0 12px 12px;color:var(--muted);max-width:78ch}
+details .body p{margin:.4em 0}
+details code{font-size:12.5px;color:var(--text)}
+@media (prefers-reduced-motion:no-preference){button,.btn{transition:border-color .15s,filter .15s}}
+.credit{max-width:1400px;margin:0 auto;padding:0 24px 28px;font-size:.82rem;color:var(--muted)}
+.credit b{color:var(--text);font-weight:600}
+.credit a{color:var(--accent);text-decoration:none}
+.credit a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>KiCad → Falstad</h1>
+  <p class="sub">Paste a copied Eeschema selection, get text that CircuitJS can import.</p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="head">
+      <h2>KiCad clipboard</h2>
+      <button id="btnExample" type="button">Load example</button>
+      <button id="btnClear" type="button">Clear</button>
+    </div>
+    <textarea id="src" spellcheck="false" aria-label="KiCad schematic text" placeholder="In Eeschema, select parts and wires, press Ctrl+C, and paste here.&#10;&#10;(kicad_sch (version 20231120) (generator &quot;eeschema&quot;) …"></textarea>
+  </section>
+
+  <section class="panel">
+    <div class="head">
+      <h2>CircuitJS import text</h2>
+      <button id="btnCopy" class="primary" type="button">Copy</button>
+      <a id="btnOpen" class="btn" target="_blank" rel="noopener" aria-disabled="true" href="https://www.falstad.com/circuit/circuitjs.html">Open in Falstad</a>
+    </div>
+    <textarea id="out" spellcheck="false" readonly aria-label="Falstad circuit text" placeholder="Converted circuit appears here."></textarea>
+    <p class="hint">In Falstad, choose File › Import From Text, paste, and press OK. Falstad uses this plain-text format rather than JSON.</p>
+  </section>
+
+  <section class="panel wide">
+    <div class="settings">
+      <label>Scale
+        <select id="scale">
+          <option value="16" selected>16 px per 0.1″ (compact)</option>
+          <option value="32">32 px per 0.1″ (roomy)</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="notes" checked> Add text notes for parts Falstad can’t simulate</label>
+      <div class="legend" aria-hidden="true"><span class="lg-wire">Wire</span><span class="lg-part">Component</span><span class="lg-net">Net label, rail or ground</span></div>
+    </div>
+    <p id="summary" class="summary" hidden></p>
+    <ul id="msgs" class="msgs"></ul>
+    <div id="preview" class="preview"><div class="empty">Paste KiCad text to see a preview of the converted circuit.</div></div>
+  </section>
+
+  <section class="panel wide">
+    <details>
+      <summary>What converts, and how</summary>
+      <div class="body">
+        <p>Resistors, capacitors (plain and polarized), inductors, diodes, Zeners, LEDs, batteries and DC/sine sources, switches and push buttons, NPN/PNP transistors, N/P MOSFETs and op-amps become Falstad parts. Fuses, ferrite beads and net ties become plain wires.</p>
+        <p>Wires keep their KiCad routing. Where a wire end, pin or label touches the middle of another wire, the wire is split, because Falstad only connects at end points. Net labels become Falstad labeled nodes, GND symbols become grounds, and power symbols like <code>+5V</code> or <code>+3V3</code> become a voltage rail. <code>VCC</code> and <code>VDD</code> are assumed to be 5 V.</p>
+        <p>Transistors and op-amps are placed on their KiCad pins with short wires to Falstad’s fixed pin layout, so check their orientation after import. ICs, connectors and anything else are skipped and listed below.</p>
+        <p>Parts marked DNP or “Exclude from simulation” are skipped. Copied selections need KiCad 6 or newer.</p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<footer class="credit"><b>KiCad → Falstad converter</b> v1.0 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></footer>
+
+<script type="text/plain" id="example">(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "6b1f3a52-2d1c-4c1e-9a77-0c1d5e8f0001")
+	(paper "A4")
+	(lib_symbols
+		(symbol "Device:Battery_Cell"
+			(pin_numbers hide)
+			(pin_names (offset 0) hide)
+			(exclude_from_sim no) (in_bom yes) (on_board yes)
+			(property "Reference" "BT" (at 2.54 2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
+			(property "Value" "Battery_Cell" (at 2.54 0 0) (effects (font (size 1.27 1.27)) (justify left)))
+			(symbol "Battery_Cell_0_1"
+				(rectangle (start -2.286 1.778) (end 2.286 1.524) (stroke (width 0) (type default)) (fill (type outline)))
+				(rectangle (start -1.524 1.016) (end 1.524 0.508) (stroke (width 0) (type default)) (fill (type outline)))
+			)
+			(symbol "Battery_Cell_1_1"
+				(pin passive line (at 0 5.08 270) (length 3.302) (name "+" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+				(pin passive line (at 0 -2.54 90) (length 2.54) (name "-" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
+			)
+		)
+		(symbol "Device:LED"
+			(pin_numbers hide)
+			(pin_names (offset 1.016) hide)
+			(exclude_from_sim no) (in_bom yes) (on_board yes)
+			(property "Reference" "D" (at 0 2.54 0) (effects (font (size 1.27 1.27))))
+			(property "Value" "LED" (at 0 -2.54 0) (effects (font (size 1.27 1.27))))
+			(symbol "LED_0_1"
+				(polyline (pts (xy -1.27 -1.27) (xy -1.27 1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+				(polyline (pts (xy 1.27 -1.27) (xy 1.27 1.27) (xy -1.27 0) (xy 1.27 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+			)
+			(symbol "LED_1_1"
+				(pin passive line (at -3.81 0 0) (length 2.54) (name "K" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+				(pin passive line (at 3.81 0 180) (length 2.54) (name "A" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
+			)
+		)
+		(symbol "Device:R"
+			(pin_numbers hide)
+			(pin_names (offset 0))
+			(exclude_from_sim no) (in_bom yes) (on_board yes)
+			(property "Reference" "R" (at 2.032 0 90) (effects (font (size 1.27 1.27))))
+			(property "Value" "R" (at 0 0 90) (effects (font (size 1.27 1.27))))
+			(symbol "R_0_1"
+				(rectangle (start -1.016 -2.54) (end 1.016 2.54) (stroke (width 0.254) (type default)) (fill (type none)))
+			)
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
+			)
+		)
+		(symbol "power:GND"
+			(power)
+			(pin_numbers hide)
+			(pin_names (offset 0) hide)
+			(exclude_from_sim no) (in_bom yes) (on_board yes)
+			(property "Reference" "#PWR" (at 0 -6.35 0) (effects (font (size 1.27 1.27)) hide))
+			(property "Value" "GND" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
+			(symbol "GND_0_1"
+				(polyline (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)) (stroke (width 0) (type default)) (fill (type none)))
+			)
+			(symbol "GND_1_1"
+				(pin power_in line (at 0 0 270) (length 0) hide (name "GND" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+			)
+		)
+	)
+	(wire (pts (xy 50.8 58.42) (xy 50.8 50.8)) (stroke (width 0) (type default)) (uuid "0e2c1a10-0000-4000-8000-000000000101"))
+	(wire (pts (xy 50.8 50.8) (xy 59.69 50.8)) (stroke (width 0) (type default)) (uuid "0e2c1a10-0000-4000-8000-000000000102"))
+	(wire (pts (xy 67.31 50.8) (xy 76.2 50.8)) (stroke (width 0) (type default)) (uuid "0e2c1a10-0000-4000-8000-000000000103"))
+	(wire (pts (xy 76.2 50.8) (xy 76.2 54.61)) (stroke (width 0) (type default)) (uuid "0e2c1a10-0000-4000-8000-000000000104"))
+	(wire (pts (xy 76.2 62.23) (xy 76.2 68.58)) (stroke (width 0) (type default)) (uuid "0e2c1a10-0000-4000-8000-000000000105"))
+	(wire (pts (xy 50.8 66.04) (xy 50.8 68.58)) (stroke (width 0) (type default)) (uuid "0e2c1a10-0000-4000-8000-000000000106"))
+	(label "LED_A" (at 71.12 50.8 0) (fields_autoplaced yes) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "0e2c1a10-0000-4000-8000-000000000201"))
+	(symbol (lib_id "Device:Battery_Cell") (at 50.8 63.5 0) (unit 1)
+		(exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(uuid "0e2c1a10-0000-4000-8000-000000000301")
+		(property "Reference" "BT1" (at 54.61 60.96 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "9V" (at 54.61 63.5 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(pin "1" (uuid "0e2c1a10-0000-4000-8000-000000000311"))
+		(pin "2" (uuid "0e2c1a10-0000-4000-8000-000000000312"))
+	)
+	(symbol (lib_id "Device:R") (at 63.5 50.8 90) (unit 1)
+		(exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(uuid "0e2c1a10-0000-4000-8000-000000000302")
+		(property "Reference" "R1" (at 63.5 45.72 90) (effects (font (size 1.27 1.27))))
+		(property "Value" "470" (at 63.5 48.26 90) (effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "0e2c1a10-0000-4000-8000-000000000321"))
+		(pin "2" (uuid "0e2c1a10-0000-4000-8000-000000000322"))
+	)
+	(symbol (lib_id "Device:LED") (at 76.2 58.42 90) (unit 1)
+		(exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(uuid "0e2c1a10-0000-4000-8000-000000000303")
+		(property "Reference" "D1" (at 80.01 57.15 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "Red" (at 80.01 59.69 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(pin "1" (uuid "0e2c1a10-0000-4000-8000-000000000331"))
+		(pin "2" (uuid "0e2c1a10-0000-4000-8000-000000000332"))
+	)
+	(symbol (lib_id "power:GND") (at 50.8 68.58 0) (unit 1)
+		(exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(uuid "0e2c1a10-0000-4000-8000-000000000304")
+		(property "Reference" "#PWR01" (at 50.8 74.93 0) (effects (font (size 1.27 1.27)) hide))
+		(property "Value" "GND" (at 50.8 72.39 0) (effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "0e2c1a10-0000-4000-8000-000000000341"))
+	)
+	(symbol (lib_id "power:GND") (at 76.2 68.58 0) (unit 1)
+		(exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+		(uuid "0e2c1a10-0000-4000-8000-000000000305")
+		(property "Reference" "#PWR02" (at 76.2 74.93 0) (effects (font (size 1.27 1.27)) hide))
+		(property "Value" "GND" (at 76.2 72.39 0) (effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "0e2c1a10-0000-4000-8000-000000000351"))
+	)
+)</script>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const isL = Array.isArray;
+const kid = (n, name) => n.find(c => isL(c) && c[0] === name);
+const kids = (n, name) => n.filter(c => isL(c) && c[0] === name);
+const flagOn = (n, name) => { if (n.includes(name)) return true; const k = kid(n, name); return !!k && (k.length === 1 || k[1] === 'yes'); };
+
+/* ---------- S-expression parser ---------- */
+function parseSexpr(src){
+  const root = [], stack = [root]; let i = 0; const n = src.length;
+  while (i < n){
+    const ch = src[i];
+    if (ch === '('){ const l = []; stack[stack.length-1].push(l); stack.push(l); i++; }
+    else if (ch === ')'){ if (stack.length > 1) stack.pop(); i++; }
+    else if (ch === '"'){
+      let s = ''; i++;
+      while (i < n && src[i] !== '"'){
+        if (src[i] === '\\' && i + 1 < n){ const e = src[i+1]; s += e === 'n' ? '\n' : e; i += 2; }
+        else s += src[i++];
+      }
+      i++; stack[stack.length-1].push(s);
+    }
+    else if (ch <= ' ') i++;
+    else { let j = i; while (j < n && !/[\s()"]/.test(src[j])) j++; stack[stack.length-1].push(src.slice(i, j)); i = j; }
+  }
+  return root;
+}
+
+/* ---------- value parsing ---------- */
+const MULT = {f:1e-15,p:1e-12,n:1e-9,u:1e-6,m:1e-3,k:1e3,K:1e3,M:1e6,G:1e9,R:1,r:1,V:1,v:1,F:1,H:1};
+function parseVal(str){
+  if (str == null) return null;
+  let s = String(str).trim().replace(/[µμ]/g, 'u').replace(/Ω|ohms?/gi, '').replace(',', '.');
+  let m = /^(\d+)([fpnumkKMGRrVvFH])(\d+)/.exec(s);
+  if (m) return parseFloat(m[1] + '.' + m[3]) * MULT[m[2]];
+  m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(MEG|Meg|meg|[fpnumkKMG])?/.exec(s);
+  if (!m) return null;
+  let v = parseFloat(m[1]);
+  if (m[2]) v *= /^meg$/i.test(m[2]) ? 1e6 : MULT[m[2]];
+  return isFinite(v) ? v : null;
+}
+const fmt = v => String(Number(v.toPrecision(6)));
+function simParam(p, key){
+  const sp = p.props['Sim.Params'] || '';
+  const m = new RegExp('(?:^|\\s)' + key + '\\s*=\\s*([^\\s]+)', 'i').exec(sp);
+  return m ? parseVal(m[1]) : null;
+}
+function railVoltage(name){
+  const n = name.trim().toUpperCase();
+  let m = /^([+-]?)(\d+)V(\d+)/.exec(n);
+  if (m) return {v:(m[1] === '-' ? -1 : 1) * parseFloat(m[2] + '.' + m[3]), assumed:false};
+  m = /^([+-]?)(\d+(?:\.\d+)?)V/.exec(n);
+  if (m) return {v:(m[1] === '-' ? -1 : 1) * parseFloat(m[2]), assumed:false};
+  if (/^(VCC|VDD|VBUS)/.test(n)) return {v:5, assumed:true};
+  return null;
+}
+const isGroundName = n => /^(GND\w*|[ADPS]GND\w*|EARTH\w*|CHASSIS\w*|0)$/i.test(n.trim());
+
+/* ---------- geometry ---------- */
+function xform(px, py, ang, mir, order){
+  let x = px, y = -py;
+  const r = ang * Math.PI / 180, c = Math.round(Math.cos(r) * 1e6) / 1e6, s = Math.round(Math.sin(r) * 1e6) / 1e6;
+  const rot = () => { const nx = x*c + y*s, ny = -x*s + y*c; x = nx; y = ny; };
+  const mr = () => { if (mir === 'x') y = -y; else if (mir === 'y') x = -x; };
+  if (order === 'B'){ mr(); rot(); } else { rot(); mr(); }
+  return [x, y];
+}
+function onSeg(x, y, w, tol){
+  const dx = w.x2 - w.x1, dy = w.y2 - w.y1, len2 = dx*dx + dy*dy;
+  if (!len2) return false;
+  const cross = dx*(y - w.y1) - dy*(x - w.x1);
+  if (Math.abs(cross) > tol * Math.sqrt(len2)) return false;
+  const t = ((x - w.x1)*dx + (y - w.y1)*dy) / len2;
+  return t >= -1e-9 && t <= 1 + 1e-9;
+}
+// CircuitJS helpers (mirror CircuitElm.interpPoint and dsign)
+function interp(a, b, f, g){
+  const gx = b.y - a.y, gy = a.x - b.x, d = Math.hypot(gx, gy); g = d ? g / d : 0;
+  return {x:Math.floor(a.x*(1-f) + b.x*f + g*gx + .48), y:Math.floor(a.y*(1-f) + b.y*f + g*gy + .48)};
+}
+const dsign = (a, b) => (b.y - a.y === 0) ? Math.sign(b.x - a.x) : Math.sign(b.y - a.y);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function axisTo(from, to){
+  const dx = to.x - from.x, dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return {ux:Math.sign(dx) || 1, uy:0, L:Math.abs(dx)};
+  return {ux:0, uy:Math.sign(dy) || 1, L:Math.abs(dy)};
+}
+
+/* ---------- library pins ---------- */
+function libPins(lib, unit, style, libMap){
+  let base = lib; const ex = kid(lib, 'extends');
+  if (ex){ for (const [k, v] of libMap){ if (k === ex[1] || k.endsWith(':' + ex[1])){ base = v; break; } } }
+  const pins = [];
+  const walk = (node, top) => {
+    for (const c of node){
+      if (!isL(c)) continue;
+      if (c[0] === 'pin'){
+        const at = kid(c, 'at'), nm = kid(c, 'name'), nu = kid(c, 'number');
+        if (!at) continue;
+        pins.push({type:String(c[1]), x:+at[1], y:+at[2], name:nm ? String(nm[1]) : '', number:nu ? String(nu[1]) : '', hidden:flagOn(c, 'hide')});
+      } else if (c[0] === 'symbol' && top){
+        const mm = /_(\d+)_(\d+)$/.exec(c[1]); const u = mm ? +mm[1] : 0, st = mm ? +mm[2] : 0;
+        if ((u === 0 || u === unit) && (st === 0 || st === style)) walk(c, false);
+      }
+    }
+  };
+  walk(base, true);
+  return pins;
+}
+
+/* ---------- classification ---------- */
+const isOut = q => q.type === 'output' || /^(~|OUT|VOUT|O)$/i.test(q.name);
+const TWO = ['led','zener','pcap','cap','res','ind','diode','vac','vsrc','push','switch','wire'];
+function classify(p){
+  const lid = p.libId.toLowerCase(), ci = lid.indexOf(':');
+  const lib = ci >= 0 ? lid.slice(0, ci) : '', nm = lid.slice(ci + 1);
+  const ref = (p.ref.match(/^[A-Za-z]+/) || [''])[0].toUpperCase();
+  const sd = String(p.props['Sim.Device'] || '').toUpperCase(), st = String(p.props['Sim.Type'] || '').toUpperCase();
+  const pins = p.pins, n = pins.length, names = new Set(pins.map(q => q.name.toUpperCase()));
+  if (n > 0 && pins.every(q => q.type === 'power_in')) return 'powerunit';
+  let k = null;
+  if (/pot|trim|r_var/.test(nm)) k = null;
+  else if (sd === 'NPN' || /npn/.test(nm)) k = 'npn';
+  else if (sd === 'PNP' || /pnp/.test(nm)) k = 'pnp';
+  else if (sd === 'NMOS' || /nmos|nfet|n-?channel/.test(nm)) k = 'nmos';
+  else if (sd === 'PMOS' || /pmos|pfet|p-?channel/.test(nm)) k = 'pmos';
+  else if (sd === 'OPAMP' || lib.includes('amplifier_operational') || /opamp|op_amp/.test(nm) ||
+           (names.has('+') && names.has('-') && n >= 3 && pins.some(isOut))) k = 'opamp';
+  else if (/led/.test(nm)) k = 'led';
+  else if (/zener|^d_z/.test(nm)) k = 'zener';
+  else if (/^(cp|c_pol)|polari[sz]ed/.test(nm)) k = 'pcap';
+  else if (sd === 'C' || /^c(_|$)|capacitor/.test(nm)) k = 'cap';
+  else if (sd === 'R' || /^r(_|$)|resistor/.test(nm)) k = 'res';
+  else if (sd === 'L' || /^l(_|$)|inductor/.test(nm)) k = 'ind';
+  else if (sd === 'D' || /^d(_|$)|diode|schottky/.test(nm)) k = 'diode';
+  else if (st === 'SIN' || /vsin|^vac/.test(nm)) k = 'vac';
+  else if (sd === 'V' || /battery|^vdc|^vsource|^v$/.test(nm)) k = 'vsrc';
+  else if (/sw_push|button|tactile/.test(nm)) k = 'push';
+  else if (/^sw/.test(nm)) k = 'switch';
+  else if (/fuse|ferrite|^jumper|net_?tie|solderjumper/.test(nm)) k = 'wire';
+  else {
+    const byRef = {R:'res', C:'cap', L:'ind', D:'diode', BT:'vsrc', SW:'switch', F:'wire', FB:'wire'};
+    if (byRef[ref]) k = byRef[ref];
+    else if (ref === 'Q'){
+      if (names.has('B') && names.has('C') && names.has('E')) k = 'npn?';
+      else if (names.has('G') && names.has('D') && names.has('S')) k = 'nmos?';
+    }
+  }
+  if (k && TWO.includes(k) && n !== 2) return null;
+  return k;
+}
+function pinFind(p, names, nums){
+  for (const n of names){ const q = p.pins.find(q => q.name.toUpperCase() === n); if (q) return q; }
+  for (const n of (nums || [])){ const q = p.pins.find(q => q.number === n); if (q) return q; }
+  return null;
+}
+
+/* ---------- converter ---------- */
+function convert(text, pxPer100mil, addNotes){
+  const msgs = [];
+  const t = text.trim();
+  if (/^EESchema/i.test(t)) throw new Error('This is a KiCad 5 legacy schematic. Open it in KiCad 6 or newer, save it, and copy again.');
+  if (/^\(\s*kicad_symbol_lib/.test(t)) throw new Error('This is a symbol library, not a schematic selection. Copy from the schematic editor instead.');
+  const tree = parseSexpr(t);
+  const items = [];
+  for (const nd of tree){
+    if (!isL(nd)) continue;
+    if (nd[0] === 'kicad_sch') items.push(...nd.slice(1)); else items.push(nd);
+  }
+  if (!items.length) throw new Error('No KiCad S-expression found. In Eeschema, select parts and wires, press Ctrl+C, and paste here.');
+
+  const libMap = new Map();
+  for (const ls of kids(items, 'lib_symbols')) for (const s of kids(ls, 'symbol')) libMap.set(String(s[1]), s);
+
+  const wires = [], junctions = [], labels = [], symNodes = [];
+  let buses = 0, sheets = 0;
+  for (const it of items){
+    const h = it[0];
+    if (h === 'wire'){
+      const xy = kids(kid(it, 'pts') || [], 'xy');
+      for (let i = 0; i + 1 < xy.length; i++) wires.push({x1:+xy[i][1], y1:+xy[i][2], x2:+xy[i+1][1], y2:+xy[i+1][2]});
+    } else if (h === 'junction'){ const a = kid(it, 'at'); if (a) junctions.push({x:+a[1], y:+a[2]}); }
+    else if (h === 'label' || h === 'global_label' || h === 'hierarchical_label'){
+      const a = kid(it, 'at'); if (a) labels.push({name:String(it[1]), x:+a[1], y:+a[2], ang:+(a[3] || 0)});
+    }
+    else if (h === 'symbol' && kid(it, 'lib_id')) symNodes.push(it);
+    else if (h === 'bus' || h === 'bus_entry') buses++;
+    else if (h === 'sheet') sheets++;
+  }
+  if (buses) msgs.push(['warn', `${buses} bus item(s) ignored. Falstad has no buses, so connect those nets with wires or labels.`]);
+  if (sheets) msgs.push(['warn', `${sheets} hierarchical sheet(s) ignored. Copy the contents of each sheet separately.`]);
+
+  // symbols
+  const parts = [];
+  for (const s of symNodes){
+    const libId = String(kid(s, 'lib_id')[1]), ln = kid(s, 'lib_name');
+    const lib = (ln && libMap.get(String(ln[1]))) || libMap.get(libId);
+    const a = kid(s, 'at') || ['at', 0, 0, 0], m = kid(s, 'mirror');
+    const props = {}; for (const pr of kids(s, 'property')) props[pr[1]] = pr[2];
+    const p = {
+      libId, props, ref:props.Reference || '?', value:props.Value || '',
+      x:+a[1], y:+a[2], ang:+(a[3] || 0), mirror:m ? String(m[1]) : null,
+      unit:+((kid(s, 'unit') || [])[1] || 1),
+      style:+((kid(s, 'convert') || kid(s, 'body_style') || [])[1] || 1),
+      dnp:flagOn(s, 'dnp'), noSim:(kid(s, 'exclude_from_sim') || [])[1] === 'yes'
+    };
+    if (!lib){ msgs.push(['err', `${p.ref} (${libId}): its symbol definition isn’t in the pasted text, so it was skipped.`]); continue; }
+    p.isPower = !!kid(lib, 'power') || /^power:/i.test(libId);
+    p.libPins = libPins(lib, p.unit, p.style, libMap);
+    parts.push(p);
+  }
+
+  // choose symbol transform (rotate→mirror is KiCad's order; the other is scored as a fallback)
+  const keyMM = (x, y) => x.toFixed(3) + ',' + y.toFixed(3);
+  const ptSet = new Set();
+  wires.forEach(w => { ptSet.add(keyMM(w.x1, w.y1)); ptSet.add(keyMM(w.x2, w.y2)); });
+  junctions.forEach(j => ptSet.add(keyMM(j.x, j.y)));
+  labels.forEach(l => ptSet.add(keyMM(l.x, l.y)));
+  const hits = (x, y) => ptSet.has(keyMM(x, y)) || wires.some(w => onSeg(x, y, w, 1e-3));
+  const place = (p, order) => p.libPins.map(q => { const [dx, dy] = xform(q.x, q.y, p.ang, p.mirror, order); return {...q, x:p.x + dx, y:p.y + dy}; });
+  for (const p of parts){
+    let pins = place(p, 'A');
+    if (p.mirror && Math.round(p.ang) % 180 !== 0){
+      const alt = place(p, 'B');
+      const sc = c => c.reduce((n, q) => n + (hits(q.x, q.y) ? 1 : 0), 0);
+      if (sc(alt) > sc(pins)) pins = alt;
+    }
+    p.pinsMM = pins;
+  }
+
+  // to Falstad pixels
+  const S = pxPer100mil / 2.54, P = v => Math.round(v * S);
+  for (const p of parts){
+    p.pins = p.pinsMM.map(q => ({...q, X:P(q.x), Y:P(q.y)}));
+    p.c = {x:P(p.x), y:P(p.y)};
+  }
+  const pt = q => ({x:q.X, y:q.Y});
+
+  const els = [];
+  const link = (a, b) => { if (a.x !== b.x || a.y !== b.y) els.push({code:'w', a, b, params:'0', kind:'link'}); };
+  const label = p => (p.ref + ' ' + p.value).trim();
+  function two(code, a, b, params, p){
+    if ((a.x === b.x) !== (a.y === b.y)) els.push({code, a, b, params, kind:'part', label:label(p)});
+    else {
+      const q = {x:a.x + 48, y:a.y};
+      els.push({code, a, b:q, params, kind:'part', label:label(p)});
+      link(q, b);
+      msgs.push(['warn', `${p.ref}: pins aren’t in a straight line, so it was placed beside them with an extra wire.`]);
+    }
+  }
+  const other = (p, q) => p.pins.find(r => r !== q);
+  let converted = 0; const skipped = [];
+  const groundNets = new Set(), railNets = new Map();
+
+  for (const p of parts){
+    if (p.isPower){
+      const q = p.pins[0]; if (!q) continue;
+      const name = (p.value || p.libId.split(':').pop()).trim();
+      const a = pt(q);
+      const ground = isGroundName(name);
+      let [vx, vy] = xform(0, ground ? -1 : 1, p.ang, p.mirror, 'A');
+      const dir = {x:Math.round(vx), y:Math.round(vy)};
+      if (ground){
+        groundNets.add(name.toUpperCase());
+        els.push({code:'g', a, b:{x:a.x + dir.x*16, y:a.y + dir.y*16}, params:'0 0', kind:'net'});
+      } else {
+        const txt = name.replace(/\s+/g, '_');
+        if (!railNets.has(name)){
+          const rv = railVoltage(name); railNets.set(name, rv);
+          if (rv){
+            els.push({code:'R', a, b:{x:a.x + dir.x*16, y:a.y + dir.y*16}, params:`0 0 40 ${fmt(rv.v)} 0 0 0.5`, kind:'net', label:name});
+            if (rv.assumed) msgs.push(['warn', `Power net ${name} was set to 5 V. Edit the rail in Falstad if it’s different.`]);
+            els.push({code:'207', a, b:{x:a.x - dir.y*16, y:a.y + dir.x*16}, params:'0 ' + txt, kind:'net', label:name});
+          } else {
+            msgs.push(['warn', `Power net ${name}: no voltage could be read from the name, so it’s only a labeled node. Add a source in Falstad.`]);
+            els.push({code:'207', a, b:{x:a.x + dir.x*16, y:a.y + dir.y*16}, params:'0 ' + txt, kind:'net', label:name});
+          }
+        } else {
+          els.push({code:'207', a, b:{x:a.x + dir.x*16, y:a.y + dir.y*16}, params:'0 ' + txt, kind:'net', label:name});
+        }
+      }
+      continue;
+    }
+    if (p.dnp){ msgs.push(['info', `${p.ref} is marked DNP and was skipped.`]); continue; }
+    if (p.noSim){ msgs.push(['info', `${p.ref} is excluded from simulation and was skipped.`]); continue; }
+
+    let k = classify(p);
+    if (k === 'powerunit'){ msgs.push(['info', `${p.ref} unit ${p.unit} only has power pins and was left out. Falstad op-amps don’t need supply pins.`]); continue; }
+    if (k === 'npn?' || k === 'nmos?'){ k = k.slice(0, -1); msgs.push(['warn', `${p.ref}: type not clear from the symbol, treated as ${k.toUpperCase()}.`]); }
+    const val = parseVal(p.value);
+    const [q1, q2] = p.pins;
+    let ok = true;
+    switch (k){
+      case 'res': { const r = val ?? 1000; if (val == null) msgs.push(['warn', `${p.ref}: couldn’t read “${p.value}”, used 1 kΩ.`]); two('r', pt(q1), pt(q2), `0 ${fmt(r)}`, p); break; }
+      case 'cap': { const c = val ?? 1e-6; if (val == null) msgs.push(['warn', `${p.ref}: couldn’t read “${p.value}”, used 1 µF.`]); two('c', pt(q1), pt(q2), `0 ${fmt(c)} 0`, p); break; }
+      case 'pcap': {
+        const c = val ?? 1e-5; if (val == null) msgs.push(['warn', `${p.ref}: couldn’t read “${p.value}”, used 10 µF.`]);
+        const plus = pinFind(p, ['+'], ['1']) || q1; two('209', pt(plus), pt(other(p, plus)), `0 ${fmt(c)} 0 1`, p); break;
+      }
+      case 'ind': { const l = val ?? 1e-3; if (val == null) msgs.push(['warn', `${p.ref}: couldn’t read “${p.value}”, used 1 mH.`]); two('l', pt(q1), pt(q2), `0 ${fmt(l)} 0`, p); break; }
+      case 'diode': case 'zener': case 'led': {
+        const A = pinFind(p, ['A'], ['2']), K = pinFind(p, ['K'], ['1']);
+        if (!A || !K || A === K){ ok = false; break; }
+        const code = k === 'diode' ? 'd' : k === 'zener' ? 'z' : '162';
+        const prm = k === 'diode' ? '2 default' : k === 'zener' ? '2 default-zener' : '2 default-led 1 0 0 0.01';
+        two(code, pt(A), pt(K), prm, p); break;
+      }
+      case 'vsrc': {
+        let v = simParam(p, 'dc'); if (v == null) v = val;
+        if (v == null){ v = 5; msgs.push(['warn', `${p.ref}: couldn’t read a voltage from “${p.value}”, used 5 V.`]); }
+        const plus = pinFind(p, ['+'], ['1']) || q1;
+        two('v', pt(other(p, plus)), pt(plus), `0 0 40 ${fmt(v)} 0 0 0.5`, p); break;
+      }
+      case 'vac': {
+        const amp = simParam(p, 'ampl') ?? 1, f = simParam(p, 'f') ?? 1000, dc = simParam(p, 'dc') ?? 0;
+        const plus = pinFind(p, ['+'], ['1']) || q1;
+        two('v', pt(other(p, plus)), pt(plus), `0 1 ${fmt(f)} ${fmt(amp)} ${fmt(dc)} 0 0.5`, p); break;
+      }
+      case 'switch': two('s', pt(q1), pt(q2), '0 1 false', p); break;
+      case 'push': two('s', pt(q1), pt(q2), '0 1 true', p); break;
+      case 'wire': els.push({code:'w', a:pt(q1), b:pt(q2), params:'0', kind:'part', label:label(p)}); break;
+      case 'npn': case 'pnp': {
+        const B = pinFind(p, ['B']), C = pinFind(p, ['C']), E = pinFind(p, ['E']);
+        if (!B || !C || !E){ ok = false; break; }
+        const pnp = k === 'pnp' ? -1 : 1, b = pt(B), c = pt(C), e = pt(E);
+        const ax = axisTo(b, {x:(c.x + e.x)/2, y:(c.y + e.y)/2}), L = Math.max(32, ax.L);
+        const p2 = {x:b.x + ax.ux*L, y:b.y + ax.uy*L};
+        let best = null;
+        for (const flip of [0, 1]){
+          let ds = dsign(b, p2); if (flip) ds = -ds;
+          const hs2 = 16*ds*pnp, pc = interp(b, p2, 1, hs2), pe = interp(b, p2, 1, -hs2);
+          const cost = dist(pc, c) + dist(pe, e);
+          if (!best || cost < best.cost) best = {flip, pc, pe, cost};
+        }
+        els.push({code:'t', a:b, b:p2, params:`${best.flip} ${pnp} 0 0 100`, kind:'part', label:label(p), posts:[best.pc, best.pe]});
+        link(best.pc, c); link(best.pe, e); break;
+      }
+      case 'nmos': case 'pmos': {
+        const G = pinFind(p, ['G']), D = pinFind(p, ['D']), Sx = pinFind(p, ['S']);
+        if (!G || !D || !Sx){ ok = false; break; }
+        const g = pt(G), d = pt(D), s = pt(Sx);
+        const ax = axisTo(g, {x:(d.x + s.x)/2, y:(d.y + s.y)/2}), L = Math.max(32, ax.L);
+        const p2 = {x:g.x + ax.ux*L, y:g.y + ax.uy*L};
+        let best = null;
+        for (const flip of [0, 1]){
+          let hs2 = 16*dsign(g, p2); if (flip) hs2 = -hs2;
+          const ps = interp(g, p2, 1, -hs2), pd = interp(g, p2, 1, hs2);
+          const cost = dist(ps, s) + dist(pd, d);
+          if (!best || cost < best.cost) best = {flip, ps, pd, cost};
+        }
+        const flags = (k === 'pmos' ? 1 : 0) | (best.flip ? 8 : 0);
+        els.push({code:'f', a:g, b:p2, params:`${flags} 1.5 0.02`, kind:'part', label:label(p), posts:[best.ps, best.pd]});
+        link(best.ps, s); link(best.pd, d);
+        if (pinFind(p, ['B'])) msgs.push(['info', `${p.ref}: bulk pin ignored. Falstad ties bulk to source.`]);
+        break;
+      }
+      case 'opamp': {
+        const IP = pinFind(p, ['+']), IM = pinFind(p, ['-']), O = p.pins.find(isOut);
+        if (!IP || !IM || !O){ ok = false; break; }
+        const ip = pt(IP), im = pt(IM), o = pt(O);
+        const ax = axisTo({x:(ip.x + im.x)/2, y:(ip.y + im.y)/2}, o), L = Math.max(32, ax.L);
+        const p1 = {x:o.x - ax.ux*L, y:o.y - ax.uy*L};
+        let best = null;
+        for (const swap of [0, 1]){
+          let hs = 16*dsign(p1, o); if (swap) hs = -hs;
+          const pm = interp(p1, o, 0, hs), pp = interp(p1, o, 0, -hs);
+          const cost = dist(pm, im) + dist(pp, ip);
+          if (!best || cost < best.cost) best = {swap, pm, pp, cost};
+        }
+        els.push({code:'a', a:p1, b:o, params:`${8 | best.swap} 15 -15 1000000 0 0 100000`, kind:'part', label:label(p), posts:[best.pm, best.pp], opamp:true});
+        link(best.pm, im); link(best.pp, ip); break;
+      }
+      default: ok = false;
+    }
+    if (ok) converted++;
+    else {
+      skipped.push(p.ref);
+      if (addNotes) els.push({code:'x', a:p.c, b:{x:p.c.x + 48, y:p.c.y}, params:`0 12 ${label(p)} (not converted)`, kind:'note', label:label(p) + ' (not converted)'});
+    }
+  }
+  if (skipped.length) msgs.unshift(['warn', `Not converted: ${skipped.join(', ')}. Falstad has no matching part, so add them by hand. Their wiring is kept.`]);
+
+  // labels
+  for (const l of labels){
+    const a = {x:P(l.x), y:P(l.y)};
+    const r = ((Math.round(l.ang) % 360) + 360) % 360;
+    const dir = r === 90 ? {x:0, y:-1} : r === 180 ? {x:-1, y:0} : r === 270 ? {x:0, y:1} : {x:1, y:0};
+    if (isGroundName(l.name) || groundNets.has(l.name.toUpperCase()))
+      els.push({code:'g', a, b:{x:a.x, y:a.y + 16}, params:'0 0', kind:'net'});
+    else
+      els.push({code:'207', a, b:{x:a.x + dir.x*16, y:a.y + dir.y*16}, params:'0 ' + l.name.replace(/\s+/g, '_'), kind:'net', label:l.name});
+  }
+
+  // wires: split wherever another connection point lands mid-segment
+  const cpts = new Map();
+  const addC = (x, y) => cpts.set(x + ',' + y, {x, y});
+  const wpx = wires.map(w => ({x1:P(w.x1), y1:P(w.y1), x2:P(w.x2), y2:P(w.y2)}));
+  wpx.forEach(w => { addC(w.x1, w.y1); addC(w.x2, w.y2); });
+  junctions.forEach(j => addC(P(j.x), P(j.y)));
+  labels.forEach(l => addC(P(l.x), P(l.y)));
+  parts.forEach(p => p.pins.forEach(q => addC(q.X, q.Y)));
+  let wireSegs = 0;
+  for (const w of wpx){
+    const dx = w.x2 - w.x1, dy = w.y2 - w.y1, len2 = dx*dx + dy*dy;
+    if (!len2) continue;
+    const len = Math.sqrt(len2), cuts = [];
+    for (const c of cpts.values()){
+      const cross = dx*(c.y - w.y1) - dy*(c.x - w.x1);
+      if (Math.abs(cross) > len * 0.5) continue;
+      const tt = ((c.x - w.x1)*dx + (c.y - w.y1)*dy) / len2;
+      if (tt > 1e-9 && tt < 1 - 1e-9) cuts.push({tt, c});
+    }
+    cuts.sort((m, n) => m.tt - n.tt);
+    let prev = {x:w.x1, y:w.y1};
+    for (const cu of cuts){ els.push({code:'w', a:prev, b:cu.c, params:'0', kind:'wire'}); prev = cu.c; wireSegs++; }
+    els.push({code:'w', a:prev, b:{x:w.x2, y:w.y2}, params:'0', kind:'wire'}); wireSegs++;
+  }
+
+  if (!els.length) throw new Error('Nothing to convert. The pasted text has no wires, labels or symbols.');
+
+  // shift onto a tidy origin
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const allPts = e => [e.a, e.b, ...(e.posts || [])];
+  els.forEach(e => allPts(e).forEach(q => { minX = Math.min(minX, q.x); minY = Math.min(minY, q.y); maxX = Math.max(maxX, q.x); maxY = Math.max(maxY, q.y); }));
+  const ox = 64 - Math.floor(minX / 16) * 16, oy = 64 - Math.floor(minY / 16) * 16;
+  const sh = q => ({x:q.x + ox, y:q.y + oy});
+  els.forEach(e => { e.a = sh(e.a); e.b = sh(e.b); if (e.posts) e.posts = e.posts.map(sh); });
+
+  const lines = ['$ 1 0.000005 10.20027730826997 50 5 50 5e-11'];
+  for (const e of els) lines.push(`${e.code} ${e.a.x} ${e.a.y} ${e.b.x} ${e.b.y} ${e.params}`);
+
+  return {
+    text:lines.join('\n') + '\n', els, msgs,
+    bounds:{minX:minX + ox, minY:minY + oy, maxX:maxX + ox, maxY:maxY + oy},
+    stats:{converted, skipped:skipped.length, wires:wireSegs, labels:labels.length, power:parts.filter(p => p.isPower).length, total:els.length}
+  };
+}
+
+/* ---------- preview ---------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
+function renderPreview(res){
+  const b = res.bounds, pad = 40;
+  const x0 = b.minX - pad, y0 = b.minY - pad, w = b.maxX - b.minX + pad*2, h = b.maxY - b.minY + pad*2;
+  const L = (a, c, cls) => `<line x1="${a.x}" y1="${a.y}" x2="${c.x}" y2="${c.y}" class="${cls}"/>`;
+  const T = (x, y, s, cls, anchor) => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor || 'middle'}">${esc(s)}</text>`;
+  let g = '', posts = '';
+  const dot = q => { posts += `<circle cx="${q.x}" cy="${q.y}" r="2.2" class="post"/>`; };
+  for (const e of res.els){
+    const mid = {x:(e.a.x + e.b.x)/2, y:(e.a.y + e.b.y)/2};
+    const vert = e.a.x === e.b.x;
+    switch (e.code){
+      case 'w': g += L(e.a, e.b, e.kind === 'part' ? 'p2' : 'w'); break;
+      case 'g': {
+        g += L(e.a, e.b, 'n');
+        const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y, px = dy ? 8 : 0, py = dx ? 8 : 0;
+        g += L({x:e.b.x - px, y:e.b.y - py}, {x:e.b.x + px, y:e.b.y + py}, 'n');
+        g += L({x:e.b.x - px/2 + dx*.2, y:e.b.y - py/2 + dy*.2}, {x:e.b.x + px/2 + dx*.2, y:e.b.y + py/2 + dy*.2}, 'n');
+        dot(e.a); break;
+      }
+      case 'R': g += L(e.a, e.b, 'n') + `<circle cx="${e.b.x}" cy="${e.b.y}" r="3" class="post" style="fill:var(--net)"/>` + T(e.b.x + (e.b.x - e.a.x)*0.6, e.b.y + (e.b.y - e.a.y)*0.6 + (e.b.y < e.a.y ? -2 : 8), e.label, 'tn'); dot(e.a); break;
+      case '207': {
+        g += L(e.a, e.b, 'n');
+        const dx = Math.sign(e.b.x - e.a.x), dy = Math.sign(e.b.y - e.a.y);
+        g += T(e.b.x + dx*3, e.b.y + (dy ? dy*10 : 3), e.label, 'tn', dx > 0 ? 'start' : dx < 0 ? 'end' : 'middle');
+        dot(e.a); break;
+      }
+      case 'x': g += T(e.a.x, e.a.y, e.label, 'tm', 'start'); break;
+      case 't': case 'f': case 'a': {
+        g += L(e.a, e.b, 'p');
+        if (e.opamp) e.posts.forEach(q => { g += L(q, e.b, 'p2'); });
+        else e.posts.forEach(q => { g += L(e.b, q, 'p2'); });
+        g += T(mid.x + (vert ? 22 : 0), mid.y + (vert ? 3 : -22), e.label, 'tp', vert ? 'start' : 'middle');
+        [e.a, e.b, ...e.posts].forEach((q, i) => { if (!(e.opamp && i === 0) && !(!e.opamp && i === 1)) dot(q); });
+        break;
+      }
+      default:
+        g += L(e.a, e.b, 'p');
+        g += T(mid.x + (vert ? 8 : 0), mid.y + (vert ? 3 : -8), e.label || '', 'tp', vert ? 'start' : 'middle');
+        dot(e.a); dot(e.b);
+    }
+  }
+  return `<svg viewBox="${x0} ${y0} ${w} ${h}" role="img" aria-label="Preview of the converted circuit" preserveAspectRatio="xMidYMid meet" style="aspect-ratio:${w}/${h}">
+    <defs><pattern id="dots" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="0" cy="0" r="1" class="gdot"/></pattern></defs>
+    <rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="url(#dots)"/>${g}${posts}</svg>`;
+}
+
+/* ---------- UI ---------- */
+const src = $('src'), out = $('out'), msgsEl = $('msgs'), prev = $('preview'), sum = $('summary'), openBtn = $('btnOpen');
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+function run(){
+  const text = src.value;
+  msgsEl.innerHTML = '';
+  if (!text.trim()){
+    out.value = ''; sum.hidden = true; openBtn.setAttribute('aria-disabled', 'true');
+    prev.innerHTML = '<div class="empty">Paste KiCad text to see a preview of the converted circuit.</div>';
+    return;
+  }
+  let res;
+  try { res = convert(text, +$('scale').value, $('notes').checked); }
+  catch (err){
+    out.value = ''; sum.hidden = true; openBtn.setAttribute('aria-disabled', 'true');
+    msgsEl.innerHTML = `<li class="err">${esc(err.message)}</li>`;
+    prev.innerHTML = '<div class="empty">No preview yet.</div>';
+    return;
+  }
+  out.value = res.text;
+  const s = res.stats;
+  sum.hidden = false;
+  sum.textContent = `Converted ${plural(s.converted, 'part', 'parts')}, ${plural(s.wires, 'wire segment', 'wire segments')}, ${plural(s.labels, 'net label', 'net labels')} and ${plural(s.power, 'power symbol', 'power symbols')} into ${plural(s.total, 'Falstad element', 'Falstad elements')}` + (s.skipped ? `. ${plural(s.skipped, 'part was', 'parts were')} skipped.` : '.');
+  msgsEl.innerHTML = res.msgs.map(([lvl, m]) => `<li class="${lvl}">${esc(m)}</li>`).join('');
+  prev.innerHTML = renderPreview(res);
+  openBtn.href = 'https://www.falstad.com/circuit/circuitjs.html?cct=' + encodeURIComponent(res.text);
+  openBtn.removeAttribute('aria-disabled');
+}
+let timer = null;
+src.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 200); });
+$('scale').addEventListener('change', run);
+$('notes').addEventListener('change', run);
+$('btnExample').addEventListener('click', () => { src.value = $('example').textContent; run(); });
+$('btnClear').addEventListener('click', () => { src.value = ''; run(); src.focus(); });
+$('btnCopy').addEventListener('click', async () => {
+  const b = $('btnCopy');
+  if (!out.value){ b.textContent = 'Nothing to copy'; setTimeout(() => b.textContent = 'Copy', 1400); return; }
+  let ok = false;
+  try { await navigator.clipboard.writeText(out.value); ok = true; } catch (e){}
+  if (!ok){ out.focus(); out.select(); try { ok = document.execCommand('copy'); } catch (e){} }
+  b.textContent = ok ? 'Copied' : 'Selected, press Ctrl+C';
+  setTimeout(() => b.textContent = 'Copy', 1600);
+});
+})();
+</script>
+</body>
+</html>
