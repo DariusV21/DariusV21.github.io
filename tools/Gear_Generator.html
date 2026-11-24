@@ -110,6 +110,7 @@ tbody tr:last-child td{border-bottom:0}
           <button class="sbtn" type="button" id="addAxle" title="New gear fixed on the same shaft as the selected gear">+ Same axle</button>
           <button class="sbtn" type="button" id="addRing" title="Internal (ring) gear around the selected gear">+ Ring gear</button>
           <button class="sbtn" type="button" id="addRack" title="Straight rack driven by the selected gear">+ Rack</button>
+          <button class="sbtn" type="button" id="addSun" style="grid-column:1/-1" title="Sun gear in the centre of the ring, meshing with the planet. Select the ring or a gear inside it">+ Sun gear (planetary set)</button>
         </div>
       </div>
 
@@ -167,11 +168,12 @@ tbody tr:last-child td{border-bottom:0}
       </div>
       <div class="notes">
         <p>Teeth use a standard involute profile: addendum 1×module, dedendum 1.25×module, with a root fillet on external gears. Meshing gears always share module and pressure angle, so changing either on one gear updates its whole meshing group. Gears on the same axle can use a different module.</p>
+        <p>Planetary sets: add a ring around a gear (the planet), then press <b>+ Sun gear</b>. The sun gets ring − 2 × planet teeth and stays in the centre, meshing with the planet. For more planets select the ring and press <b>+ Meshing gear</b>: planets snap to the angles where they mesh with both sun and ring (steps of 360° ÷ (sun + ring teeth)). The carrier is held still, so the planets turn on fixed axles.</p>
         <p>DXF files are in millimetres (R12 format) and open in AutoCAD, Fusion, FreeCAD, LibreCAD and laser/CNC software. To get a DWG, open the DXF in AutoCAD or DWG TrueView and save as DWG. For printed gears set a little backlash (0.05–0.15&nbsp;mm) so they don't bind.</p>
       </div>
     </div>
   </div>
-  <footer class="credit"><b>Gear Generator</b> v1.0 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></footer>
+  <footer class="credit"><b>Gear Generator</b> v1.01 / Made by <a href="https://dariusv21.github.io/" target="_blank" rel="noopener">Darius V.</a></footer>
 </div>
 
 <script>
@@ -306,7 +308,7 @@ const state={rpm:10,playing:true,speed:1,t:0,showLabels:true,showPitch:true};
 const view={x:0,y:0,s:4};
 const byId=id=>gears.find(g=>g.id===id);
 const kids=g=>gears.filter(c=>c.parent===g.id);
-const DEF={type:"external",teeth:20,module:2,pa:20,backlash:0,bore:5,holes:0,holeD:6,rim:6,rackH:6,thick:6,angle:0,rel:"mesh",parent:null,x:0,y:0};
+const DEF={type:"external",teeth:20,module:2,pa:20,backlash:0,bore:5,holes:0,holeD:6,rim:6,rackH:6,thick:6,angle:0,rel:"mesh",parent:null,sunOf:null,x:0,y:0};
 
 function makeGear(o){
   const g=Object.assign({},DEF,o);
@@ -322,7 +324,7 @@ function defaultProject(){
   gears=[a,b];selId=a.id;state.rpm=10;state.t=0;
 }
 function serialize(){
-  const keys=["id","name","type","teeth","module","pa","backlash","bore","holes","holeD","rim","rackH","thick","angle","rel","parent","x","y","color"];
+  const keys=["id","name","type","teeth","module","pa","backlash","bore","holes","holeD","rim","rackH","thick","angle","rel","parent","sunOf","x","y","color"];
   return {app:"gear-generator",v:1,rpm:state.rpm,gears:gears.map(g=>Object.fromEntries(keys.map(k=>[k,g[k]])))};
 }
 function deserialize(o){
@@ -338,6 +340,12 @@ function deserialize(o){
     if(!/^#[0-9a-f]{6}$/i.test(g.color))g.color=PALETTE[(g.id-1)%PALETTE.length];
     ids.add(g.id);list.push(g);
   }
+  // a sun must mesh with a planet and come after its ring, otherwise it becomes an ordinary gear
+  list.forEach((g,i)=>{
+    if(g.sunOf==null){g.sunOf=null;return;}
+    const iR=list.findIndex(x=>x.id===g.sunOf),pl=list.find(x=>x.id===g.parent);
+    if(iR<0||iR>i||list[iR].type!=="internal"||g.type!=="external"||g.rel!=="mesh"||!pl||pl.type!=="external")g.sunOf=null;
+  });
   if(list[0].parent!=null)throw new Error("First gear must be the driver");
   gears=list;nextId=Math.max(...list.map(g=>g.id))+1;selId=list[0].id;
   state.rpm=isFinite(+o.rpm)?+o.rpm:10;state.t=0;
@@ -350,7 +358,9 @@ function layout(){
     if(g.parent==null){
       g._x=g.x;g._y=g.y;g._w=state.rpm*TAU/60;g._th=g._w*state.t;g._layer=0;continue;
     }
-    const p=byId(g.parent),a=g.angle*D2R,[cx,cy]=dir(a);
+    const p=byId(g.parent);let a=g.angle*D2R;
+    if(g.rel==="mesh"&&g.type==="external")a=planetaryAngle(g,p,a);
+    const [cx,cy]=dir(a);
     if(g.rel==="axle"){g._x=p._x;g._y=p._y;g._w=p._w;g._th=p._th+a;g._layer=p._layer+1;continue;}
     g._layer=p._layer;
     const up=(a-p._th)*p.teeth/TAU; // parent tooth phase at the contact point
@@ -369,6 +379,71 @@ function layout(){
   }
 }
 
+// ---- planetary sets ----
+const sunOfRing=r=>gears.find(s=>s.sunOf===r.id);
+// Sun: always points from its planet to the ring centre, with ring − 2·planet teeth.
+// Other planets of a ring that has a sun: snapped to angles where they mesh with sun and ring.
+function planetaryAngle(g,p,a){
+  if(g.sunOf!=null){
+    const R=byId(g.sunOf);if(!R||!R._d)return a;
+    const n=R.teeth-2*p.teeth;
+    if(n>=5&&n!==g.teeth){g.teeth=n;g._d=dims(g);}
+    a=Math.atan2(R._y-p._y,R._x-p._x);
+    g.angle=+((((a*R2D)%360)+360)%360).toFixed(4);
+    return a;
+  }
+  if(p.type!=="internal")return a;
+  const S=sunOfRing(p);if(!S||S.parent===g.id)return a;
+  const ref=byId(S.parent);if(!ref||ref.teeth!==g.teeth)return a;
+  let a0;
+  if(ref.parent===p.id&&ref.rel==="mesh")a0=ref.angle*D2R;
+  else if(p.parent===ref.id&&p.rel==="mesh")a0=p.angle*D2R;
+  else return a;
+  const step=TAU/(S.teeth+p.teeth);
+  a=a0+Math.round((a-a0)/step)*step;
+  g.angle=+((((a*R2D)%360)+360)%360).toFixed(4);
+  return a;
+}
+// the ring (with a sun) that a planet sits in
+function ringOfPlanet(g){
+  if(g.type!=="external"||g.sunOf!=null)return null;
+  return meshNeighbours(g).find(r=>r.type==="internal"&&sunOfRing(r))||null;
+}
+const planetsOf=r=>meshNeighbours(r).filter(x=>x.type==="external");
+function sunTarget(p){
+  if(!p||p.type==="rack"||p.sunOf!=null)return null;
+  let ring,planet;
+  if(p.type==="internal"){ring=p;planet=meshNeighbours(p).find(x=>x.type==="external");}
+  else{planet=p;ring=meshNeighbours(p).find(x=>x.type==="internal");}
+  if(!ring||!planet||sunOfRing(ring))return null;
+  return {ring,planet,teeth:ring.teeth-2*planet.teeth};
+}
+const ringWithSun=p=>{const r=p.type==="internal"?p:p.sunOf!=null?byId(p.sunOf):null;return r&&sunOfRing(r)?r:null;};
+
+// Two gears not linked in the tree that sit at meshing distance (e.g. a sun and a second planet).
+// null: not at meshing distance. Otherwise whether their speeds and tooth phases agree.
+function meshCheck(A,B){
+  if(A._layer!==B._layer||A.type==="rack"||B.type==="rack")return null;
+  if(A.type==="internal"&&B.type==="internal")return null;
+  if(Math.abs(A.module-B.module)>1e-9||Math.abs(A.pa-B.pa)>1e-9)return null;
+  const dd=Math.hypot(A._x-B._x,A._y-B._y),tol=0.02*A.module,T=x=>Math.abs(x-Math.round(x));
+  const same=(u,v)=>Math.abs(u-v)<=1e-6*(Math.abs(u)+Math.abs(v))+1e-9;
+  let e;
+  if(A.type==="external"&&B.type==="external"){
+    if(Math.abs(dd-(A._d.rp+B._d.rp))>tol)return null;
+    if(!same(A._w*A.teeth,-B._w*B.teeth))return {ok:false,why:"speed"};
+    const a=Math.atan2(B._y-A._y,B._x-A._x);
+    e=(a-A._th)*A.teeth/TAU+(a+Math.PI-B._th)*B.teeth/TAU-0.5;
+  }else{
+    const R=A.type==="internal"?A:B,P=R===A?B:A;
+    if(dd<tol||Math.abs(dd-(R._d.rp-P._d.rp))>tol)return null;
+    if(!same(R._w*R.teeth,P._w*P.teeth))return {ok:false,why:"speed"};
+    const a=Math.atan2(P._y-R._y,P._x-R._x);
+    e=(a-R._th)*R.teeth/TAU-(a-P._th)*P.teeth/TAU-0.5;
+  }
+  return T(e)<0.03?{ok:true}:{ok:false,why:"phase"};
+}
+
 function meshNeighbours(g){
   const out=[];
   if(g.parent!=null&&g.rel==="mesh")out.push(byId(g.parent));
@@ -381,7 +456,10 @@ function meshGroup(g){
   return [...seen];
 }
 function teethLimits(g){
+  if(g.sunOf!=null){const R=byId(g.sunOf),pl=byId(g.parent);if(R&&pl){const n=R.teeth-2*pl.teeth;return [n,n];}}
   let lo=g.type==="rack"?2:g.type==="internal"?12:5,hi=g.type==="rack"?400:600;
+  if(g.type==="internal"&&sunOfRing(g))for(const pl of planetsOf(g))lo=Math.max(lo,2*pl.teeth+5);
+  const R=ringOfPlanet(g);if(R)hi=Math.min(hi,Math.floor((R.teeth-5)/2));
   for(const n of meshNeighbours(g)){
     if(g.type==="internal"&&n.type==="external")lo=Math.max(lo,n.teeth+4);
     if(g.type==="external"&&n.type==="internal")hi=Math.min(hi,n.teeth-4);
@@ -406,6 +484,7 @@ function collisions(){
     const A=gears[i],B=gears[j];
     if(A._layer!==B._layer)continue;
     if((B.parent===A.id||A.parent===B.id))continue;
+    const mc=meshCheck(A,B);if(mc&&mc.ok)continue;
     const a=bounds(A),b=bounds(B);if(!a||!b)continue;
     const dd=Math.hypot(A._x-B._x,A._y-B._y),eps=1e-6;
     let hit=false;
@@ -427,6 +506,23 @@ function addGear(kind){
   }else if(kind==="ring"){
     if(p.type!=="external")return;
     g=makeGear(Object.assign({},inherit,{parent:p.id,type:"internal",teeth:Math.max(p.teeth*3,p.teeth+14),rim:Math.max(3,3*p.module),angle:0}));
+  }else if(kind==="sun"){
+    const t=sunTarget(p);if(!t)return;
+    if(t.teeth<5){setStatus("The ring needs at least "+(2*t.planet.teeth+5)+" teeth to fit a sun with "+t.planet.name+" as planet.");return;}
+    g=makeGear(Object.assign({},inherit,{parent:t.planet.id,rel:"mesh",teeth:t.teeth,bore:t.planet.bore||5,sunOf:t.ring.id,name:"Sun"}));
+  }else if(kind==="mesh"&&ringWithSun(p)){
+    // another planet: same teeth as the first, at the free slot furthest from the others
+    const ring=ringWithSun(p),S=sunOfRing(ring),ref=byId(S.parent);
+    g=makeGear(Object.assign({},inherit,{parent:ring.id,teeth:ref.teeth,bore:ref.bore}));
+    layout();
+    const ang=x=>Math.atan2(x._y-ring._y,x._x-ring._x),taken=planetsOf(ring).map(ang),n=S.teeth+ring.teeth,a0=ang(ref);
+    const cands=[];
+    for(let k=1;k<n;k++){const a=a0+k*TAU/n;let m=Infinity;for(const b of taken)m=Math.min(m,Math.abs(((a-b)%TAU+TAU+Math.PI)%TAU-Math.PI));cands.push([m,a]);}
+    cands.sort((u,v)=>v[0]-u[0]);
+    gears.push(g);let ok=false;
+    for(const [,a] of cands){g.angle=+((((a*R2D)%360)+360)%360).toFixed(4);layout();if(!collisions().has(g.id)){ok=true;break;}}
+    gears.pop();
+    if(!ok){nextId--;setStatus("There's no room for another planet in "+ring.name+".");return;}
   }else if(kind==="rack"){
     if(p.type!=="external")return;
     g=makeGear(Object.assign({},inherit,{parent:p.id,type:"rack",teeth:Math.max(8,Math.round(p.teeth*1.2)),rackH:Math.max(3,3*p.module),angle:-90}));
@@ -453,6 +549,7 @@ function removeSelected(){
   const kill=new Set([g.id]);
   for(const x of gears)if(x.parent!=null&&kill.has(x.parent))kill.add(x.id);
   gears=gears.filter(x=>!kill.has(x.id));
+  for(const x of gears)if(x.sunOf!=null&&!byId(x.sunOf))x.sunOf=null;
   selId=g.parent;changed(true);
 }
 
@@ -601,6 +698,7 @@ cv.addEventListener("pointerdown",e=>{
     if(selId!==g.id){selId=g.id;changed(false);}
     const base=chainUp(g);
     if(base.parent==null)drag={mode:"move",g:base,ox:wx-base.x,oy:wy-base.y};
+    else if(base.sunOf!=null)drag={mode:"pan",sx,sy,vx:view.x,vy:view.y};
     else drag={mode:"swing",g:base};
   }else drag={mode:"pan",sx,sy,vx:view.x,vy:view.y};
   cv.classList.add("dragging");
@@ -698,22 +796,24 @@ function buildPanel(){
   box.appendChild(h);
   if(!g){const p=document.createElement("p");p.className="sub";p.textContent="Click a gear to edit it.";box.appendChild(p);return;}
   const sub=document.createElement("p");sub.className="sub";
-  sub.textContent=TYPE_NAME[g.type]+(g.parent==null?" · driver":g.rel==="axle"?" · on the axle of "+byId(g.parent).name:" · driven by "+byId(g.parent).name);
+  sub.textContent=TYPE_NAME[g.type]+(g.parent==null?" · driver":g.rel==="axle"?" · on the axle of "+byId(g.parent).name:g.sunOf!=null?" · sun of "+byId(g.sunOf).name+", driven by "+byId(g.parent).name:" · driven by "+byId(g.parent).name);
   box.appendChild(sub);
   const list=LISTS[g.type].slice();
-  if(g.parent!=null)list.splice(list.length-1,0,g.rel==="axle"?"axleAngle":"angle");
+  if(g.parent!=null&&g.sunOf==null)list.splice(list.length-1,0,g.rel==="axle"?"axleAngle":"angle");
+  const isSnapped=g.rel==="mesh"&&g.type==="external"&&g.parent!=null&&byId(g.parent).type==="internal"&&sunOfRing(byId(g.parent))&&sunOfRing(byId(g.parent)).parent!==g.id;
   for(const fk of list){
     const f=FIELDS[fk],key=f.key||fk;
     const row=document.createElement("div");row.className="field";
     const lab=document.createElement("label");lab.htmlFor="f_"+fk;lab.textContent=f.label;
-    if(f.hint){const s=document.createElement("small");s.textContent=f.hint;lab.appendChild(s);}
+    const hint=key==="teeth"&&g.sunOf!=null?"Locked: ring − 2 × planet":fk==="angle"&&isSnapped?"Snaps to where it meshes with the sun":key==="teeth"&&ringOfPlanet(g)?"Same for every planet":f.hint;
+    if(hint){const s=document.createElement("small");s.textContent=hint;lab.appendChild(s);}
     const ib=document.createElement("div");ib.className="inp";
     const el=document.createElement("input");el.id="f_"+fk;
     if(f.type==="text"){el.type="text";el.maxLength=40;el.value=g[key];}
     else if(f.type==="color"){el.type="color";el.value=g[key];}
     else{
       el.type="number";el.step=f.step;el.inputMode="decimal";el.value=g[key];
-      if(key==="teeth"){const [lo,hi]=teethLimits(g);el.min=lo;el.max=hi;}else{el.min=f.min;el.max=f.max;}
+      if(key==="teeth"){const [lo,hi]=teethLimits(g);el.min=lo;el.max=hi;if(g.sunOf!=null)el.disabled=true;}else{el.min=f.min;el.max=f.max;}
     }
     ib.appendChild(el);
     if(f.unit){const u=document.createElement("span");u.textContent=f.unit;ib.appendChild(u);}
@@ -727,6 +827,7 @@ function buildPanel(){
       if(!isFinite(v)){if(commit)el.value=g[key];return;}
       const lo=+el.min,hi=+el.max;v=Math.min(hi,Math.max(lo,v));if(f.int)v=Math.round(v);
       if(f.group){for(const m of meshGroup(g))m[key]=v;}else g[key]=v;
+      if(key==="teeth"){const R=ringOfPlanet(g);if(R)for(const x of planetsOf(R))x.teeth=v;}
       if(commit)el.value=g[key];
       for(const o of Object.values(fieldEls))if(o.f.show)o.row.hidden=!o.f.show(g);
       changed(false,true);
@@ -774,14 +875,23 @@ function updateInfo(){
       const ring=g.type==="internal"?g:n.type==="internal"?n:null,pin=ring===g?n:g;
       if(ring&&pin.type==="external"&&ring.teeth-pin.teeth<12)warn("Ring "+ring.name+" has only "+(ring.teeth-pin.teeth)+" more teeth than "+pin.name+". Below about 12 the tips of internal gears clash.");
     }
-    if(coll.has(g.id))warn("Overlaps "+coll.get(g.id).map(x=>x.name).join(", ")+". Drag it to a free spot or move it to another axle layer.");
+    const clash=new Set();
+    for(const x of gears){
+      if(x===g||x.parent===g.id||g.parent===x.id)continue;
+      const mc=meshCheck(g,x);if(!mc||mc.ok)continue;
+      clash.add(x);
+      warn(mc.why==="speed"?g.name+" sits at meshing distance from "+x.name+", but the train drives them at speeds that don't match, so their teeth would clash."
+        :g.name+"'s teeth land on "+x.name+"'s teeth. Swing it a little until the teeth line up.");
+    }
+    const over=(coll.get(g.id)||[]).filter(x=>!clash.has(x));
+    if(over.length)warn("Overlaps "+over.map(x=>x.name).join(", ")+". Drag it to a free spot or move it to another axle layer.");
   }else{$("selName").firstChild.textContent="–";$("selSub").textContent="";}
   // train table
   const tb=$("train");tb.innerHTML="";
   for(const x of gears){
     const tr=document.createElement("tr");tr.setAttribute("aria-selected",x.id===selId);
     const cells=[
-      ["<span class='sw'></span>",x.name],[null,TYPE_NAME[x.type]+(x.parent==null?" (driver)":x.rel==="axle"?" (axle)":"")],
+      ["<span class='sw'></span>",x.name],[null,TYPE_NAME[x.type]+(x.parent==null?" (driver)":x.rel==="axle"?" (axle)":x.sunOf!=null?" (sun)":"")],
       ["num",String(x.teeth)],["num",fmt(x.module,3)],["num",x.type==="rack"?"–":fmt(2*x._d.rp,2)],
       ["num",x.type==="rack"?"–":root._w?fmt(Math.abs(root._w/x._w),3)+":1":"–"],
       ["num",x.type==="rack"?fmt(Math.abs(x._v),1)+" mm/s":fmt(Math.abs(x._w)*60/TAU,2)+" rpm"],
@@ -802,6 +912,7 @@ function updateInfo(){
   $("addAxle").disabled=!sel||sel.type==="rack";
   $("addRing").disabled=!sel||sel.type!=="external";
   $("addRack").disabled=!sel||sel.type!=="external";
+  $("addSun").disabled=!sunTarget(sel);
   $("dxfSel").disabled=$("stlSel").disabled=!sel;
 }
 
@@ -1003,6 +1114,7 @@ $("addMesh").addEventListener("click",()=>addGear("mesh"));
 $("addAxle").addEventListener("click",()=>addGear("axle"));
 $("addRing").addEventListener("click",()=>addGear("ring"));
 $("addRack").addEventListener("click",()=>addGear("rack"));
+$("addSun").addEventListener("click",()=>addGear("sun"));
 $("rpm").addEventListener("input",e=>{const v=parseFloat(e.target.value);if(isFinite(v)){state.rpm=Math.max(-10000,Math.min(10000,v));changed(false,true);}});
 $("speed").addEventListener("change",e=>{state.speed=+e.target.value;});
 function setPlaying(p){state.playing=p;const b=$("play");b.textContent=p?"Pause":"Play";b.setAttribute("aria-pressed",p);if(!p)draw();}
